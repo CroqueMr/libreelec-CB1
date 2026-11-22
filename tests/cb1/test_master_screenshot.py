@@ -29,6 +29,7 @@ constexpr int DVBRIDGE_MODE_MASTER_REFERENCE=5,DVBRIDGE_MODE_SDR=7,AV_PIX_FMT_RG
 constexpr int GL_READ_FRAMEBUFFER_BINDING=1,GL_READ_FRAMEBUFFER=2;
 using GLint=int;
 int bound=99,depth=0,readFormat=AV_PIX_FMT_RGBA;bool flip=false,readOK=true,mapOK=true;
+uint8_t carrierPixels[8]{};
 void glGetIntegerv(int,int* out){*out=bound;}
 void glBindFramebuffer(int,unsigned value){bound=value;}
 namespace KODI::RENDERING::CAPTURE {
@@ -39,6 +40,7 @@ bool ReadFramebufferRegion(int,int,int w,int h,int bits,bool upsideDown,Readback
  if(!readOK)return false;
  out.width=2;out.height=1;out.stride=8;out.format=readFormat;
  out.pixels=std::make_unique<uint8_t[]>(8);
+ std::copy_n(carrierPixels,8,out.pixels.get());
  return true;
 }}
 struct pl_matrix3x3 {float m[3][3];};
@@ -46,14 +48,18 @@ constexpr int PL_COLOR_PRIM_BT_2020=3,PL_COLOR_PRIM_BT_709=1,PL_INTENT_RELATIVE_
 constexpr pl_matrix3x3 pl_matrix3x3_identity={{{1,0,0},{0,1,0},{0,0,1}}};
 int pl_raw_primaries_get(int p){return p;}
 pl_matrix3x3 pl_get_color_mapping_matrix(int,int,int){return pl_matrix3x3_identity;}
-struct pl_transform3x3 {pl_matrix3x3 mat;float c[3];};
-struct dvbridge_color {int repr;struct {pl_matrix3x3 linear;}dovi;};
+constexpr int16_t cb1_ipt_output_ycc[9]={8194,799,1681,8194,-933,1091,8194,267,-5545};
+constexpr int16_t cb1_ipt_output_lms[9]={17080,-348,-348,-348,17080,-348,-348,-348,17080};
+struct dvbridge_color {struct {pl_matrix3x3 nonlinear,linear;float nonlinear_offset[3];}dovi;};
 bool dvbridge_map_color(dvbridge_color* out,const void*,size_t,bool paired){
- assert(paired);out->dovi.linear={{{1,0,0},{0,1,0},{0,0,1}}};return mapOK;
+ assert(paired);out->dovi.nonlinear=out->dovi.linear=pl_matrix3x3_identity;return mapOK;
 }
-void pl_color_repr_normalize(int*){}
-pl_transform3x3 pl_color_repr_decode(int*,void*){return {{{{1,0,0},{0,1,0},{0,0,1}}},{0,0,0}};}
-void pl_matrix3x3_mul(pl_matrix3x3*,const pl_matrix3x3*){}
+void pl_matrix3x3_mul(pl_matrix3x3* left,const pl_matrix3x3* right){
+ pl_matrix3x3 product{};
+ for(unsigned i=0;i<3;++i)for(unsigned j=0;j<3;++j)for(unsigned k=0;k<3;++k)
+   product.m[i][j]+=left->m[i][k]*right->m[k][j];
+ *left=product;
+}
 struct CDVPlaybackInfo {enum {FEL=2};};
 namespace DVBRIDGE {enum class OutputMode{MasterReference};}
 struct CDVBridgeGLES {
@@ -88,7 +94,12 @@ int main(){
  assert(!bridge.ReadScreenshot(out,true) && out.pixels.get()==accepted);
  assert(bridge.ReadScreenshot(out,false));
  bridge.sourceCarrier=false;
- assert(bridge.ReadScreenshot(out,false) && !out.colorEncodingVerified);
+ // Packed converted IPT from the rendered Y=2223, Cb=1530, Cr=1522 test patch.
+ const uint8_t iptPair[]={95,138,175,255,95,138,47,255};
+ std::copy_n(iptPair,8,carrierPixels);
+ assert(bridge.ReadScreenshot(out,false) && out.colorEncodingVerified);
+ const auto* ipt=reinterpret_cast<const uint16_t*>(out.pixels.get());
+ assert(ipt[0]==23221 && ipt[1]==35492 && ipt[2]==41290 && ipt[3]==65535);
  bridge.sourceCarrier=true;
  bridge.m_pendingOverlayVisible=bridge.m_overlayVisible=bridge.m_nativeOverlayEnabled=false;
  bridge.m_guiComposed=true;
@@ -309,9 +320,9 @@ int main() {
   float identity[12]={1,0,0,0,0,1,0,0,0,0,1,0};
   pack(1000,1500,input); pack(2000,2500,input+4);
   assert(DVBRIDGE::DecodeReferenceScreenshot(input,2,1,identity,linear,output));
-  assert(std::abs(int(output[0])-int(std::lround(1000.0/4095*65535)))<=1);
-  assert(std::abs(int(output[1])-int(std::lround(1500.0/4095*65535)))<=1);
-  assert(std::abs(int(output[2])-int(std::lround(2500.0/4095*65535)))<=1);
+  assert(std::abs(int(output[0])-int(std::lround(1000.0/4096*65535)))<=1);
+  assert(std::abs(int(output[1])-int(std::lround(1500.0/4096*65535)))<=1);
+  assert(std::abs(int(output[2])-int(std::lround(2500.0/4096*65535)))<=1);
   assert(output[4]>output[0]);
 }
 '''
