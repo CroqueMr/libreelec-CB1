@@ -325,7 +325,7 @@
     "tests/cb1/test_sdr_capture_color.py": "71bff46f3c9de349bdd3762dcef48d3f024f89e82e025537851490ea658242bc",
     "tests/cb1/test_master_screenshot.py": "a760a252695dfbc235cd9561420bfc2e3631b9b76cbc64b3d6a7d210e39002ec",
     "tests/cb1/test_master_recovery.py": "87fea95fafb075971757a78332ed406ba56c5e050813d8f2eb73a2b58cf85420",
-    "tests/cb1/test_native_spatial_contract.py": "f2ea5b3fa96e727500ae25fd0984422a710945a193b49bd2582f57c2ab7e70c2",
+    "tests/cb1/test_native_spatial_contract.py": "981ea69d592ff87e3fe01998977b26500f56404ab5e55b5caedcb49d93f00de0",
     "tests/cb1/test_vaapi_egl_probe.py": "1732ba41d1d9771b5e8de2570f3432bda2e82107c34570c6154bc239c166365e",
     "tests/cb1/test_frame_packing_gap.py": "b2b76548ad7a2f74db3d54233ea5929be494dbb85e256e06b1bb0a70612a8b32",
     "tests/cb1/test_sdr_native_surface.py": "228f351b42b5c0e2c4e7662e4a84cbf4e402cdd5f38196bd6809037571cdf601",
