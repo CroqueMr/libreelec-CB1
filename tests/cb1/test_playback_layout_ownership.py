@@ -56,14 +56,11 @@ int main(){
   Dialog native{false,{count,hasFooter}};native.apply();
   assert(native.group.h==9 && native.list.h==9 && native.footer.y==2);
   Dialog d{true,{count,hasFooter}};d.apply();
-  const int displayed=std::clamp(count,1,hasFooter?21:22);
+  const int displayed=std::clamp(count,1,22);
   assert(d.list.h==38*displayed && d.group.x==1270);
-  assert(d.group.y>=40 && d.group.y+d.group.h==(hasFooter?1024:1040));
+  assert(d.group.y>=40 && d.group.y+d.group.h==(hasFooter?1014:1040));
   assert(d.image.h==d.group.h);
-  if(hasFooter)
-   assert(d.footer.y==114+d.list.h && d.footer.y+32+12==d.group.h);
-  else
-   assert(d.group.h==104+d.list.h+24);
+  assert(d.group.h==104+d.list.h+24 && d.footer.y==2);
  }
 }
 '''.replace('GEOMETRY', geometry)
@@ -77,14 +74,14 @@ int main(){
         layout=ET.parse(repo/'projects/Generic/filesystem/usr/share/kodi/media/cb1/IncludesDVProcessInfo.xml')
         group=layout.find(".//include[@name='CB1PlaybackModeLayout']//control[@id='9100']")
         self.assertIsNotNone(group)
-        self.assertEqual((group.findtext('right'),group.findtext('bottom'),group.findtext('width')),('42','56','608'))
+        self.assertEqual((group.findtext('right'),group.findtext('bottom'),group.findtext('width')),('42','66','608'))
         for ident in ('3', '6'):
             node=group.find("control[@id='"+ident+"']")
             self.assertEqual(tuple(node.findtext(tag) for tag in ('left','top','width')), ('24','104','560'))
         rows=layout.find(".//include[@name='CB1PlaybackModeRows']")
         for kind in ('itemlayout','focusedlayout'):
             self.assertEqual(rows.find(kind).attrib, {'width':'560','height':'38'})
-        footer=group.find("control[@id='9103']/control[@id='9102']")
+        footer=layout.find(".//include[@name='CB1PlaybackModeLayout']/control[@id='9103']/control[@id='9102']")
         self.assertEqual(footer.findtext('scroll'), 'false')
         self.assertEqual(footer.findtext('wrapmultiline'), 'false')
 
