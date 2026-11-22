@@ -87,7 +87,7 @@ int main(){
   self.assertIsNone(dv.find('.//param[@name="value"][@value="$INFO[Window(playerprocessinfo).Property(DV.HDR10PlusCarried)]"]'))
   self.assertIn('SetProperty("DV.HDR10PlusCarried"',patch)
   layout=panel.find('./include[@name="DVProcessLayout"]')
-  static=layout.find('.//include[.="DVStaticMetadataFields"]')
+  static=layout.find('.//include[.="DVStaticHDRFields"]')
   self.assertIn('String.IsEmpty(Window(playerprocessinfo).Property(DV.Transport))',static.get('condition'))
   self.assertIn('const bool metadata = active && data.metadata;', (TREE/'xbmc/dialogs/GUIDialogPlayerProcessInfo.cpp').read_text())
  def test_forwarded_trims_have_dedicated_output_properties(self):
@@ -95,17 +95,26 @@ int main(){
   for level in (2,8):
    self.assertIn(f'DV.OutputL{level}Targets',panel)
    self.assertIn(f'SetProperty("DV.OutputL{level}Targets"',patch)
- def test_pr92_grouping_distinguishes_source_facts_from_applied_values(self):
+ def test_source_metadata_values_are_in_the_processing_column(self):
   panel=ET.parse(PANEL)
   columns=panel.findall('./include[@name="DVProcessLayout"]/definition/control/control[@type="grouplist"]')
-  self.assertIn('DVSourceMetadataFields',[i.text for i in columns[1].findall('include')])
-  for name in ('DVStaticMetadataFields','DVHDR10PlusFields'):
-   self.assertIn(name,[i.text for i in columns[0].findall('include')])
-   self.assertNotIn(name,[i.text for i in columns[1].findall('include')])
-  applied=ET.tostring(panel.find('./include[@name="DVSourceMetadataFields"]'),encoding='unicode')
-  self.assertIn('DV.AppliedBlocks',applied)
-  self.assertNotIn('DV.L2Targets',applied)
-  self.assertNotIn('DV.L8Targets',applied)
+  inputs, processing=([i.text for i in col.findall('include')] for col in columns[:2])
+  for name in ('DVSourceMetadataFields','DVStaticHDRFields','DVHDR10PlusFields'):
+   self.assertIn(name,processing)
+   self.assertNotIn(name,inputs)
+  dv=panel.find('./include[@name="DVInputDolbyVisionFields"]')
+  self.assertIsNotNone(dv.find('.//param[@name="label"][@value="File metadata"]'))
+  for label in ('L6 max / min','L6 MaxCLL / MaxFALL'):
+   self.assertIsNone(dv.find(f'.//param[@name="label"][@value="{label}"]'))
+   self.assertIsNotNone(panel.find(f'./include[@name="DVSourceMetadataFields"]//param[@name="label"][@value="{label}"]'))
+
+ def test_panel_height_is_set_before_first_process(self):
+  source=(TREE/'xbmc/dialogs/GUIDialogPlayerProcessInfo.cpp').read_text()
+  init=source.split('void CGUIDialogPlayerProcessInfo::OnInitWindow()',1)[1].split('void CGUIDialogPlayerProcessInfo::OnDeinitWindow',1)[0]
+  self.assertLess(init.index('RefreshInfo();'),init.index('CGUIDialog::OnInitWindow();'))
+  self.assertLess(init.index('CGUIDialog::OnInitWindow();'),init.index('UpdatePanelHeight();'))
+  self.assertIn('CTimeUtils::GetFrameTime()',init)
+
  def test_output_handles_native_and_sdr_without_inventing_unknown_signal(self):
   values=ET.parse(PANEL).find('./variable[@name="DVOutputFormat"]').findall('value')
   for signal in ('sdr','hlg','hdr10','hdr10plus','dolbyvision'):
@@ -160,8 +169,19 @@ int main(){
   self.assertEqual(sorted(seen),sorted(rounded))
  def test_source_metadata_details_remain_applied_and_neutral(self):
   panel=ET.parse(PANEL)
-  source=panel.find('./include[@name="DVSourceMetadataFields"]')
-  self.assertEqual(source.find('.//include[@content="DVSection"]/param[@name="label"]').get('value'),'Source metadata')
+  layout=panel.find('./include[@name="DVProcessLayout"]')
+  processing=layout.find('.//control[@id="$PARAM[col2]"]')
+  sections=[include for include in panel.findall('.//include[@content="DVSection"]')
+            if include.find('./param[@name="label"][@value="Source metadata"]') is not None]
+  self.assertEqual(len(sections),1)
+  heading=sections[0]
+  self.assertIn(heading,list(processing))
+  self.assertLess(list(processing).index(heading),list(processing).index(processing.find('./include[.="DVSourceMetadataFields"]')))
+  self.assertLess(list(processing).index(heading),list(processing).index(processing.find('./include[.="DVStaticHDRFields"]')))
+  visible=heading.find('./param[@name="visible"]').get('value')
+  for expression in ('DVHasAppliedSourceMetadata','DVHasStaticSourceMetadata'):
+   self.assertIn(f'$EXP[{expression}]',visible)
+   self.assertIsNotNone(panel.find(f'./expression[@name="{expression}"]'))
   for name in ('DVSourceMetadataFields','DVUsedHDRFields','DVUsedHDR10PlusFields'):
    for row in panel.findall('./include[@name="'+name+'"]/definition/include[@content="DVInfoRow"]'):
     self.assertEqual(row.find('./param[@name="labelcolor"]').get('value'),'FFEEF2F3')
