@@ -11,7 +11,8 @@ ROOT = Path(__file__).resolve().parents[2]
 class NvidiaPackages(unittest.TestCase):
     def recipe(self, relative, commands):
         return subprocess.run(['bash', '-ec', 'VULKAN_SUPPORT=no; PKG_DIR="$(dirname "$1")"; source "$1"; ' + commands,
-                               'recipe', str(ROOT / relative)], text=True, capture_output=True)
+                               'recipe', str(ROOT / relative)], env=dict(os.environ, ROOT=str(ROOT)),
+                               text=True, capture_output=True)
 
     def test_matched_driver_and_open_modules(self):
         result = self.recipe('packages/graphics/nvidia/package.mk',
@@ -58,12 +59,13 @@ class NvidiaPackages(unittest.TestCase):
             (payload / 'LICENSE').write_bytes(b'test-license')
             (base / 'licenses').mkdir()
             (base / 'licenses/LicenseRef-NVIDIA-Driver-License-Agreement.txt').write_bytes(b'test-license')
-            env = dict(os.environ, INSTALL=str(installed), ROOT=str(base), PKG_DIR=str(recipe.parent))
+            env = dict(os.environ, INSTALL=str(installed), ROOT=str(ROOT),
+                       FIXTURE_ROOT=str(base), PKG_DIR=str(recipe.parent))
             shared = installed/'usr/lib/libnvidia-egl-gbm.so.1.1.3'
             shared.parent.mkdir(parents=True)
             shared.write_bytes(b'source-built-common-egl-gbm')
             result = subprocess.run(['bash', '-ec',
-                'VULKAN_SUPPORT=no; source "$1"; '
+                'VULKAN_SUPPORT=no; source "$1"; ROOT="$FIXTURE_ROOT"; '
                 'get_full_firmware_dir() { echo usr/lib/kernel-overlays/$1/lib/firmware; }; '
                 'get_full_module_dir() { echo usr/lib/modules/test; }; '
                 'die() { echo "$*" >&2; exit 1; }; cd "$2"; makeinstall_target',
