@@ -1,8 +1,8 @@
 {
   "Release": {
-    "version": "DV-R1.1.0-RC1",
-    "tag": "R1.1.0-RC1",
-    "image": "LibreELEC-Generic.x86_64-13.0-DV-R1.1.0-RC1"
+    "version": "CB1-R1.1.1-RC1",
+    "tag": "R1.1.1-RC1",
+    "image": "LibreELEC-Generic.x86_64-13.0-CB1-R1.1.1-RC1"
   },
   "LibreELEC": {
     "version": "13 Beta 1 (12.95.1)",
