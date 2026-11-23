@@ -11,6 +11,7 @@ from test_native_video_source import body
 class VideoPresentationDrain(unittest.TestCase):
     def test_waits_for_new_source_through_scanout_and_ignores_redraws(self):
         window = shipped_code('xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp')
+        atomic = shipped_code('xbmc/windowing/gbm/drm/DRMAtomic.h')
         bridge = shipped_code('xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp')
         manager = shipped_code('xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp')
         program = r'''
@@ -18,6 +19,7 @@ class VideoPresentationDrain(unittest.TestCase):
 #include <array>
 #include <cassert>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <optional>
 namespace DVBRIDGE {
@@ -28,8 +30,11 @@ struct SourceBinding {
 };
 }
 struct DRM { virtual ~DRM() = default; };
-struct CDRMAtomic : DRM { bool busy{}; bool HasPendingCB1Page() const { return busy; } };
-struct Handle { DRM* driver; DRM* get() const { return driver; } };
+struct CDRMAtomic : DRM {
+  bool m_cb1Pending{}, m_cb1Uncertain{};
+  bool HasPendingCB1Page() const { return m_cb1Pending; }
+  bool CanWaitForCB1Page() const @@WAIT@@
+};
 struct PlayerLedPage { DVBRIDGE::SourceBinding decoded; };
 struct CDVBridgeGLES {
   struct Queue {
@@ -45,13 +50,14 @@ struct CWinSystemGbm {
   CDRMAtomic driver;
   bool retires{true};
   bool CompleteDVBridgePage(int) {
-    if (driver.busy && !retires) return false;
-    driver.busy = false;
+    if (driver.m_cb1Pending && (!retires || driver.m_cb1Uncertain)) return false;
+    driver.m_cb1Pending = false;
     return true;
   }
 };
 struct CWinSystemGbmGLESContext : CWinSystemGbm {
-  Handle m_DRM{&driver};
+  std::shared_ptr<DRM> m_DRM{&driver, [](DRM*) {}};
+  bool m_dvModeSwitchDeferred{};
   DVBRIDGE::SourceBinding m_preparedSource{}, m_cb1PageSource{}, m_cb1DisplayedSource{};
   std::optional<PlayerLedPage> m_playerLedPage;
   double m_playerLedPagePts{};
@@ -95,14 +101,17 @@ int main() {
   window.m_dvFrame = true;
   assert(pending()); // A synchronous frame is ready but its flip has not happened.
   window.m_dvFrame = false;
-  window.driver.busy = true;
+  window.driver.m_cb1Pending = true;
   window.TrackCB1VideoPage(true);
   assert(pending()); // The first flip of that picture has yet to retire.
   window.retires = false;
-  assert(!window.CompleteDVBridgePage(0) && pending());
+  assert(!window.CompleteDVBridgePage(0) && pending() && window.m_dvModeSwitchDeferred);
+  window.driver.m_cb1Uncertain = true;
+  assert(!window.CompleteDVBridgePage(0) && pending() && !window.m_dvModeSwitchDeferred);
+  window.driver.m_cb1Uncertain = false;
   window.retires = true;
   assert(window.CompleteDVBridgePage(0) && !pending());
-  window.driver.busy = true;
+  window.driver.m_cb1Pending = true;
   window.TrackCB1VideoPage(true);
   window.preparing = window.m_cb1SourcePreparing = window.m_dvFrame = true;
   assert(!pending()); // Repeated preparation and page of a displayed picture.
@@ -130,6 +139,7 @@ int main() {
             '@@MANAGER@@', body(manager, 'bool CRenderManager::HasPendingVideoPresentation()'))
         program = program.replace('@@TRACK@@', body(window, 'void CWinSystemGbmGLESContext::TrackCB1VideoPage('))
         program = program.replace('@@COMPLETE@@', body(window, 'bool CWinSystemGbmGLESContext::CompleteDVBridgePage('))
+        program = program.replace('@@WAIT@@', body(atomic, 'bool CanWaitForCB1Page() const'))
         program = program.replace('@@FIFO@@', body(bridge, 'bool CDVBridgeGLES::PlayerLedCpuHasNewPicture('))
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
