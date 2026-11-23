@@ -251,8 +251,8 @@ struct CWinSystemGbmGLESContext : CWinSystemGbmEGLContext {
  bool m_dvPriorHDRConversion=false,m_dvPriorGuiCompositing=false,m_guiCompositing=false;
  float m_guiSDRGamma=2.4f,m_dvPriorGuiSDRGamma=2.4f;
  bool m_dvPQSubtitleDraws=false;
- bool m_cb1FramePending=false,m_dvFrame=false,m_dvNativeGui=false;
- bool m_failedHDR10SetupRestore=false,m_dvShutdownFence=false;
+ bool m_cb1FramePending=false,m_cb1SourcePreparing=false,m_dvFrame=false,m_dvNativeGui=false;
+ bool m_failedHDR10SetupRestore=false,m_dvShutdownFence=false,m_dvModeSwitchDeferred=false;
  bool completeOK=true,pollOK=true,restoreOK=true,modeOK=true,recoveryOK=true;
  Capabilities capabilities;
  bool m_dvSuperseded=false,m_dvEndPending=false,m_dvRecoveryPending=false,m_dvRejectedSurface=false,m_dvRollbackFailed=false,m_dvFatalConsumed=false,m_dvNativeFailed=false,m_dvFallbackActive=false;

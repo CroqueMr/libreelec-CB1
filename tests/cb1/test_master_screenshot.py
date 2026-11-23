@@ -9,8 +9,9 @@ from shipped_kodi import shipped_code
 class MasterScreenshot(unittest.TestCase):
     def test_native_readback_preserves_framebuffer_and_other_modes(self):
         from test_native_video_source import body
-        implementation=body(shipped_code('xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp'),
-                            'bool CDVBridgeGLES::ReadScreenshot(')
+        renderer=shipped_code('xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp')
+        implementation=body(renderer,'bool CDVBridgeGLES::ReadScreenshot(')
+        player_led=body(renderer,'bool CDVBridgeGLES::ReadPlayerLedScreenshot(')
         diagnostics=body(shipped_code('xbmc/utils/DVBridgeDiagnosticState.h'),'class DiagnosticFailures')
         program=shipped_code('xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeScreenshot.h')+r'''
 #include <cassert>
@@ -27,18 +28,42 @@ template<class... T>void DiagnosticLog(int,const char*,const char* stage,T...){+
 }
 constexpr int DVBRIDGE_MODE_MASTER_REFERENCE=5,DVBRIDGE_MODE_SDR=7,AV_PIX_FMT_RGBA=1,AV_PIX_FMT_RGBA64LE=2,AV_PIX_FMT_BGRA=3,AV_PIX_FMT_X2BGR10LE=4;
 constexpr int GL_READ_FRAMEBUFFER_BINDING=1,GL_READ_FRAMEBUFFER=2;
+constexpr int GL_DRAW_FRAMEBUFFER_BINDING=3,GL_DRAW_FRAMEBUFFER=4;
 using GLint=int;
-int bound=99,depth=0,readFormat=AV_PIX_FMT_RGBA;bool flip=false,readOK=true,mapOK=true;
-void glGetIntegerv(int,int* out){*out=bound;}
-void glBindFramebuffer(int,unsigned value){bound=value;}
+using GLuint=unsigned;
+int bound=99,draw=98,depth=0,readFormat=AV_PIX_FMT_RGBA;bool flip=false,readOK=true,mapOK=true;
+uint8_t carrierPixels[8]{};
+void glGetIntegerv(int target,int* out){*out=target==GL_READ_FRAMEBUFFER_BINDING?bound:draw;}
+void glBindFramebuffer(int target,unsigned value){(target==GL_READ_FRAMEBUFFER?bound:draw)=value;}
+struct pl_tex_params {int w=3840,h=2160,format=11;bool renderable=false;};
+struct Texture {pl_tex_params params;};
+using pl_tex=Texture*;
+struct dvbridge_policy {int peak=1500;};
+bool allocOK=true,resolveOK=true;
+unsigned allocated=0,destroyed=0,resolved=0;
+pl_tex pl_tex_create(int, const pl_tex_params* params){
+ assert(params->w==3840 && params->h==2160 && params->format==11 && params->renderable);
+ bound=6;draw=7;
+ if(!allocOK)return nullptr;
+ ++allocated;return new Texture{*params};
+}
+void pl_tex_destroy(int,pl_tex* target){if(*target){++destroyed;delete *target;*target=nullptr;}}
+bool dvbridge_resolve_player_led_rgb10(int,const dvbridge_policy* policy,pl_tex picture,
+                                      pl_tex target,bool flipY){
+ assert(policy->peak==1500 && picture!=target && !flipY);++resolved;
+ return resolveOK;
+}
+void pl_opengl_unwrap(int,pl_tex,void*,void*,GLuint* fbo){*fbo=78;}
 namespace KODI::RENDERING::CAPTURE {
 struct ReadbackBuffer {std::unique_ptr<uint8_t[]> pixels; unsigned width=0,height=0;int stride=0,format=0;
  bool colorEncodingVerified=true;};
 bool ReadFramebufferRegion(int,int,int w,int h,int bits,bool upsideDown,ReadbackBuffer& out){
  assert(w==3840 && h==2160);depth=bits;flip=upsideDown;
+ if(allocated!=destroyed)assert(bound==78);
  if(!readOK)return false;
  out.width=2;out.height=1;out.stride=8;out.format=readFormat;
  out.pixels=std::make_unique<uint8_t[]>(8);
+ std::copy_n(carrierPixels,8,out.pixels.get());
  return true;
 }}
 struct pl_matrix3x3 {float m[3][3];};
@@ -46,14 +71,18 @@ constexpr int PL_COLOR_PRIM_BT_2020=3,PL_COLOR_PRIM_BT_709=1,PL_INTENT_RELATIVE_
 constexpr pl_matrix3x3 pl_matrix3x3_identity={{{1,0,0},{0,1,0},{0,0,1}}};
 int pl_raw_primaries_get(int p){return p;}
 pl_matrix3x3 pl_get_color_mapping_matrix(int,int,int){return pl_matrix3x3_identity;}
-struct pl_transform3x3 {pl_matrix3x3 mat;float c[3];};
-struct dvbridge_color {int repr;struct {pl_matrix3x3 linear;}dovi;};
+constexpr int16_t cb1_ipt_output_ycc[9]={8194,799,1681,8194,-933,1091,8194,267,-5545};
+constexpr int16_t cb1_ipt_output_lms[9]={17080,-348,-348,-348,17080,-348,-348,-348,17080};
+struct dvbridge_color {struct {pl_matrix3x3 nonlinear,linear;float nonlinear_offset[3];}dovi;};
 bool dvbridge_map_color(dvbridge_color* out,const void*,size_t,bool paired){
- assert(paired);out->dovi.linear={{{1,0,0},{0,1,0},{0,0,1}}};return mapOK;
+ assert(paired);out->dovi.nonlinear=out->dovi.linear=pl_matrix3x3_identity;return mapOK;
 }
-void pl_color_repr_normalize(int*){}
-pl_transform3x3 pl_color_repr_decode(int*,void*){return {{{{1,0,0},{0,1,0},{0,0,1}}},{0,0,0}};}
-void pl_matrix3x3_mul(pl_matrix3x3*,const pl_matrix3x3*){}
+void pl_matrix3x3_mul(pl_matrix3x3* left,const pl_matrix3x3* right){
+ pl_matrix3x3 product{};
+ for(unsigned i=0;i<3;++i)for(unsigned j=0;j<3;++j)for(unsigned k=0;k<3;++k)
+   product.m[i][j]+=left->m[i][k]*right->m[k][j];
+ *left=product;
+}
 struct CDVPlaybackInfo {enum {FEL=2};};
 namespace DVBRIDGE {enum class OutputMode{MasterReference};}
 struct CDVBridgeGLES {
@@ -63,12 +92,18 @@ struct CDVBridgeGLES {
  int m_effectiveMode=5;bool m_prepared=true,m_direct=true,m_hdr10Limited=false;unsigned m_outputBits=10;
  bool m_hdr10=true,m_playerLed=false,sourceCarrier=true;
  bool UsesMasterSourceCarrier() const {return sourceCarrier;}
- struct Texture{struct{int w=3840,h=2160;}params;} texture;Texture* m_scanout=&texture;
+ Texture texture, picture;
+ Texture* m_scanout=&texture;
+ pl_tex m_playerLedPicture=&picture;
+ dvbridge_policy m_playerLedPolicy;
+ struct {int gpu=1;} context,*m_gl=&context;
+ int m_renderer=1;
  unsigned m_scanoutFramebuffer=42,m_pendingInfo=2;int pqCalls=0;
  struct {const void* Data(){return this;}size_t Size(){return 10;}}m_pendingMetadata;
  bool m_pendingOverlayVisible=false, m_overlayVisible=false, m_guiComposed=false, m_nativeOverlayEnabled=false;
  struct {float rect[4]{};} m_nativeOverlay;
  unsigned GetPQFramebuffer(bool forGUI){++pqCalls;if(forGUI)m_guiComposed=true;return 77;}
+ bool ReadPlayerLedScreenshot(KODI::RENDERING::CAPTURE::ReadbackBuffer& out) @@PLAYER_LED@@
  struct {struct {int primaries=PL_COLOR_PRIM_BT_709;} container;} sdrOutput;
  auto HDR10Output() const {return &sdrOutput;}
  bool ReadScreenshot(KODI::RENDERING::CAPTURE::ReadbackBuffer& out, bool videoOnly=false) @@BODY@@
@@ -88,7 +123,12 @@ int main(){
  assert(!bridge.ReadScreenshot(out,true) && out.pixels.get()==accepted);
  assert(bridge.ReadScreenshot(out,false));
  bridge.sourceCarrier=false;
- assert(bridge.ReadScreenshot(out,false) && !out.colorEncodingVerified);
+ // Packed converted IPT from the rendered Y=2223, Cb=1530, Cr=1522 test patch.
+ const uint8_t iptPair[]={95,138,175,255,95,138,47,255};
+ std::copy_n(iptPair,8,carrierPixels);
+ assert(bridge.ReadScreenshot(out,false) && out.colorEncodingVerified);
+ const auto* ipt=reinterpret_cast<const uint16_t*>(out.pixels.get());
+ assert(ipt[0]==23221 && ipt[1]==35492 && ipt[2]==41290 && ipt[3]==65535);
  bridge.sourceCarrier=true;
  bridge.m_pendingOverlayVisible=bridge.m_overlayVisible=bridge.m_nativeOverlayEnabled=false;
  bridge.m_guiComposed=true;
@@ -105,7 +145,22 @@ int main(){
  assert(out.format==AV_PIX_FMT_RGBA && out.stride==8);
  assert(out.colorEncodingVerified);
  bridge.m_playerLed=true;
- assert(bridge.ReadScreenshot(out) && !out.colorEncodingVerified);
+ const int priorPlayerLedPQ=bridge.pqCalls;
+ assert(bridge.ReadScreenshot(out) && out.colorEncodingVerified);
+ assert(allocated==1 && resolved==1 && destroyed==1 && bridge.pqCalls==priorPlayerLedPQ);
+ assert(bound==99 && draw==98 && depth==16 && !flip);
+ accepted=out.pixels.get();
+ allocOK=false;
+ assert(!bridge.ReadScreenshot(out) && bound==99 && draw==98 && out.pixels.get()==accepted);
+ allocOK=true;resolveOK=false;
+ assert(!bridge.ReadScreenshot(out) && allocated==2 && destroyed==2 && out.pixels.get()==accepted);
+ resolveOK=true;readOK=false;
+ assert(!bridge.ReadScreenshot(out) && allocated==3 && destroyed==3 && out.pixels.get()==accepted);
+ readOK=true;bridge.m_playerLedPicture=nullptr;
+ assert(!bridge.ReadScreenshot(out) && allocated==3 && bridge.pqCalls==priorPlayerLedPQ);
+ bridge.m_playerLedPicture=&bridge.picture;
+ bridge.m_guiComposed=false;
+ assert(!bridge.ReadScreenshot(out,true) && allocated==3);
  bridge.m_playerLed=false;
  bridge.m_guiComposed=false;
  assert(bridge.ReadScreenshot(out,true) && !bridge.m_guiComposed);
@@ -136,7 +191,7 @@ int main(){
  assert(!bridge.ReadScreenshot(out));assert(DVBRIDGE::lastStage=="decode");
  assert(out.pixels.get()==accepted && bound==99);
 }
-'''.replace('@@BODY@@',implementation).replace('DIAGNOSTICS',diagnostics)
+'''.replace('@@BODY@@',implementation).replace('@@PLAYER_LED@@',player_led).replace('DIAGNOSTICS',diagnostics)
         with tempfile.TemporaryDirectory() as directory:
             source,binary=Path(directory)/'read.cpp',Path(directory)/'read'
             source.write_text(program)
@@ -309,9 +364,9 @@ int main() {
   float identity[12]={1,0,0,0,0,1,0,0,0,0,1,0};
   pack(1000,1500,input); pack(2000,2500,input+4);
   assert(DVBRIDGE::DecodeReferenceScreenshot(input,2,1,identity,linear,output));
-  assert(std::abs(int(output[0])-int(std::lround(1000.0/4095*65535)))<=1);
-  assert(std::abs(int(output[1])-int(std::lround(1500.0/4095*65535)))<=1);
-  assert(std::abs(int(output[2])-int(std::lround(2500.0/4095*65535)))<=1);
+  assert(std::abs(int(output[0])-int(std::lround(1000.0/4096*65535)))<=1);
+  assert(std::abs(int(output[1])-int(std::lround(1500.0/4096*65535)))<=1);
+  assert(std::abs(int(output[2])-int(std::lround(2500.0/4096*65535)))<=1);
   assert(output[4]>output[0]);
 }
 '''

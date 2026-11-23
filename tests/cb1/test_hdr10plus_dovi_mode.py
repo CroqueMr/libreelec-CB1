@@ -391,7 +391,7 @@ int main(){
 #include <cassert>
 #include <cstring>
 int main(){
- assert(!std::strcmp(cb1_engine_version(),"CB1 1.0"));
+ assert(!std::strcmp(cb1_engine_version(),"CB1 1.1"));
  assert(CB1_DV_HDR10PLUS==12 && CB1_HDR10_DV_REFERENCE==7 && CB1_HDR10_DV_ADAPTIVE==8);
  const char* guided=cb1_circuit_version(static_cast<cb1_circuit>(13));
  assert(guided && !std::strcmp(guided,"CB1-HDR10PDVR.1.0"));
@@ -528,10 +528,16 @@ struct Setting {std::string id;const std::string& GetId()const{return id;}};
 struct Option {explicit Option(int n):value(n){} int value;std::string label,label2;
  std::vector<std::pair<std::string,bool>> properties;};
 struct Localizer {std::string Get(int id)const{return std::to_string(id);}};
+struct StringUtils {
+ static std::string Format(const std::string& label,const std::string& rate) {
+   return label+" "+rate;
+ }
+};
 void admit(const std::shared_ptr<const Setting>& setting,std::vector<Option>& list,
  const DVBRIDGE::OutputCapabilities& caps){
  const DVBRIDGE::OutputPreferences preferences;const Localizer localizer;
  constexpr bool pending=false;
+ constexpr double lldvUnsupportedRate=0.0;
  ADMISSION
 }
 int main(){
@@ -768,6 +774,7 @@ struct Picture {
  StreamHdrType hdrType=StreamHdrType::HDR_TYPE_HDR10PLUS;
  StreamHdrType hdrTypeAlt=StreamHdrType::HDR_TYPE_NONE;
  DVBRIDGE::SourceInfo doviSourceInfo{};DVBRIDGE::SourceBinding doviSourceBinding{5,6,7};
+ bool IsLimitedHLG8() const {return false;}
  int64_t doviSourcePts=1000;unsigned iFlags=0;std::string stereoMode;
  std::shared_ptr<const VideoSourceSideData> sourceSideData;
 };
@@ -927,7 +934,7 @@ int main(){
  assert(result.informationGeneration==17 && !result.metadata && result.output.hdr10PlusDV);
  assert(result.output.guidedSourceFields==2 && result.output.guidedEstimatedFields==5);
  assert(result.output.untranslatedCurve && result.output.untranslatedSaturation);
- assert(result.output.circuit=="CB1-HDR10PDVR.1.0" && result.output.engine=="CB1 1.0");
+ assert(result.output.circuit=="CB1-HDR10PDVR.1.0" && result.output.engine=="CB1 1.1");
  assert(result.output.emittedL1[1]==3079);
  assert(CDVPlaybackInfo::Mode(result.output)=="Dolby Vision : Rendering");
  // Display mapping is a committed-frame fact, independent of later preferences.

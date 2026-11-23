@@ -81,7 +81,7 @@ struct CWinSystemGbmGLESContext:CWinSystemGbm,CRenderSystemGLES {
  struct HDRCapabilities{bool SupportsHLG()const{return false;}bool SupportsHDR10()const{return false;}};
  HDRCapabilities GetDisplayHDRCapabilities() const {return {};}
  std::unique_ptr<Bridge> m_dvBridge=std::make_unique<Bridge>();
- std::shared_ptr<Context> m_dvContext=std::make_shared<Context>();bool m_dvShutdownFence=false;
+ std::shared_ptr<Context> m_dvContext=std::make_shared<Context>();bool m_dvShutdownFence=false,m_dvModeSwitchDeferred=false;
  int m_nWidth=3840,m_nHeight=2160;bool restoreOK=true;
  struct EGL{bool TrySwapBuffers(){return true;}}m_eglContext;
  bool EndDVBridge(){
@@ -158,8 +158,10 @@ int main(){
  for(bool driverRefusal:{true,false}){
   CWinSystemGbmGLESContext refused;CServiceBroker::window=&refused;CGraphicContext rg;
   refused.m_DRM->accepts=!driverRefusal;refused.restoreOK=driverRefusal;
+  gpuReady=false;
   assert(!rg.SetVideoResolutionInternal(0,false));
   assert(rg.m_Resolution==FILM && refused.m_DRM->committed==FILM && refused.m_DRM->mode.id==FILM);
+  assert(!refused.m_dvModeSwitchDeferred);
   refused.m_DRM->accepts=true;refused.restoreOK=true;
   assert(rg.SetVideoResolutionInternal(0,false));
   assert(rg.m_Resolution==0 && refused.m_DRM->committed==0);
@@ -170,6 +172,7 @@ int main(){
  kernel.m_dvState.backend=CDVBridgeState::Backend::KERNEL;unsigned before=finishes;
  assert(!kg.SetVideoResolutionInternal(0,false) && finishes==before);
  assert(kg.m_Resolution==FILM && kernel.m_DRM->committed==FILM);
+ assert(kernel.m_dvModeSwitchDeferred);
 }
 '''
         for key,value in {

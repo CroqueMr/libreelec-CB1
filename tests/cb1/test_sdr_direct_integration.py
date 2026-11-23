@@ -37,6 +37,11 @@ class SDRDirectIntegration(unittest.TestCase):
         demux_copy = demux[start:demux.index('#ifdef HAVE_DVBRIDGE',start)]
         start = decoder.index('  pVideoPicture->doviMetadata.Reset();')
         decoded = decoder[start:decoder.index('  if (pVideoPicture->hdrType == StreamHdrType::HDR_TYPE_HDR10 ||',start)]
+        # The Generic fixture exercises CB1 source ownership without native RPU export.
+        native_export = decoded.find('  pVideoPicture->doviRpu.reset();')
+        if native_export != -1:
+            metadata_owner = decoded.index('  if (pVideoPicture->hdrType == StreamHdrType::HDR_TYPE_DOLBYVISION)\n  {', native_export)
+            decoded = decoded[:native_export] + decoded[metadata_owner:]
         start = producer.index('  layer.lease=buffer.doviSourcePicture;')
         layer_copy = producer[start:producer.index('  layer.sourceSerial=',start)]
         hints = (TREE/'xbmc/cores/VideoPlayer/DVDStreamInfo.cpp').read_text()
@@ -44,6 +49,7 @@ class SDRDirectIntegration(unittest.TestCase):
         for token,code in {'@ADMISSION@':admission,'@DEMUX_COPY@':demux_copy,
             '@HINTS_COPY@':next(line for line in hints.splitlines() if 'dovi = stream->dovi;' in line),
             '@DECODED@':decoded,'@LAYER_COPY@':layer_copy,
+            '@FEL_IDENTITY@':body(decoder,'struct FELBaseIdentity'),
             '@LAYER_BINDING@':next(line for line in producer.splitlines() if 'layer.binding=hdr10 ?' in line)}.items():
             provenance = provenance.replace(token,code)
         program = (Path(__file__).with_name('sdr_direct_owners.cpp')).read_text()

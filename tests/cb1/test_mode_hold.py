@@ -14,10 +14,20 @@ class ModeHoldTests(unittest.TestCase):
         trigger = opening.index('m_renderManager.TriggerUpdateResolution', resolve)
         mode = opening[resolve:trigger]
         synchronous = body(mode, 'if (!pMenus && !dvStartupModeSet)')
-        startup = body(opening, 'if (window && !m_HasVideo && !pMenus && !hint.interlaced')
-        callback = body(startup, 'auto setStartupMode = [&]')
+        if 'm_dvStartupPlaybackPending' in opening:
+            startup = body(opening, 'if (window && m_dvStartupPlaybackPending && !pMenus && !hint.interlaced')
+            callback = body(startup, 'auto setStartupMode = [&]')
+            selector = body(startup, 'auto selectPlayerLedFallback = [&]')
+            self.assertIn('selectPlayerLedFallback(', callback)
+            self.assertIn('PlayerLedStartupHDR10Resolution(', selector)
+            self.assertIn('GetDVOutputCapabilities(nullptr, true).playerLed', selector)
+            self.assertIn('m_dvStartupPlaybackPending = true;', body(source, 'void CVideoPlayer::Prepare('))
+            self.assertIn('m_dvStartupPlaybackPending = false;', opening)
+        else:
+            startup = body(opening, 'if (window && !m_HasVideo && !pMenus && !hint.interlaced')
+            callback = body(startup, 'auto setStartupMode = [&]')
+            self.assertIn('PlayerLedStartupHDR10Resolution(', callback)
         self.assertIn('ChoosePlaybackResolution(', callback)
-        self.assertIn('PlayerLedStartupHDR10Resolution(', callback)
         self.assertIn('SetVideoResolution(resolution, false)', callback)
         self.assertIn('SendMsg(TMSG_CALLBACK', startup)
         self.assertEqual(mode.count('SetVideoResolution('), 1)
@@ -183,13 +193,30 @@ int main(){
     def test_renderer_carries_startup_intent_with_its_native_resolution_request(self):
         method=body((TREE/'xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp').read_text(),
                     'void CRenderManager::UpdateResolution()')
+        renderer=(TREE/'xbmc/cores/VideoPlayer/VideoRenderers/RenderManager.cpp').read_text()
+        requested=body(renderer,'void CRenderManager::RequestResolutionUpdate()')
+        deferred=body((TREE/'xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp').read_text(),
+                      'bool CWinSystemGbmGLESContext::ConsumeDVModeSwitchDeferral()')
         program=r'''
 #define HAVE_DVBRIDGE
 #include <atomic>
 #include <cassert>
+#include <chrono>
+#include <functional>
 #include <optional>
 #include <string>
+using namespace std::chrono_literals;
 using RESOLUTION=int;
+constexpr int LOGWARNING=0;
+struct CLog { static inline int warnings=0; static void Log(int,const char*){++warnings;} };
+namespace XbmcThreads {
+inline std::chrono::milliseconds now{};
+template<class T=void> struct EndTime {
+ std::chrono::milliseconds expires;
+ explicit EndTime(std::chrono::milliseconds wait):expires(now+wait){}
+ bool IsTimePast() const {return now>=expires;}
+};
+}
 constexpr int ADJUST_REFRESHRATE_OFF=0;
 namespace DVBRIDGE {
 inline std::atomic<int> modeChangeResolution{-1};
@@ -199,62 +226,111 @@ struct CSettings {static constexpr const char* SETTING_VIDEOPLAYER_ADJUSTREFRESH
 struct Picture {int iWidth=3840,iHeight=2160;std::string stereoMode;};
 struct Gfx {
  bool fullscreen=true,deferred=false,interleave=false;int resolution=60,intent=-9,calls=0;
+ std::function<void()> onSet;
  bool IsFullScreenVideo(){return fullscreen;}bool IsFullScreenRoot(){return true;}
  void SetVideoResolution(int res,bool){
   if(interleave)DVBRIDGE::modeChangeResolution.store(90);
   intent=DVBRIDGE::guiModeChangeResolution.value_or(DVBRIDGE::modeChangeResolution.load());
   if(!deferred)resolution=res;++calls;
+  if(onSet)onSet();
  }
  int GetVideoResolution(){return resolution;}
 };
 namespace KODI::WINDOWING::GBM {struct CWinSystemGbmGLESContext {
  Gfx gfx;Gfx& GetGfxContext(){return gfx;}
- int completeCalls=0,deferralResets=0;
- bool DVModeSwitchDeferred(){return gfx.deferred;}
- void ResetDVModeSwitchDeferral(){++deferralResets;}
- bool CompleteDVModeSwitch(const Picture&){++completeCalls;return true;}
+ bool m_dvModeSwitchDeferred=false,m_dvRollbackFailed=false;
+ int completions=0;
+ bool ConsumeDVModeSwitchDeferral() DEFERRED_BODY
+ bool CompleteDVModeSwitch(const Picture&){++completions;return true;}
 };}
 struct Settings {int adjust=2;Settings* GetSettings(){return this;}int GetInt(const char*){return adjust;}};
 struct CServiceBroker {
  static auto* GetWinSystem(){static KODI::WINDOWING::GBM::CWinSystemGbmGLESContext window;return &window;}
  static Settings* GetSettingsComponent(){static Settings settings;return &settings;}
 };
-struct CResolutionUtils {static int ChooseBestResolution(float,int,int,bool){return 24;}};
+struct CResolutionUtils {static int ChooseBestResolution(float fps,int,int,bool){return fps>=59 ? 60 : 24;}};
 struct Renderer {int updates=0;void Update(){++updates;}};
 struct Port {int changes=0;void VideoParamsChange(){++changes;}};
 struct Manager {
- bool m_bTriggerUpdateResolution=true,m_nativeDVRate=true;
- std::atomic_bool m_bResetDVModeSwitchDeferral{false};
- float m_fps=24;Picture m_picture;
+ enum class ResolutionUpdate { IDLE, REQUESTED, RUNNING, DEFERRED };
+ std::atomic<ResolutionUpdate> m_resolutionUpdate{ResolutionUpdate::REQUESTED};
+ bool m_nativeDVRate=true;float m_fps=24;Picture m_picture;
+ bool pending() const {return m_resolutionUpdate!=ResolutionUpdate::IDLE;}
+ void RequestResolutionUpdate() REQUEST_BODY
+ std::optional<XbmcThreads::EndTime<>> m_dvModeSwitchDeadline;
  Renderer renderer,*m_pRenderer=&renderer;Port port,*m_playerPort=&port;
  int ChoosePlaybackResolution(double fps,int width,int height,bool stereo,bool,bool,const Picture*)const{return CResolutionUtils::ChooseBestResolution(fps,width,height,stereo);}
  void UpdateLatencyTweak(){}
  void update() METHOD
 };
 int main(){
- auto& win=*CServiceBroker::GetWinSystem();
- auto& gfx=win.gfx;
+ auto& window=*CServiceBroker::GetWinSystem();
+ auto& gfx=window.gfx;
  // The initial request can be a no-op; the render manager owns the later switch.
  Manager native;native.update();assert(gfx.intent==24 && gfx.resolution==24);
- assert(DVBRIDGE::modeChangeResolution.load()==-1 && !native.m_bTriggerUpdateResolution);
+ assert(DVBRIDGE::modeChangeResolution.load()==-1 && !native.pending());
  DVBRIDGE::modeChangeResolution.store(90);Manager pending;pending.update();
  assert(gfx.intent==24 && DVBRIDGE::modeChangeResolution.load()==90);
  Manager ordinary;ordinary.m_nativeDVRate=false;ordinary.update();
  assert(gfx.intent==-1 && DVBRIDGE::modeChangeResolution.load()==90);
- gfx.deferred=true;gfx.resolution=60;Manager deferred;deferred.update();
- assert(gfx.intent==24 && DVBRIDGE::modeChangeResolution.load()==90 && deferred.m_bTriggerUpdateResolution);
- // Non-DV incoming transitions (e.g., DV -> 60p HDR10/SDR) also preserve retry until retirement completes.
  gfx.deferred=true;gfx.resolution=60;
- int beforeComplete=win.completeCalls,beforeReset=win.deferralResets;
- Manager ordinaryDeferred;ordinaryDeferred.m_nativeDVRate=false;
- ordinaryDeferred.m_bResetDVModeSwitchDeferral=true;
- ordinaryDeferred.update();
- assert(gfx.intent==-1 && ordinaryDeferred.m_bTriggerUpdateResolution);
- assert(!ordinaryDeferred.m_bResetDVModeSwitchDeferral.load());
- assert(win.deferralResets==beforeReset+1 && win.completeCalls==beforeComplete);
- gfx.deferred=false;ordinaryDeferred.update();
- assert(gfx.resolution==24 && !ordinaryDeferred.m_bTriggerUpdateResolution);
- assert(win.deferralResets==beforeReset+2 && win.completeCalls==beforeComplete);
+ gfx.onSet=[&] {window.m_dvModeSwitchDeferred=true;};
+ Manager deferred;deferred.update();
+ assert(gfx.intent==24 && DVBRIDGE::modeChangeResolution.load()==90 && deferred.pending());
+ gfx.resolution=24;
+ Manager successor;successor.m_nativeDVRate=false;successor.m_fps=60;
+ const int completions=window.completions;
+ successor.update();
+ assert(successor.pending() && successor.port.changes==0 && gfx.resolution==24);
+ // The next tick retries after the old output has retired.
+ gfx.deferred=false;gfx.onSet={};
+ successor.update();
+ assert(!successor.pending() && successor.port.changes==1 && gfx.resolution==60);
+ assert(window.completions==completions && gfx.intent==-1);
+
+ gfx.deferred=true;gfx.resolution=24;
+ gfx.onSet=[&] {window.m_dvModeSwitchDeferred=true;};
+ Manager page;page.m_nativeDVRate=false;page.m_fps=60;
+ page.update();
+ XbmcThreads::now=1999ms;page.update();
+ assert(page.pending() && page.port.changes==0);
+ XbmcThreads::now=2000ms;page.update();
+ assert(!page.pending() && page.port.changes==1 && gfx.resolution==24);
+ assert(CLog::warnings==1);
+
+ Manager replacement;replacement.m_nativeDVRate=false;replacement.m_fps=60;
+ replacement.update();
+ XbmcThreads::now=3999ms;
+ replacement.RequestResolutionUpdate();
+ replacement.update();
+ XbmcThreads::now=4000ms;replacement.update();
+ assert(replacement.pending());
+ window.m_dvRollbackFailed=true;
+ replacement.update();
+ assert(!replacement.pending() && CLog::warnings==1);
+ // An older deferral must not turn an unrelated refusal into a retry.
+ window.m_dvRollbackFailed=false;window.m_dvModeSwitchDeferred=true;gfx.onSet={};
+ Manager unrelated;unrelated.m_nativeDVRate=false;unrelated.m_fps=60;
+ unrelated.update();
+ assert(!unrelated.pending() && gfx.resolution==24);
+ // Deliver a new mode request during the previous SetVideoResolution.
+ gfx.deferred=false;
+ Manager interleaved;interleaved.m_nativeDVRate=false;
+ gfx.onSet=[&] {interleaved.m_fps=60;interleaved.RequestResolutionUpdate();};
+ interleaved.update();
+ assert(interleaved.pending() && interleaved.port.changes==0);
+ gfx.onSet={};interleaved.update();
+ assert(!interleaved.pending() && gfx.resolution==60 && interleaved.port.changes==1);
+ // A stop during a deferred attempt wins over its retry.
+ gfx.deferred=true;
+ Manager cancelled;cancelled.m_nativeDVRate=false;
+ gfx.onSet=[&] {
+   cancelled.m_resolutionUpdate=Manager::ResolutionUpdate::IDLE;
+   window.m_dvModeSwitchDeferred=true;
+ };
+ cancelled.update();
+ assert(!cancelled.pending() && cancelled.port.changes==0);
+ gfx.deferred=false;gfx.onSet={};
  DVBRIDGE::modeChangeResolution.store(-1);gfx.interleave=true;Manager overlap;overlap.update();
  assert(gfx.intent==24 && DVBRIDGE::modeChangeResolution.load()==90);
  assert(!DVBRIDGE::guiModeChangeResolution.has_value());gfx.interleave=false;
@@ -262,80 +338,11 @@ int main(){
  gfx.fullscreen=true;CServiceBroker::GetSettingsComponent()->adjust=0;
  Manager disabled;disabled.update();assert(gfx.calls==calls);
 }
-'''.replace('METHOD',method)
+'''.replace('METHOD',method).replace('DEFERRED_BODY',deferred).replace('REQUEST_BODY',requested)
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);(root/'test.cpp').write_text(program)
             build=subprocess.run(['c++','-std=c++20',str(root/'test.cpp'),'-o',str(root/'test')],
                                  capture_output=True,text=True)
-            self.assertEqual(build.returncode,0,build.stderr)
-            result=subprocess.run([str(root/'test')],capture_output=True,text=True)
-            self.assertEqual(result.returncode,0,result.stderr)
-
-    def test_dv_mode_switch_deferred_timeout_and_reset(self):
-        source=(TREE/'xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp').read_text()
-        method=body(source,'bool CWinSystemGbmGLESContext::DVModeSwitchDeferred()')
-        program=r'''
-#include <cassert>
-#include <cstdint>
-#include <memory>
-#include <optional>
-constexpr int LOGINFO=0,LOGWARNING=1;
-constexpr int DVBRIDGE_DV_IDLE=0,DVBRIDGE_DV_BUSY=1,DVBRIDGE_DV_FAILED=2;
-struct CLog {
- static inline int info=0,warn=0;
- template<class... T> static void Log(int level,const char*,T...) {
-  if(level==LOGINFO)++info; else if(level==LOGWARNING)++warn;
- }
-};
-namespace DVBRIDGE {
- inline uint64_t nowMs=0;
- inline uint64_t DiagnosticNowMs(){return nowMs;}
-}
-struct Context { int status=DVBRIDGE_DV_BUSY; int Poll() const {return status;} };
-struct Window {
- bool m_dvRollbackFailed=false,m_dvEndPending=false,m_dvShutdownFence=false;
- std::optional<uint64_t> m_dvModeSwitchDeferStartMs;
- std::shared_ptr<Context> m_dvContext=std::make_shared<Context>();
- void ResetDVModeSwitchDeferral(){m_dvModeSwitchDeferStartMs.reset();}
- bool DVModeSwitchDeferred() METHOD
-};
-int main(){
- Window w;
- DVBRIDGE::nowMs=100;
- assert(!w.DVModeSwitchDeferred());
- // Fence busy: arms timer once, retries up to 2000 ms, times out at >= 2000 ms.
- w.m_dvShutdownFence=true;
- assert(w.DVModeSwitchDeferred() && CLog::info==1 && CLog::warn==0);
- DVBRIDGE::nowMs=1000;
- assert(w.DVModeSwitchDeferred() && CLog::info==1 && CLog::warn==0);
- DVBRIDGE::nowMs=2099;
- assert(w.DVModeSwitchDeferred() && CLog::info==1 && CLog::warn==0);
- DVBRIDGE::nowMs=2100;
- assert(!w.DVModeSwitchDeferred() && CLog::info==1 && CLog::warn==1);
- assert(!w.m_dvModeSwitchDeferStartMs.has_value());
- // Pending EndDVBridge KMS pageflip also defers cleanly with fresh budget after timeout/reset.
- w.m_dvShutdownFence=false;w.m_dvEndPending=true;
- DVBRIDGE::nowMs=5000;
- assert(w.DVModeSwitchDeferred() && CLog::info==2 && CLog::warn==1);
- DVBRIDGE::nowMs=6500;
- assert(w.DVModeSwitchDeferred());
- w.ResetDVModeSwitchDeferral();
- assert(!w.m_dvModeSwitchDeferStartMs.has_value());
- // Immediate abort on DVBRIDGE_DV_FAILED or m_dvRollbackFailed.
- w.m_dvEndPending=false;w.m_dvShutdownFence=true;
- DVBRIDGE::nowMs=7000;
- assert(w.DVModeSwitchDeferred() && CLog::info==3);
- w.m_dvContext->status=DVBRIDGE_DV_FAILED;
- assert(!w.DVModeSwitchDeferred() && !w.m_dvModeSwitchDeferStartMs.has_value());
- w.m_dvContext->status=DVBRIDGE_DV_BUSY;w.m_dvRollbackFailed=true;
- assert(!w.DVModeSwitchDeferred() && !w.m_dvModeSwitchDeferStartMs.has_value());
-}
-'''.replace('METHOD',method)
-        with tempfile.TemporaryDirectory() as temporary:
-            root=Path(temporary);(root/'test.cpp').write_text(program)
-            build=subprocess.run(['c++','-std=c++20','-fsanitize=address,undefined',
-                '-fno-omit-frame-pointer',str(root/'test.cpp'),'-o',str(root/'test')],
-                capture_output=True,text=True)
             self.assertEqual(build.returncode,0,build.stderr)
             result=subprocess.run([str(root/'test')],capture_output=True,text=True)
             self.assertEqual(result.returncode,0,result.stderr)
@@ -375,6 +382,8 @@ struct Window {
  void OnLostDevice(){if(!m_dispReset){m_dispReset=true;++lost;}}
  void PresentFrame(bool,bool){}
  void RefreshHDR10LinkDepth(){}
+ bool PendingDVStartupEdid() const {return false;}
+ bool GetDisplayInfo() const {return false;}
  bool RefreshDisplayInfoForVideo(){return false;}
  void RefreshDVOutputCapabilities(){}
  bool HasPendingDVOutputSurface(){return pending;}

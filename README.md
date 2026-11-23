@@ -19,7 +19,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/cb1/images/cb1-version-white-dot.svg">
-  <img src="docs/cb1/images/cb1-version-light.svg" alt="R1.0.0 · CB1 1.0" width="100%">
+  <img src="docs/cb1/images/cb1-version-light.svg" alt="R1.1.0-RC1 · CB1 1.1" width="100%">
 </picture>
 
 <p align="center">
@@ -167,6 +167,7 @@ For new features, [send your suggestion privately](https://docs.google.com/forms
 - Passthrough Dialnorm controls adapted from [CoreELEC p3i work by pannal](https://github.com/CroqueMr/libreelec-x86-DV/pull/155).
 - Development assistance from OpenAI GPT-6 Astra, GPT-6.1 Sol.
 - ashlar contributed the idea and part of the code for shader-based CNN upscaling.
+- [Snuffpig](https://github.com/Snuffpig) diagnosed and proposed the fix for deferred Dolby Vision mode switches ([#297](https://github.com/CroqueMr/libreelec-CB1/pull/297)).
 - **Thank you to everyone who tests the builds, reports issues, shares logs and samples, and retests fixes. Your feedback helps improve each release.**
 
 LibreELEC × CB1 is an unofficial community build made possible by the LibreELEC project. It is independent of Dolby, Intel, AMD, and NVIDIA.

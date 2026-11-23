@@ -219,6 +219,32 @@ class PassthroughDialnorm(unittest.TestCase):
         corrupt[-1] ^= 1
         self.assertTrue(self.parse(bytes(corrupt) * 3, 'd').startswith(corrupt))
 
+    def test_eac3_rewrite_preserves_possible_protected_metadata(self):
+        for block_code in range(4):
+            plain = bytearray(eac3_header())
+            putbits(plain, 34, 2, block_code)
+            # The short-frame BSI has one extra convsync bit before addbsie.
+            skip_bit = 64 if block_code == 3 else 63
+            for field in ('plain', 'skip', 'aux'):
+                with self.subTest(block_code=block_code, field=field):
+                    frame = bytearray(plain)
+                    if field == 'skip':
+                        putbits(frame, skip_bit, 1, 1)
+                    elif field == 'aux':
+                        tail = len(frame) * 8 - 32
+                        putbits(frame, tail - 24, 24, 0x583800)
+                        putbits(frame, tail, 14, 24)
+                        putbits(frame, tail + 14, 1, 1)
+                    sealed = seal_eac3(frame)
+                    original = self.parse(sealed * 8)
+                    self.assertTrue(original)
+                    actual = self.parse(sealed * 8, 'd')
+                    self.assertEqual(len(actual), len(original))
+                    if field == 'plain':
+                        self.assertEqual(getbits(actual, 45, 5), 31)
+                    else:
+                        self.assertEqual(actual, original)
+
     def test_truehd_atmos_only_with_repaired_major_crc(self):
         standard = truehd_major(False)
         atmos = truehd_major(True)

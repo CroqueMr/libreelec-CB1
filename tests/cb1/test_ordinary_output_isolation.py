@@ -24,7 +24,7 @@ class OrdinaryOutputIsolationTests(unittest.TestCase):
 #include <mutex>
 #include "windowing/gbm/ModeChangeHold.h"
 using KODI::WINDOWING::GBM::CHeldModeAnnouncement;
-constexpr int DVBRIDGE_DV_IDLE=0;
+constexpr int DVBRIDGE_DV_IDLE=0,DVBRIDGE_DV_BUSY=1;
 constexpr int LOGWARNING=1,AVCOL_TRC_GAMMA22=4;
 struct Services {Services& GetWindowManager(){return *this;}void MarkDirty(){}};
 struct CServiceBroker {static Services* GetGUI(){static Services value;return &value;}};
@@ -113,8 +113,8 @@ struct CWinSystemGbmGLESContext : CWinSystemGbmEGLContext {
  unsigned HDR10Framebuffer()const{return 0;}
  bool m_dvPriorHDRConversion=false,m_dvPriorGuiCompositing=false,m_guiCompositing=false;
  float m_guiSDRGamma=2.4f,m_dvPriorGuiSDRGamma=2.4f;
- bool m_cb1FramePending=false,m_dvFrame=false,m_dvNativeGui=false;
- bool m_failedHDR10SetupRestore=false,m_dvShutdownFence=false;
+ bool m_cb1FramePending=false,m_cb1SourcePreparing=false,m_dvFrame=false,m_dvNativeGui=false;
+ bool m_failedHDR10SetupRestore=false,m_dvShutdownFence=false,m_dvModeSwitchDeferred=false;
  bool completeOK=true,pollOK=true,restoreOK=true,modeOK=true,recoveryOK=true;
  Capabilities capabilities;
  bool m_dvSuperseded=false,m_dvRollbackFailed=false,m_dvFatalConsumed=false,m_dvNativeFailed=false,m_dvFallbackActive=false;
