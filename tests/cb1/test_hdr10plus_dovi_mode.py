@@ -391,7 +391,7 @@ int main(){
 #include <cassert>
 #include <cstring>
 int main(){
- assert(!std::strcmp(cb1_engine_version(),"CB1 1.0"));
+ assert(!std::strcmp(cb1_engine_version(),"CB1 1.1"));
  assert(CB1_DV_HDR10PLUS==12 && CB1_HDR10_DV_REFERENCE==7 && CB1_HDR10_DV_ADAPTIVE==8);
  const char* guided=cb1_circuit_version(static_cast<cb1_circuit>(13));
  assert(guided && !std::strcmp(guided,"CB1-HDR10PDVR.1.0"));
@@ -934,7 +934,7 @@ int main(){
  assert(result.informationGeneration==17 && !result.metadata && result.output.hdr10PlusDV);
  assert(result.output.guidedSourceFields==2 && result.output.guidedEstimatedFields==5);
  assert(result.output.untranslatedCurve && result.output.untranslatedSaturation);
- assert(result.output.circuit=="CB1-HDR10PDVR.1.0" && result.output.engine=="CB1 1.0");
+ assert(result.output.circuit=="CB1-HDR10PDVR.1.0" && result.output.engine=="CB1 1.1");
  assert(result.output.emittedL1[1]==3079);
  assert(CDVPlaybackInfo::Mode(result.output)=="Dolby Vision : Rendering");
  // Display mapping is a committed-frame fact, independent of later preferences.

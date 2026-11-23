@@ -1,8 +1,8 @@
 {
   "Release": {
-    "version": "DV-R1.1-Upstream-Validation",
-    "tag": "R1.1-Upstream-Validation",
-    "image": "LibreELEC-Generic.x86_64-13.0-DV-R1.1-Upstream-Validation"
+    "version": "DV-R1.1.0-RC1",
+    "tag": "R1.1.0-RC1",
+    "image": "LibreELEC-Generic.x86_64-13.0-DV-R1.1.0-RC1"
   },
   "LibreELEC": {
     "version": "13 Beta 1 (12.95.1)",
@@ -42,8 +42,8 @@
     "modified": false
   },
   "CB1": {
-    "version": "1.0",
-    "revision": "56accaaabc7d6bbcc84ec9de8b135402a9674bd3",
+    "version": "1.1",
+    "revision": "1d12fdfc51348fbef08516c2c29b2d08d5c8b1c3",
     "base_revision": "b852bd0b5e4c1422e0aa5e005520bca765dcb00a",
     "modified": true,
     "historical_revision": "R1.0.0-RC4-Preview:CB1/"

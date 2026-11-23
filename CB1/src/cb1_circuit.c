@@ -4,7 +4,7 @@
 
 const char *cb1_engine_version(void)
 {
-    return "CB1 1.0";
+    return "CB1 1.1";
 }
 
 const char *cb1_circuit_version(enum cb1_circuit circuit)
