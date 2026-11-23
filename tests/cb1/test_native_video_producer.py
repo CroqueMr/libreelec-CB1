@@ -52,7 +52,7 @@ int main() {
  assert(info.transmittedBlocks[1] && info.transmittedBlocks[5]);
  assert(info.output.aiL1L3[1]==2000 && !info.output.engine.empty());
  assert(info.output.aiModel=="CB1-L1L3 0.1" && info.output.aiBaseline[1]==1900);
- assert(info.output.circuit=="CB1-HDR10DVR.1.0" && info.output.engine=="CB1 1.0");
+ assert(info.output.circuit=="CB1-HDR10DVR.1.0" && info.output.engine=="CB1 1.1");
  s.output.hdr10PlusDV=true;s.output.guidedSourceFields=2;s.output.guidedEstimatedFields=5;
  info=DVBRIDGE::NativeProcessingInfo(s);
  assert(!info.metadata && info.output.circuit=="CB1-HDR10PDVR.1.0");

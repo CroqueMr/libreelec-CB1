@@ -244,13 +244,14 @@ int main(){VideoPicture configured,buffered;assert(configured.IsSameParams(buffe
                 self.assertIn("SetBufferColorimetry(buf, toneMap)", check)
                 check = method(renderer, "CLinuxRendererGL::SetBufferColorimetry")
             self.assertIn("tmp.colorBits = buf.m_srcBits;", check)
-            self.assertIn("tmp.color_transfer = buf.m_srcColTransfer;", check)
+            self.assertIn("tmp.color_transfer = toneMap ? AVCOL_TRC_BT709 : buf.m_srcColTransfer;", check)
             shader_request = "!m_cmsOn" if backend == "GL" else "true"
             end = check.index(f"SetColorimetry(&tmp, {shader_request});")
             stage = check[check.index("VideoPicture tmp{};"):check.index(';', end) + 1]
             compile_run(self, r'''
 #include <cassert>
 constexpr int AVCOL_SPC_UNSPECIFIED=0, AVCOL_PRI_BT2020=9;
+constexpr int AVCOL_SPC_BT709=1, AVCOL_TRC_BT709=1, AVCOL_PRI_BT709=1;
 struct VideoPicture {int color_space{},color_transfer{},color_primaries{},iWidth{},iHeight{},colorBits{};};
 struct Window {
  VideoPicture picture;

@@ -49,6 +49,7 @@ class HDR10FinalGUI(unittest.TestCase):
             cpp, binary = directory / 'check.cpp', directory / 'check'
             cpp.write_text(source)
             build = subprocess.run(['c++', '-std=c++20', '-I', str(ROOT / 'CB1/src'),
+                                    '-I', str(Path(tree) / 'xbmc'),
                                     str(cpp), '-lEGL', '-lGLESv2', '-o', str(binary)],
                                    capture_output=True, text=True)
             self.assertEqual(build.returncode, 0, build.stderr)

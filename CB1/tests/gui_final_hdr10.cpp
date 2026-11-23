@@ -12,8 +12,11 @@
 #include <sstream>
 #include <string>
 #include "cb1_dv_enhanced_shader.h"
+#include "windowing/gbm/SDROutputGamut.h"
 #define HAVE_DVBRIDGE 1
 
+using KODI::WINDOWING::GBM::SDROutputRange;
+constexpr int AVCOL_TRC_BT2020_10=14;
 constexpr int width=8,height=2;
 GLuint guiTexture,degammaTexture,pqTexture,finalFramebuffer,pqFramebuffer;
 GLuint nativeProgram;
@@ -120,6 +123,7 @@ struct CWinSystemGbmGLESContext {
   GUIFramebuffer m_guiFbo,m_dvPQSubtitleFbo;
   bool m_guiWillRender=true,m_guiFboClean=false,m_dvNativeGui=false;
   bool m_hdrConversion=true,m_sdrConversion=false,m_dvFrame=true,limited=false;
+  int m_guiColorTransfer=0;
   unsigned m_dvPQSubtitleDraws=0;bool m_dvPQGuiComposed=false;
   int m_guiFboWidth=width,m_guiFboHeight=height,m_nWidth=width,m_nHeight=height;
   State m_dvState;std::unique_ptr<DRM> m_DRM=std::make_unique<DRM>();
@@ -132,6 +136,7 @@ struct CWinSystemGbmGLESContext {
   bool HasDVBridgeScreenshot()const{return m_dvPQSubtitleDraws!=0;}
   unsigned GetGUIElementCount()const{return 2;}
   bool UseLimitedColor()const{return limited;}
+  int GetOutputBitDepth()const{return 10;}
   void CompositeGui() GUI_COMPOSITE_BODY
 };
 

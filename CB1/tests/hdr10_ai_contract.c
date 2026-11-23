@@ -19,7 +19,7 @@ int main(void)
         "CB1-DVHDR10P.0.1", "CB1-HDR10PDVR.0.2",
         "CB1-DVSDR.0.1", "CB1-HDR10SDR.0.1", "CB1-HLGDVR.0.1", "CB1-DVLLDV.0.1",
     };
-    assert(strcmp(cb1_engine_version(), "CB1 0.5") == 0);
+    assert(strcmp(cb1_engine_version(), "CB1 1.1") == 0);
     assert(CB1_CIRCUIT_COUNT == (int)(sizeof(expected)/sizeof(*expected)));
     for (int i = 0; i < CB1_CIRCUIT_COUNT; ++i)
         if (expected[i]) assert(strcmp(cb1_circuit_version((enum cb1_circuit)i), expected[i]) == 0);

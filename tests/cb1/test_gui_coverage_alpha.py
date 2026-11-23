@@ -43,7 +43,7 @@ class GUICoverageAlpha(unittest.TestCase):
             cpp, binary = root / 'check.cpp', root / 'check'
             cpp.write_text(source)
             for disabled in [False, True]:
-                command = ['c++', '-std=c++20', '-I' + str(ROOT / 'CB1/src')]
+                command = ['c++', '-std=c++20', '-I' + str(ROOT / 'CB1/src'), '-I' + str(TREE / 'xbmc')]
                 if disabled:
                     command.append('-DCB1_TEST_DISABLE_DV')
                 built = subprocess.run(command + [str(cpp), '-lEGL', '-lGLESv2', '-o', str(binary)],
