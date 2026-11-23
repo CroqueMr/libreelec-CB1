@@ -362,7 +362,7 @@
     "tests/cb1/test_pascal_hdr10_scanout.py": "d065254563c1a94c03d08cd24dd9c47a6269f868c741cc1dc67788c9e0fd6ed4",
     "tests/cb1/test_output_window_teardown.py": "e5927c0750c9544b44c6be08d307ac9dc2d0f5cfb691c6048be31f6e2126e987",
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9008-optional-vsif-reference.patch": "5b1f0fea996844004f837559ce7acd714a23bbf5017a1cf12f1950c23bfceeb7",
-    "config/cb1-patch-index.json": "0882803ef63debf5f16baa87a9695600a6681ae460fe6e9a9e6054ad2c6794c9",
+    "config/cb1-patch-index.json": "b21761d2e8d99430e5f7c40cab52802452e2ca232620493e07be8175fcdc75a9",
     "projects/Generic/patches/linux/linux-9948-intel-hdmi-ready-recovery.patch": "c10f4aa258ca6d2be95a175006389362ccfad3566cff1e892f0b162faf486780",
     "projects/Generic/patches/linux/linux-9970-rx550-native-dv.patch": "1cbb750f5bf019430e7762785824169b0fafcf65f458267d2cec2412c8a0b204",
     "tests/cb1/test_bluray_overlay_order.py": "538775e911baa402d135669964fb31e021a121bf66ee06d95e1068777a9bf27c",
@@ -506,7 +506,9 @@
     "projects/Generic/patches/linux/linux-9981-amd-hdmi-vsif-ownership.patch": "d3f3b10a82d6e9b8138261c77395e61c1b1e4a103d903cceb58acd7224aaf963",
     "projects/Generic/patches/linux/linux-9982-amd-frl-opt-in.patch": "fb459b673e0303a8a404242198646f3a40c74c2aa7511c776a4288b669012c3a",
     "projects/Generic/linux/7.4-rc4/linux.x86_64.conf": "13a9c3fe27cd070eca5b890b41d4b03406c6bce11bdcf84106e95b56bb1b9cac",
-    "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e"
+    "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e",
+    "projects/Generic/patches/linux/linux-9983-intel-native-hdmi-frl-lab.patch": "1feb5c6147aa18ff1cc828261c4a63c03780a90176fe08cf4619a368b8932278",
+    "tests/cb1/test_intel_frl_policy.py": "d9d84f4f4b195c95e38eead678151dabff2c7757e328adaf6c069779ca83d7a5"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {
