@@ -2437,5 +2437,19 @@
     "files": {
       "drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c": "drm/amd/display: keep HDMI FRL opt-in for CB1"
     }
+  },
+  "packages/graphics/nvidia-open-kernel-modules/patches/615.78.08/0001-drm-fbdev-helper-header.patch": {
+    "owner": "Keep the R615 package buildable with the Linux 7.4 fbdev header layout.",
+    "files": {
+      "kernel-open/nvidia-drm/nvidia-drm-drv.c": "Select the fbdev helper header provided by the build kernel."
+    }
+  },
+  "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9010-linux-7.4-drm-state.patch": {
+    "owner": "Build R580 against the Linux 7.4 DRM state allocation hooks.",
+    "files": {
+      "kernel-open/nvidia-drm/nvidia-drm-crtc.c": "Use the Linux 7.4 DRM API while preserving the private state owner and compatible old-kernel path.",
+      "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Use the Linux 7.4 DRM API while preserving the private state owner and compatible old-kernel path.",
+      "kernel-open/nvidia-drm/nvidia-drm-drv.c": "Use the Linux 7.4 DRM API while preserving the private state owner and compatible old-kernel path."
+    }
   }
 }

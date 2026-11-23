@@ -21,7 +21,7 @@ class PascalPackages(unittest.TestCase):
             'src/common/inc/nvkms-dv-vsif.h': 'common/inc/nvkms-dv-vsif.h',
             'src/common/inc/nvkms-cb1-hdr10plus.h': 'common/inc/nvkms-cb1-hdr10plus.h',
         }
-        for name in ('connector.c', 'connector.h', 'drv.c', 'priv.h', 'modeset.c', 'encoder.c', 'encoder.h'):
+        for name in ('connector.c', 'connector.h', 'crtc.c', 'drv.c', 'priv.h', 'modeset.c', 'encoder.c', 'encoder.h'):
             owner = 'nvidia-drm/nvidia-drm-' + name
             artifacts['kernel-open/' + owner] = owner
         for enabled, recipe in [('yes', 'nvidia-pascal'), ('no', 'nvidia')]:
@@ -39,7 +39,7 @@ class PascalPackages(unittest.TestCase):
                 rm.write_bytes(b'unchanged-matched-proprietary-RM')
                 pristine = base/'pristine/kernel-open'
                 checked = ['nvidia-drm/nvidia-drm-'+name for name in
-                           ('connector.c', 'connector.h', 'drv.c', 'priv.h', 'modeset.c', 'encoder.c', 'encoder.h')]
+                           ('connector.c', 'connector.h', 'crtc.c', 'drv.c', 'priv.h', 'modeset.c', 'encoder.c', 'encoder.h')]
                 checked.append('common/inc/nvkms-kapi.h')
                 for name in checked:
                     path = pristine/name; path.parent.mkdir(parents=True, exist_ok=True)
