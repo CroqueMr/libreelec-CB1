@@ -1,26 +1,17 @@
-From 858b706fe892beaa9d4eb6ea8b9d513c409f5fe0 Mon Sep 17 00:00:00 2001
-From: CB1 <cb1@localhost>
-Date: Mon, 23 Nov 2026 01:27:33 +0100
 Subject: [PATCH] drm/amd/display: refresh static HDR on a reused HDMI backend
 
-Entering or leaving HDR passes through the full commit path even when
-the HDMI resources are unchanged. Refresh the packet before skipping
-the reused backend so the receiver sees HDR changes without retraining.
----
- .../gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c | 22 ++++++++++++++++---
- .../amd/display/dc/hwss/dce110/dce110_hwseq.c | 22 ++++++++++++++++++-
- 2 files changed, 40 insertions(+), 4 deletions(-)
+Preserve the static HDR and wide SDR transition on the HDMI TMDS and FRL paths.
 
-diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-index 1f9f539..5752b05 100644
---- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-+++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-@@ -8929,10 +8929,26 @@ static int fill_hdr_info_packet(const struct drm_connector_state *state,
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
+@@ -2836,10 +2836,26 @@
  
  	memset(out, 0, sizeof(*out));
  
 -	if (!state->hdr_output_metadata)
 -		return 0;
+-
+-	ret = drm_hdmi_infoframe_set_hdr_metadata(&frame, state);
 +	if (!state->hdr_output_metadata) {
 +		const struct drm_connector *connector = state->connector;
 +		const struct dm_connector_state *dm_state = to_dm_connector_state(state);
@@ -36,8 +27,7 @@ index 1f9f539..5752b05 100644
 +		    dm_state->dv_standard || dm_state->lldv_format ||
 +		    state->hdr10plus_metadata)
 +			return 0;
- 
--	ret = drm_hdmi_infoframe_set_hdr_metadata(&frame, state);
++
 +		ret = hdmi_drm_infoframe_init(&frame);
 +	} else {
 +		ret = drm_hdmi_infoframe_set_hdr_metadata(&frame, state);
@@ -45,11 +35,9 @@ index 1f9f539..5752b05 100644
  	if (ret)
  		return ret;
  
-diff --git a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c b/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
-index 37e9942..c02a84a 100644
 --- a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
 +++ b/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
-@@ -2654,6 +2654,17 @@ static void dce110_setup_audio_dto(
+@@ -2660,6 +2660,17 @@
  	}
  }
  
@@ -61,13 +49,13 @@ index 37e9942..c02a84a 100644
 +
 +	return old_valid != new_valid ||
 +	       (new_valid && memcmp(&old->hdr_static_metadata, &new->hdr_static_metadata,
-+	                            sizeof(new->hdr_static_metadata)));
++				    sizeof(new->hdr_static_metadata)));
 +}
 +
  enum dc_status dce110_apply_ctx_to_hw(
  		struct dc *dc,
  		struct dc_state *context)
-@@ -2723,8 +2734,17 @@ enum dc_status dce110_apply_ctx_to_hw(
+@@ -2729,8 +2740,17 @@
  			continue;
  		}
  
@@ -76,7 +64,7 @@ index 37e9942..c02a84a 100644
 +			/* A reused HDMI backend still needs the new static HDR packet. */
 +			if (resource_is_pipe_type(pipe_ctx, OTG_MASTER) &&
 +			    !pipe_ctx->stream->dpms_off &&
-+			    dc_is_hdmi_tmds_signal(pipe_ctx->stream->signal) &&
++			    dc_is_hdmi_signal(pipe_ctx->stream->signal) &&
 +			    dce110_static_hdr_packet_changed(pipe_ctx_old->stream, pipe_ctx->stream)) {
 +				resource_build_info_frame(pipe_ctx);
 +				dc->hwss.update_info_frame(pipe_ctx);
@@ -86,6 +74,3 @@ index 37e9942..c02a84a 100644
  
  		if (pipe_ctx->top_pipe || pipe_ctx->prev_odm_pipe)
  			continue;
--- 
-2.43.0
-

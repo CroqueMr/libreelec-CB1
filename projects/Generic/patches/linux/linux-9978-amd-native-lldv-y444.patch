@@ -214,8 +214,8 @@ diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h b/drivers/gpu/drm
  	uint32_t connector_id;
  	int bl_idx;
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
---- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-+++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
 @@ -8231,8 +8231,11 @@
  		return 0;
  	}
@@ -281,8 +281,8 @@ diff --git a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c b/drivers
  	tf = &plane_state->in_transfer_func;
  
  	dce110_prescale_params(&prescale_params, plane_state);
--	if (pipe_ctx->stream->dv_standard && !pipe_ctx->stream->dv_native_422)
-+	if (pipe_ctx->stream->dv_standard && !pipe_ctx->stream->dv_native_lldv)
+-	if (params->stream->dv_standard && !params->stream->dv_native_422)
++	if (params->stream->dv_standard && !params->stream->dv_native_lldv)
  		prescale_params.mode = IPP_PRESCALE_MODE_BYPASS_LUT;
  	ipp->funcs->ipp_program_prescale(ipp, &prescale_params);
  
@@ -346,3 +346,84 @@ diff --git a/drivers/gpu/drm/amd/display/dc/hwss/dcn401/dcn401_hwseq.c b/drivers
  			pipe_ctx->stream->timing.display_color_depth, pipe_ctx->stream->signal);
  
  		hwss_add_opp_program_fmt(seq_state, pipe_ctx->stream_res.opp,
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
+@@ -2495,7 +2495,7 @@
+ 
+ static enum dc_status
+ dm_validate_stream_color_format(const struct drm_connector_state *drm_state,
+-				const struct dc_stream_state *stream)
++				enum dc_pixel_encoding candidate)
+ {
+ 	enum dc_pixel_encoding encoding;
+ 
+@@ -2521,7 +2521,7 @@
+ 		break;
+ 	}
+ 
+-	return encoding == stream->timing.pixel_encoding ?
++	return encoding == candidate ?
+ 		DC_OK : DC_UNSUPPORTED_VALUE;
+ }
+ 
+@@ -2727,8 +2727,13 @@
+ 			if (dc_result == DC_OK)
+ 				dc_result = dm_validate_stream_and_context(adev->dm.dc, stream);
+ 
+-			if (dc_result == DC_OK)
+-				dc_result = dm_validate_stream_color_format(drm_state, stream);
++			if (dc_result == DC_OK) {
++				/* Native LLDV transforms an admitted RGB input into HDMI YCbCr.
++				 * DRM's format property still describes the input to that path.
++				 */
++				dc_result = dm_validate_stream_color_format(drm_state,
++					stream->dv_native_lldv ? enc : stream->timing.pixel_encoding);
++			}
+ 
+ 			if (dc_result == DC_OK)
+ 				return stream;
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c
+@@ -499,7 +499,7 @@
+ 	const struct dm_plane_state *dm = to_dm_plane_state(p);
+ 	const struct dc_plane_state *dc = dm->dc_state;
+ 	const struct dc *display = dc && dc->ctx ? dc->ctx->dc : NULL;
+-	const struct dc_cm2_func_luts *mcm;
++	const struct dc_plane_cm *cm;
+ 
+ 	if (!display || display->debug.always_scale)
+ 		return false;
+@@ -508,9 +508,9 @@
+ 	     (display->debug.force_sharpness == SHARPNESS_CUSTOM &&
+ 	      (display->debug.force_sharpness_level || dc->adaptive_sharpness_en))))
+ 		return false;
+-	mcm = &dc->mcm_luts;
+-	/* The VIDMEM union contains a GPU address, not a kernel LUT pointer. */
+-	if (mcm->lut3d_data.lut3d_src != DC_CM2_TRANSFER_FUNC_SOURCE_SYSMEM)
++	cm = &dc->cm;
++	/* DMA uses the same union as the host 3D LUT. Never inspect it as a LUT. */
++	if (cm->flags.bits.lut3d_dma_enable)
+ 		return false;
+ 
+ 	return p->plane->type != DRM_PLANE_TYPE_CURSOR && p->fb &&
+@@ -532,18 +532,12 @@
+ 		!dm->blend_lut && dv_identity_tf(dm->degamma_tf) &&
+ 		dv_identity_tf(dm->shaper_tf) && dv_identity_tf(dm->blend_tf) &&
+ 		dm->hdr_mult == AMDGPU_HDR_MULT_DEFAULT &&
+-		!dc->mcm_lut1d_enable &&
+-		dc->mcm_shaper_3dlut_setting == DC_CM2_SHAPER_3DLUT_SETTING_BYPASS_ALL &&
+-		(!mcm->shaper || mcm->shaper->type == TF_TYPE_BYPASS) &&
+-		(!mcm->lut1d_func || mcm->lut1d_func->type == TF_TYPE_BYPASS) &&
+-		(!mcm->lut3d_data.lut3d_func || !mcm->lut3d_data.lut3d_func->state.bits.initialized) &&
+-		!mcm->lut3d_data.mpc_3dlut_enable && !mcm->lut3d_data.rmcm_3dlut_enable &&
++		cm->shaper_func.type == TF_TYPE_BYPASS &&
++		cm->blend_func.type == TF_TYPE_BYPASS && !cm->lut3d_func.state.bits.initialized &&
+ 		dc->visible && !dc->horizontal_mirror && dc->rotation == ROTATION_ANGLE_0 &&
+ 		!dc->per_pixel_alpha && !dc->global_alpha &&
+ 		dc->gamma_correction.is_identity &&
+ 		dc->in_transfer_func.type == TF_TYPE_BYPASS &&
+-		dc->in_shaper_func.type == TF_TYPE_BYPASS &&
+-		dc->blend_tf.type == TF_TYPE_BYPASS && !dc->lut3d_func.state.bits.initialized &&
+ 		dc->hdr_mult.value == dc_fixpt_one.value &&
+ 		!dc->gamut_remap_matrix.enable_remap &&
+ 		!dc->input_csc_color_matrix.enable_adjustment;

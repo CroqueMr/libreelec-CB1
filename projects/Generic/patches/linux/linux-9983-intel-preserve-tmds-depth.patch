@@ -1,0 +1,16 @@
+Subject: drm/i915/hdmi: preserve the qualified TMDS 12 bpc policy
+
+Keep the existing CB1 TMDS source-depth policy until the Intel HDMI
+transport changes can be tested independently.
+
+--- a/drivers/gpu/drm/i915/display/intel_hdmi.c
++++ b/drivers/gpu/drm/i915/display/intel_hdmi.c
+@@ -2122,7 +2122,7 @@
+ {
+ 	switch (bpc) {
+ 	case 12:
+-		return !HAS_GMCH(display);
++		return !HAS_GMCH(display) && DISPLAY_VER(display) <= 10;
+ 	case 10:
+ 		return DISPLAY_VER(display) >= 11;
+ 	case 8:

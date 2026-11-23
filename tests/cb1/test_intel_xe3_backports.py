@@ -122,14 +122,19 @@ int main(void){
 '''.replace('@@OWNER@@', owner))
 
     def test_ptl_clock_probe_keeps_valid_bios_clock(self):
-        owner = function(self.source('intel_cdclk.c'), 'bxt_sanitize_cdclk')
+        source = self.source('intel_cdclk.c')
+        owner = '\n'.join(function(source, name) for name in
+                          ('has_cd2x_pipe_select', 'bxt_sanitize_cdclk'))
         self.run_native(r'''
 #include <assert.h>
+#include <stdbool.h>
 #include <stdint.h>
 typedef uint32_t u32;
 struct intel_cdclk_config {int vco,cdclk,bypass;};
-struct intel_display {int version;struct {struct intel_cdclk_config hw;}cdclk;};
+struct intel_display {int version;struct {struct intel_cdclk_config hw;}cdclk;
+ struct {bool broxton;} platform;};
 #define DISPLAY_VER(d) ((d)->version)
+#define IS_DISPLAY_VER(d, low, high) (DISPLAY_VER(d) >= (low) && DISPLAY_VER(d) <= (high))
 #define INVALID_PIPE -1
 #define CDCLK_CTL 0
 #define CDCLK_FREQ_DECIMAL_MASK 0x7ff
@@ -181,7 +186,7 @@ int main(void){
   assert(bxt_cdclk_cd2x_pipe(&d,INVALID_PIPE)==mask);
   assert(bxt_cdclk_cd2x_pipe(&d,PIPE_A)==0);
   assert(bxt_cdclk_cd2x_pipe(&d,PIPE_B)==0x100000U);
-  assert(bxt_cdclk_cd2x_pipe(&d,PIPE_C)==(d.version==11?0x300000U:0x200000U));
+  assert(bxt_cdclk_cd2x_pipe(&d,PIPE_C)==0x200000U);
  }
 }
 '''.replace('@@DEFINES@@', defines).replace('@@OWNERS@@', owners))

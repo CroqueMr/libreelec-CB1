@@ -36,7 +36,7 @@ int main(void)
         10,1,0,255,4,8,16,32,64,128,0,0,0,0,0,0,0,0,0,0,0,0,0x40};
     struct drm_property_blob blob={31,data};
     struct dc_info_packet p={0},before;
-    assert(fill_hdr10plus_info_packet(&blob,&p)==0);
+    assert(amdgpu_dm_fill_hdr10plus_info_packet(&blob,&p)==0);
     assert(p.valid && p.hb0==0x81 && p.hb1==1 && p.hb2==27 && p.hb3==0);
     assert(!memcmp(p.sb,data+3,28));
     for(unsigned vic=93;vic<=95;++vic){
@@ -63,17 +63,17 @@ int main(void)
         modern[11]=modern_fields[i][1];
         struct drm_property_blob modern_blob={sizeof(modern),modern};
         struct dc_info_packet modern_packet={0};
-        assert(fill_hdr10plus_info_packet(&modern_blob,&modern_packet)==0);
+        assert(amdgpu_dm_fill_hdr10plus_info_packet(&modern_blob,&modern_packet)==0);
         assert(modern_packet.valid && !memcmp(modern_packet.sb,modern+3,28));
         assert(fill_hdr10plus_stream_packet(&modern_blob,&stream,&cinema)==0);
         assert(stream.vsp_infopacket.valid && !memcmp(stream.vsp_infopacket.sb,modern+3,28));
     }
     before=p;
     blob.length=30;
-    assert(fill_hdr10plus_info_packet(&blob,&p)==-EINVAL);
+    assert(amdgpu_dm_fill_hdr10plus_info_packet(&blob,&p)==-EINVAL);
     assert(!memcmp(&p,&before,sizeof(p)));
     blob.length=31;data[8]^=1;
-    assert(fill_hdr10plus_info_packet(&blob,&p)==-EINVAL);
+    assert(amdgpu_dm_fill_hdr10plus_info_packet(&blob,&p)==-EINVAL);
     assert(!memcmp(&p,&before,sizeof(p)));
     puts("hdr10plus AMD packet: pass");
 }

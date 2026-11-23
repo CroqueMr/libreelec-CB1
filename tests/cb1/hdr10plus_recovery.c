@@ -19,9 +19,10 @@ struct intel_display { void *drm; struct intel_crtc crtcs[2]; };
 struct drm_atomic_commit {
  struct drm_modeset_acquire_ctx *acquire_ctx;
  struct drm_plane *planes[2]; struct drm_plane_state *new_states[2];
- struct intel_crtc_state crtcs[2]; bool internal;
+ struct intel_crtc_state crtcs[2];
 };
-static struct drm_atomic_commit transaction;
+struct intel_atomic_state { struct drm_atomic_commit base; bool internal; };
+static struct intel_atomic_state transaction;
 static struct drm_plane planes[2];
 static struct intel_display display;
 static struct drm_modeset_acquire_ctx context;
@@ -30,7 +31,10 @@ static unsigned released, committed, requested, acquired, captured;
 #define IS_ERR(p) ((uintptr_t)(p) >= (uintptr_t)-4095)
 #define PTR_ERR(p) ((int)(intptr_t)(p))
 #define ERR_PTR(e) ((void *)(intptr_t)(e))
-#define to_intel_atomic_state(s) (s)
+static struct intel_atomic_state *to_intel_atomic_state(struct drm_atomic_commit *state)
+{ assert(state==&transaction.base); return &transaction; }
+static struct intel_display *to_intel_display(struct intel_atomic_state *state)
+{ assert(state==&transaction); return &display; }
 #define for_each_intel_crtc_in_pipe_mask(d,c,m) \
  for (unsigned index=0; index<2; ++index) \
   if (((c)=&(d)->crtcs[index]), (m)&(1u<<index))
@@ -39,20 +43,20 @@ static unsigned released, committed, requested, acquired, captured;
   if (((p)=(s)->planes[i]), ((n)=(s)->new_states[i]))
 static u32 drm_crtc_mask(const struct drm_crtc *crtc) { return crtc->mask; }
 static struct drm_atomic_commit *drm_atomic_commit_alloc(void *device)
-{ assert(device==&display); return allocation_fails ? NULL : &transaction; }
+{ assert(device==&display); return allocation_fails ? NULL : &transaction.base; }
 static void drm_atomic_commit_put(struct drm_atomic_commit *state)
-{ assert(state==&transaction); ++released; }
+{ assert(state==&transaction.base); ++released; }
 static struct intel_crtc_state *intel_atomic_get_crtc_state(
  struct drm_atomic_commit *state, struct intel_crtc *crtc)
 {
- assert(state->acquire_ctx==&context && state->internal);
+ assert(state->acquire_ctx==&context && to_intel_atomic_state(state)->internal);
  requested |= 1u<<crtc->pipe;
  return crtc_error ? ERR_PTR(crtc_error) : &state->crtcs[crtc->pipe];
 }
 static struct drm_plane_state *drm_atomic_get_plane_state(
  struct drm_atomic_commit *state, struct drm_plane *plane)
 {
- assert(state->acquire_ctx==&context && state->internal);
+ assert(state->acquire_ctx==&context && to_intel_atomic_state(state)->internal);
  if (plane_error) return ERR_PTR(plane_error);
  acquired |= 1u<<plane->index;
  state->planes[plane->index]=plane;

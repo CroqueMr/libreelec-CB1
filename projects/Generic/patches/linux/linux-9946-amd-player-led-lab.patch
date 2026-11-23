@@ -1,8 +1,6 @@
-diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-index e6cb913..1f9f539 100644
---- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-+++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-@@ -7814,7 +7814,7 @@ create_stream_for_sink(struct drm_connector *connector,
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
+@@ -1621,7 +1621,7 @@
  	if (!amdgpu_dm_stereo_mode_supported(connector, drm_mode))
  		return NULL;
  	/* Dolby Vision and stereoscopic HDMI use different VSIF payloads. */
@@ -11,7 +9,7 @@ index e6cb913..1f9f539 100644
  		return NULL;
  
  	drm_mode_init(&mode, drm_mode);
-@@ -8003,7 +8003,7 @@ create_stream_for_sink(struct drm_connector *connector,
+@@ -1810,7 +1810,7 @@
  		aconnector->sr_skip_count = AMDGPU_DM_PSR_ENTRY_DELAY;
  
  	}
@@ -20,7 +18,7 @@ index e6cb913..1f9f539 100644
  		int dv_ret = amdgpu_dm_dv_configure_stream(stream, dm_state, drm_mode);
  
  		if (dv_ret) {
-@@ -8205,6 +8205,13 @@ int amdgpu_dm_connector_atomic_set_property(struct drm_connector *connector,
+@@ -2015,6 +2015,13 @@
  		return 0;
  	}
  
@@ -34,7 +32,7 @@ index e6cb913..1f9f539 100644
  	if (property == dev->mode_config.scaling_mode_property) {
  		enum amdgpu_rmx_type rmx_type;
  
-@@ -8279,6 +8286,11 @@ int amdgpu_dm_connector_atomic_get_property(struct drm_connector *connector,
+@@ -2090,6 +2097,11 @@
  		return 0;
  	}
  
@@ -46,7 +44,7 @@ index e6cb913..1f9f539 100644
  	if (property == dev->mode_config.scaling_mode_property) {
  		switch (dm_state->scaling) {
  		case RMX_CENTER:
-@@ -8984,7 +8996,10 @@ amdgpu_dm_connector_atomic_check(struct drm_connector *conn,
+@@ -2856,7 +2868,10 @@
  
  	trace_amdgpu_dm_connector_atomic_check(new_con_state);
  	if (drm_connector_check_hdr10plus(new_con_state) ||
@@ -58,10 +56,10 @@ index e6cb913..1f9f539 100644
  		return -EINVAL;
  
  	if (conn->connector_type == DRM_MODE_CONNECTOR_DisplayPort) {
-@@ -8993,11 +9008,15 @@ amdgpu_dm_connector_atomic_check(struct drm_connector *conn,
- 			return ret;
+@@ -2866,11 +2881,15 @@
  	}
  
+ 	crtc = new_con_state->crtc;
 -	if (!crtc)
 +	if (!crtc) {
 +		to_dm_connector_state(new_con_state)->lldv_format = 0;
@@ -75,7 +73,17 @@ index e6cb913..1f9f539 100644
  	    !!new_con_state->hdr10plus_metadata != !!old_con_state->hdr10plus_metadata ||
  	    to_dm_connector_state(new_con_state)->hdr10_deep_color !=
  	    to_dm_connector_state(old_con_state)->hdr10_deep_color) {
-@@ -12339,7 +12358,7 @@ static void get_freesync_config_for_crtc(
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_freesync.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_freesync.c
+@@ -31,6 +31,7 @@
+ #include "dc.h"
+ #include "amdgpu.h"
+ #include "amdgpu_dm.h"
++#include "amdgpu_dm_dv.h"
+ #include "amdgpu_dm_crtc.h"
+ #include "amdgpu_dm_psr.h"
+ #include "amdgpu_dm_replay.h"
+@@ -127,7 +128,7 @@
  	aconnector = to_amdgpu_dm_connector(new_con_state->base.connector);
  
  	/* No FreeSync capability InfoFrame while bytes carry the DV tunnel. */
@@ -84,13 +92,15 @@ index e6cb913..1f9f539 100644
  					new_con_state->freesync_capable &&
  					vrefresh >= aconnector->min_vfreq &&
  					vrefresh <= aconnector->max_vfreq;
-@@ -12522,6 +12541,7 @@ static int dm_update_crtc_state(struct amdgpu_display_manager *dm,
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
+@@ -5499,6 +5499,7 @@
  		if (amdgpu_freesync_vid_mode &&
  		    dm_new_crtc_state->stream &&
  		    dm_new_conn_state->dv_standard == dm_old_conn_state->dv_standard &&
 +		    dm_new_conn_state->lldv_format == dm_old_conn_state->lldv_format &&
  		    dm_new_conn_state->hdr10_deep_color == dm_old_conn_state->hdr10_deep_color &&
- 		    is_timing_unchanged_for_freesync(new_crtc_state, old_crtc_state))
+ 		    amdgpu_dm_is_timing_unchanged_for_freesync(new_crtc_state, old_crtc_state))
  			goto skip_modeset;
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c
 index 6b58616..4166c1c 100644

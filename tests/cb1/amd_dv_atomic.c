@@ -15,7 +15,7 @@ typedef uint64_t u64;
 enum amdgpu_transfer_function {AMDGPU_TRANSFER_FUNCTION_DEFAULT,AMDGPU_TRANSFER_FUNCTION_IDENTITY,AMDGPU_TRANSFER_FUNCTION_PQ};
 enum {DRM_PLANE_TYPE_PRIMARY=1,DRM_PLANE_TYPE_CURSOR,DRM_FORMAT_XRGB8888,DRM_FORMAT_XBGR8888,
       DRM_MODE_ROTATE_0,DRM_BLEND_ALPHA_OPAQUE,AMDGPU_HDR_MULT_DEFAULT,ROTATION_ANGLE_0,
-      TF_TYPE_BYPASS,VRR_STATE_ACTIVE_FIXED,VRR_STATE_ACTIVE_VARIABLE,DITHER_OPTION_DISABLE,
+      VRR_STATE_ACTIVE_FIXED,VRR_STATE_ACTIVE_VARIABLE,DITHER_OPTION_DISABLE,
       COLOR_SPACE_SRGB,SIGNAL_TYPE_HDMI_TYPE_A,TIMING_3D_FORMAT_NONE,PIXEL_ENCODING_RGB,
       COLOR_DEPTH_888,DRM_MODE_CONNECTOR_HDMIA,DRM_HDMI_BROADCAST_RGB_FULL,RMX_OFF,
       DRM_FORMAT_XRGB2101010,DRM_FORMAT_XBGR2101010,DITHER_OPTION_TRUN8,DITHER_OPTION_TRUN10,
@@ -25,20 +25,17 @@ enum {DRM_OUTPUT_COLOR_FORMAT_YCBCR422=2,DRM_OUTPUT_COLOR_FORMAT_YCBCR444=1,
       DRM_EDID_HDMI_DC_30=16,PIXEL_ENCODING_YCBCR444=88};
 enum {SHARPNESS_HW_OFF,SHARPNESS_ZERO,SHARPNESS_CUSTOM};
 enum {VISUAL_CONFIRM_DISABLE,VISUAL_CONFIRM_SURFACE};
-enum {DC_CM2_TRANSFER_FUNC_SOURCE_SYSMEM,DC_CM2_TRANSFER_FUNC_SOURCE_VIDMEM};
-enum {DC_CM2_SHAPER_3DLUT_SETTING_BYPASS_ALL,DC_CM2_SHAPER_3DLUT_SETTING_ENABLE_SHAPER};
+enum {TF_TYPE_PREDEFINED,TF_TYPE_DISTRIBUTED_POINTS,TF_TYPE_BYPASS,TF_TYPE_HWPWL};
 struct dc {struct {bool use_spl;}config;
  struct {int visual_confirm;bool disable_spl,always_scale;unsigned force_sharpness,force_sharpness_level;}debug;};
 struct dc_context {struct dc *dc; int dce_version; struct {unsigned chip_id;}asic_id;};
 struct dc_transfer_func {int type;};
-struct dc_3dlut {struct {struct {bool initialized;}bits;}state;};
-struct dc_cm2_func_luts {
- const struct dc_transfer_func *shaper;
- struct {int lut3d_src;union {const struct dc_3dlut *lut3d_func;
-  struct {uint64_t addr;}gpu_mem_params;};
-  bool rmcm_3dlut_shaper_select,mpc_3dlut_enable,rmcm_3dlut_enable,mpc_mcm_post_blend;
-  uint8_t rmcm_tmz;}lut3d_data;
- const struct dc_transfer_func *lut1d_func;
+struct dc_3dlut {union {unsigned raw;struct {unsigned initialized:1;}bits;}state;};
+struct dc_plane_cm {
+ struct dc_transfer_func shaper_func,blend_func;
+ union {struct dc_3dlut lut3d_func;struct {uint64_t addr;}lut3d_dma;};
+ union {unsigned all; struct {unsigned shaper_enable:1,lut3d_enable:1,blend_enable:1,
+  lut3d_dma_enable:1,rmcm_enable:1;}bits;}flags;
 };
 struct dc_edid {u8 raw_edid[256];unsigned length;};
 struct dc_stream_state {
@@ -58,13 +55,12 @@ struct dc_stream_state {
 };
 struct dc_plane_state {
  struct dc_context *ctx;
- bool adaptive_sharpness_en,mcm_lut1d_enable;
- unsigned sharpness_level;int mcm_shaper_3dlut_setting;
- struct dc_cm2_func_luts mcm_luts;
+ bool adaptive_sharpness_en,pre_multiplied_alpha;
+ unsigned sharpness_level;
+ struct dc_plane_cm cm;
  bool visible,horizontal_mirror,per_pixel_alpha,global_alpha;int rotation;
  struct {bool is_identity;}gamma_correction;
- struct {int type;}in_transfer_func,in_shaper_func,blend_tf;
- struct {struct {struct {bool initialized;}bits;}state;}lut3d_func;
+ struct dc_transfer_func in_transfer_func;
  struct {long value;}hdr_mult;
  struct {bool enable_remap;}gamut_remap_matrix;
  struct {bool enable_adjustment;}input_csc_color_matrix;
@@ -118,9 +114,8 @@ static void check_transport(bool low_latency){
  struct drm_plane plane={DRM_PLANE_TYPE_PRIMARY};
  typeof(*((struct drm_framebuffer*)0)->format)format={DRM_FORMAT_XRGB8888};
  struct drm_framebuffer fb={&format,3840,2160};
- struct dc_plane_state dp={.ctx=&ctx,.visible=true,.rotation=ROTATION_ANGLE_0,
-  .gamma_correction={true},.in_transfer_func={TF_TYPE_BYPASS},.in_shaper_func={TF_TYPE_BYPASS},
-  .blend_tf={TF_TYPE_BYPASS},.hdr_mult={1}};
+ struct dc_plane_state dp={.visible=true,.rotation=ROTATION_ANGLE_0,.hdr_mult={1}};
+ dc_plane_construct(&ctx,&dp);
  struct dm_plane_state ps={.base={.plane=&plane,.crtc=&crtc,.fb=&fb,
   .rotation=DRM_MODE_ROTATE_0,.alpha=DRM_BLEND_ALPHA_OPAQUE,.visible=true,
   .src_w=3840u<<16,.src_h=2160u<<16,.crtc_w=3840,.crtc_h=2160},
@@ -143,9 +138,9 @@ static void check_transport(bool low_latency){
  checksum(sink.dc_edid.raw_edid);checksum(b);
  assert(dv_plane_neutral(&ps.base,&cs.base.mode,false));assert(!amdgpu_dm_dv_atomic_check(&atomic));
  unsigned missed=0;
- #define REJECT(field,bad) do {typeof(field) saved=(field);(field)=(bad);if(amdgpu_dm_dv_atomic_check(&atomic)!=-EINVAL){fprintf(stderr,"Unprotected: %s\n",#field);++missed;}stream.dv_standard=false;assert(!amdgpu_dm_dv_atomic_check(&atomic));stream.dv_standard=true;(field)=saved;assert(!amdgpu_dm_dv_atomic_check(&atomic));}while(0)
- REJECT(dp.in_transfer_func.type,TF_TYPE_BYPASS+1);REJECT(dp.blend_tf.type,TF_TYPE_BYPASS+1);
- REJECT(dp.lut3d_func.state.bits.initialized,true);REJECT(dp.input_csc_color_matrix.enable_adjustment,true);
+ #define REJECT(field,bad) do {typeof(false ? (field) : (field)) saved=(field);(field)=(bad);if(amdgpu_dm_dv_atomic_check(&atomic)!=-EINVAL){fprintf(stderr,"Unprotected: %s\n",#field);++missed;}stream.dv_standard=false;assert(!amdgpu_dm_dv_atomic_check(&atomic));stream.dv_standard=true;(field)=saved;assert(!amdgpu_dm_dv_atomic_check(&atomic));}while(0)
+ REJECT(dp.in_transfer_func.type,TF_TYPE_BYPASS+1);REJECT(dp.cm.blend_func.type,TF_TYPE_BYPASS+1);
+ REJECT(dp.cm.lut3d_func.state.bits.initialized,true);REJECT(dp.input_csc_color_matrix.enable_adjustment,true);
  REJECT(ps.ctm,&ps);REJECT(ps.degamma_tf,AMDGPU_TRANSFER_FUNCTION_PQ);
  REJECT(ps.base.src_w,1920u<<16);REJECT(ps.base.crtc_h,1080);REJECT(format.format,999);
  REJECT(plane.type,DRM_PLANE_TYPE_CURSOR);REJECT(stream.timing.flags.DSC,true);
@@ -161,25 +156,17 @@ static void check_transport(bool low_latency){
  REJECT(cs.base.vrr_enabled,true);REJECT(cs.base.ctm,&cs);REJECT(cs.base.connector_mask,3);
  REJECT(display.debug.visual_confirm,VISUAL_CONFIRM_SURFACE);
  REJECT(display.debug.always_scale,true);
- struct dc_transfer_func stream_shaper={TF_TYPE_BYPASS},mcm_shaper=stream_shaper,mcm_one=stream_shaper;
- struct dc_3dlut stream_lut={0},mcm_lut={0};
+ struct dc_transfer_func stream_shaper={TF_TYPE_BYPASS};
+ struct dc_3dlut stream_lut={0};
  stream.func_shaper=&stream_shaper;stream.lut3d_func=&stream_lut;
- dp.mcm_luts.shaper=&mcm_shaper;dp.mcm_luts.lut1d_func=&mcm_one;
- dp.mcm_luts.lut3d_data.lut3d_func=&mcm_lut;
  assert(!amdgpu_dm_dv_atomic_check(&atomic));
- REJECT(stream_shaper.type,TF_TYPE_BYPASS+1);
+ REJECT(stream_shaper.type,TF_TYPE_PREDEFINED);
  REJECT(stream_lut.state.bits.initialized,true);
- REJECT(mcm_shaper.type,TF_TYPE_BYPASS+1);
- REJECT(mcm_one.type,TF_TYPE_BYPASS+1);
- REJECT(mcm_lut.state.bits.initialized,true);
- REJECT(dp.mcm_lut1d_enable,true);
- REJECT(dp.mcm_shaper_3dlut_setting,DC_CM2_SHAPER_3DLUT_SETTING_ENABLE_SHAPER);
- REJECT(dp.mcm_luts.lut3d_data.mpc_3dlut_enable,true);
- REJECT(dp.mcm_luts.lut3d_data.rmcm_3dlut_enable,true);
- // A VIDMEM address is not a kernel pointer, even when enable bits are zero.
- typeof(dp.mcm_luts.lut3d_data) vidmem={.lut3d_src=DC_CM2_TRANSFER_FUNC_SOURCE_VIDMEM,
-     .gpu_mem_params.addr=0x12340000};
- REJECT(dp.mcm_luts.lut3d_data,vidmem);
+ REJECT(dp.cm.shaper_func.type,TF_TYPE_HWPWL);
+ dp.cm.lut3d_dma.addr=0x12340000;
+ REJECT(dp.cm.flags.bits.lut3d_dma_enable,true);
+ dp.cm.lut3d_func.state.raw=0;
+ assert(!amdgpu_dm_dv_atomic_check(&atomic));
  display.config.use_spl=true;
  REJECT(display.debug.force_sharpness,SHARPNESS_ZERO);
  display.debug.force_sharpness=SHARPNESS_CUSTOM;

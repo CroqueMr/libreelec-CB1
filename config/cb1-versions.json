@@ -16,7 +16,7 @@
     "source_revision": "8a61102fefb5edbc2aff867010cc461579dfca2c"
   },
   "Linux": {
-    "version": "7.2.6",
+    "version": "7.4-rc4",
     "modified": true
   },
   "FFmpeg": {

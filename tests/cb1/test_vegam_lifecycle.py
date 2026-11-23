@@ -143,7 +143,7 @@ struct dce_hwseq {struct {
  bool(*set_output_transfer_func)(struct dc *,struct pipe_ctx *,const struct dc_stream_state *);
 }funcs;};
 struct dc {struct {int dce_version; struct {unsigned chip_id;}asic_id;} *ctx;struct dce_hwseq *hwseq;};
-struct dc_plane_state {struct {struct {bool full_update,in_transfer_func_change,gamma_change;}bits;}update_flags;};
+struct dc_plane_state {struct {bool full_update,in_transfer_func_change,gamma_change;}update_bits;};
 struct dc_stream_state {bool dv_standard;};
 struct pipe_ctx {struct dc_plane_state *plane_state;struct dc_stream_state *stream;};
 static unsigned input_calls,output_calls;
@@ -151,8 +151,12 @@ static bool input(struct dc *d,struct pipe_ctx *p,const struct dc_plane_state *s
 {(void)d;(void)p;(void)s;++input_calls;return true;}
 static bool output(struct dc *d,struct pipe_ctx *p,const struct dc_stream_state *s)
 {(void)d;(void)p;(void)s;++output_calls;return true;}
+static void hwss_set_output_transfer_func(struct dc *d,struct pipe_ctx *p)
+{d->hwseq->funcs.set_output_transfer_func(d,p,p->stream);}
+static void hwss_set_input_transfer_func(struct dc *d,struct pipe_ctx *p)
+{d->hwseq->funcs.set_input_transfer_func(d,p,p->plane_state);}
 static void native_color_dispatch(struct dc *dc,struct pipe_ctx *pipe_ctx)
-{struct dce_hwseq *hws=dc->hwseq;
+{
 ''' + block + r'''
 }
 int main(void)
@@ -168,7 +172,7 @@ int main(void)
  ctx.dce_version=DCE_VERSION_11_2;native_color_dispatch(&dc,&pipe);assert(input_calls==4);
  ctx.asic_id.chip_id=0x699f;native_color_dispatch(&dc,&pipe);assert(input_calls==5);
  ctx.dce_version=DCE_VERSION_12_0;native_color_dispatch(&dc,&pipe);assert(input_calls==5);
- plane.update_flags.bits.full_update=true;native_color_dispatch(&dc,&pipe);
+ plane.update_bits.full_update=true;native_color_dispatch(&dc,&pipe);
  assert(input_calls==6 && output_calls==1);
 }
 ''')

@@ -1,0 +1,17 @@
+Subject: [PATCH] drm/amd/display: keep HDMI FRL opt-in for CB1
+
+Preserve the qualified default while the new FRL path is under test.
+The upstream feature bit remains available to lab systems.
+
+--- a/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
++++ b/drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c
+@@ -221,7 +221,7 @@
+  * EDP NO POWER SEQUENCING (bit 4) disabled by default
+- * FRL (bit 10) enabled by default
++ * FRL (bit 10) disabled by default
+  */
+-uint amdgpu_dc_feature_mask = DC_MULTI_MON_PP_MCLK_SWITCH_MASK | DC_FRL_MASK;
++uint amdgpu_dc_feature_mask = DC_MULTI_MON_PP_MCLK_SWITCH_MASK;
+ uint amdgpu_dc_debug_mask;
+ uint amdgpu_dc_visual_confirm;
+ int amdgpu_async_gfx_ring = 1;

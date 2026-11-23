@@ -32,8 +32,8 @@ diff --git a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c b/drivers
  	tf = &plane_state->in_transfer_func;
  
  	dce110_prescale_params(&prescale_params, plane_state);
--	if (pipe_ctx->stream->dv_standard)
-+	if (pipe_ctx->stream->dv_standard && !pipe_ctx->stream->dv_native_422)
+-	if (params->stream->dv_standard)
++	if (params->stream->dv_standard && !params->stream->dv_native_422)
  		prescale_params.mode = IPP_PRESCALE_MODE_BYPASS_LUT;
  	ipp->funcs->ipp_program_prescale(ipp, &prescale_params);
  
