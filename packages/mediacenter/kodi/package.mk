@@ -3,9 +3,9 @@
 # Copyright (C) 2017-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="kodi"
-PKG_VERSION="28ea2eac1eb7af8fdcbd2672d933ce87f594be79"
-PKG_SHA256="34ef5ef2345763588c17f1d2065d63ada4f6016d249a47f8c98ee3c64efaedb4"
-PKG_LICENSE="GPL-3.0-only"
+PKG_VERSION="22.0rc2-Piers"
+PKG_SHA256="e704ca70bcccd41baf409f6d54119add52a03f34e6eea3f11c6304f1553b4397"
+PKG_LICENSE="GPL-2.0-or-later"
 PKG_SITE="http://www.kodi.tv"
 PKG_URL="https://github.com/xbmc/xbmc/archive/${PKG_VERSION}.tar.gz"
 PKG_DEPENDS_TARGET="toolchain libplacebo JsonSchemaBuilder:host TexturePacker:host Python3 zlib systemd lzo pcre2 swig:host libass curl exiv2 fontconfig fribidi tinyxml tinyxml2 libjpeg-turbo freetype libcdio taglib libxml2 libxslt nlohmann-json sqlite ffmpeg crossguid libdvdnav libfmt libfstrcmp flatbuffers:host flatbuffers libudfread spdlog libxkbcommon"
@@ -15,11 +15,34 @@ PKG_DEPENDS_HOST="toolchain"
 PKG_LONGDESC="A free and open source cross-platform media player."
 PKG_BUILD_FLAGS="+speed"
 
+CB1_KODI_SOURCE_REPOSITORY="https://github.com/CroqueMr/xbmc"
+CB1_KODI_SOURCE_COMMIT="a2373a247431641b013ab47e0a0c7278742c8f5b"
+CB1_KODI_SOURCE_SHA256="1eaac07c4c864fe86960c026f59239e8c4673f0590c1b05393dea7c78b92f28b"
+
+if [ "${PROJECT}" = "Generic" ] && [ "${TARGET_ARCH}" = "x86_64" ] && [ "${DISPLAYSERVER}" = "no" ]; then
+  # This fork already contains the package and Generic GBM patch series.
+  PKG_URL="${CB1_KODI_SOURCE_REPOSITORY}/archive/${CB1_KODI_SOURCE_COMMIT}.tar.gz"
+  PKG_SOURCE_NAME="${PKG_NAME}-${CB1_KODI_SOURCE_COMMIT}.tar.gz"
+  PKG_SHA256="${CB1_KODI_SOURCE_SHA256}"
+  PKG_LICENSE="GPL-3.0-or-later"
+  PKG_SKIP_PATCHES="yes"
+  PKG_DEPENDS_UNPACK+=" cb1-engine"
+fi
+
 if [ "${TARGET_ARCH}" = "arm" ]; then
   PKG_BUILD_FLAGS+=" -gold"
 fi
 
 configure_package() {
+  KODI_BUILD_REVISION="${PKG_VERSION}"
+  CB1_ENGINE_SOURCE="${PKG_DIR}/cb1"
+  CB1_ENGINE_MODEL="${PKG_DIR}/cb1-model"
+  if [ "${PROJECT}" = "Generic" ] && [ "${TARGET_ARCH}" = "x86_64" ] && [ "${DISPLAYSERVER}" = "no" ]; then
+    KODI_BUILD_REVISION="${CB1_KODI_SOURCE_COMMIT}"
+    CB1_ENGINE_SOURCE="$(get_build_dir cb1-engine)"
+    CB1_ENGINE_MODEL="${CB1_ENGINE_SOURCE}/models/l1l3"
+  fi
+
   if [ "${CB1_HDR10_AI}" = "yes" ]; then
     PKG_DEPENDS_TARGET+=" lightgbm"
   fi
@@ -245,7 +268,7 @@ configure_package() {
     KODI_LIRCCLIENT="-DENABLE_LIRCCLIENT=OFF"
   fi
 
-  if [ "${PROJECT}" = "Allwinner" -o "${PROJECT}" = "Rockchip" ]; then
+  if [ "${PROJECT}" = "Allwinner" -o "${PROJECT}" = "Amlogic" -o "${PROJECT}" = "Rockchip" ]; then
     PKG_PATCH_DIRS+=" drmprime-filter"
   fi
 
@@ -257,13 +280,13 @@ configure_package() {
 
   PKG_CMAKE_OPTS_TARGET="-DENABLE_DVBRIDGE=ON \
                          -DCORE_COMPILE_OPTIONS=-Werror=missing-field-initializers;-Werror=sign-compare \
-                         -DDVBRIDGE_SOURCE_DIR=${PKG_DIR}/cb1/src \
+                         -DDVBRIDGE_SOURCE_DIR=${CB1_ENGINE_SOURCE}/src \
                          -DNATIVEPREFIX=${TOOLCHAIN} \
                          -DWITH_TEXTUREPACKER=${TOOLCHAIN}/bin/TexturePacker \
                          -DWITH_JSONSCHEMABUILDER=${TOOLCHAIN}/bin/JsonSchemaBuilder \
                          -DSWIG_EXECUTABLE=${TOOLCHAIN}/bin/swig \
                          -DPYTHON_EXECUTABLE=${TOOLCHAIN}/bin/${PKG_PYTHON_VERSION} \
-                         -DGIT_VERSION=${PKG_VERSION} \
+                         -DGIT_VERSION=${KODI_BUILD_REVISION} \
                          -DFFMPEG_PATH=${SYSROOT_PREFIX}/usr \
                          -DENABLE_INTERNAL_CROSSGUID=OFF \
                          -DENABLE_INTERNAL_EXIV2=OFF \
@@ -310,7 +333,7 @@ configure_package() {
 
   if [ "${CB1_HDR10_AI}" = "yes" ]; then
     PKG_CMAKE_OPTS_TARGET+=" -DCB1_ENABLE_HDR10_AI=ON \
-                           -DCB1_L1L3_BUNDLE_CONTRACT=${PKG_DIR}/cb1-model/contract \
+                           -DCB1_L1L3_BUNDLE_CONTRACT=${CB1_ENGINE_MODEL}/contract \
                            -DCB1_LIGHTGBM_INCLUDE_DIR=${SYSROOT_PREFIX}/usr/include \
                            -DCB1_LIGHTGBM_LIBRARY=${SYSROOT_PREFIX}/usr/lib/lib_lightgbm.so"
   else
@@ -325,7 +348,7 @@ configure_host() {
     -DCMAKE_INSTALL_PREFIX=/usr \
     -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} \
     -DHEADERS_ONLY=ON \
-    -DDVBRIDGE_SOURCE_DIR=${PKG_DIR}/cb1/src \
+    -DDVBRIDGE_SOURCE_DIR=${CB1_ENGINE_SOURCE}/src \
     ${KODI_ARCH} \
     ${KODI_NEON} \
     ${KODI_PLATFORM} ..
@@ -357,8 +380,8 @@ pre_configure_target() {
 post_makeinstall_target() {
   if [ "${CB1_HDR10_AI}" = "yes" ]; then
     mkdir -p ${INSTALL}/usr/share/cb1/l1l3
-    cp ${PKG_DIR}/cb1-model/data/* ${INSTALL}/usr/share/cb1/l1l3/
-    cp ${PKG_DIR}/cb1-model/LICENSE.md ${INSTALL}/usr/share/cb1/l1l3/
+    cp ${CB1_ENGINE_MODEL}/data/* ${INSTALL}/usr/share/cb1/l1l3/
+    cp ${CB1_ENGINE_MODEL}/LICENSE.md ${INSTALL}/usr/share/cb1/l1l3/
   fi
   mkdir -p ${INSTALL}/.noinstall
   mv ${INSTALL}/usr/share/kodi/addons/skin.estuary \

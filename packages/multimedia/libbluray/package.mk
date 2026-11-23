@@ -3,6 +3,7 @@
 # Copyright (C) 2018-present Team LibreELEC (https://libreelec.tv)
 
 PKG_NAME="libbluray"
+# also bump packages/addons/tools/jre.zulu/package.mk
 PKG_VERSION="1.5.0"
 PKG_SHA256="f676408e91a5d321abf8b8d4dfdae36205c297dab5c54c3ec519639025f474a2"
 PKG_LICENSE="LGPL-2.1-or-later"
@@ -30,9 +31,26 @@ PKG_MESON_OPTS_TARGET="-Ddefault_library=shared \
                        -Dfreetype=enabled \
                        -Dlibxml2=enabled"
 
+CB1_BLURAY_SOURCE_REPOSITORY="https://github.com/CroqueMr/libbluray-cb1"
+CB1_BLURAY_SOURCE_COMMIT="7b18d8f440c85fa4f96d4c65daba5c4dffcfd720"
+CB1_BLURAY_SOURCE_SHA256="4db8fecf28ca80e64db9327cd9326ce7d082ef9570110da1638041ed6df1a553"
+
 if [ "${PROJECT}" = "Generic" ] && [ "${TARGET_ARCH}" = "x86_64" ]; then
-  PKG_DEPENDS_UNPACK+=" jdk-${MACHINE_HARDWARE_NAME}-zulu"
+  PKG_VERSION="1.5.1"
+  PKG_URL="${CB1_BLURAY_SOURCE_REPOSITORY}/archive/${CB1_BLURAY_SOURCE_COMMIT}.tar.gz"
+  PKG_SOURCE_NAME="${PKG_NAME}-${CB1_BLURAY_SOURCE_COMMIT}.tar.gz"
+  PKG_SOURCE_DIR="libbluray-cb1-${CB1_BLURAY_SOURCE_COMMIT}"
+  PKG_SHA256="${CB1_BLURAY_SOURCE_SHA256}"
+  PKG_SKIP_PATCHES="yes"
+  PKG_DEPENDS_UNPACK+=" jdk-${MACHINE_HARDWARE_NAME}-zulu cb1-udfread-source"
 fi
+
+post_unpack() {
+  if [ "${PROJECT}" = "Generic" ] && [ "${TARGET_ARCH}" = "x86_64" ]; then
+    # Source archives do not include Git submodules. Keep the original vendored revision.
+    cp -a "$(get_build_dir cb1-udfread-source)/." "${PKG_BUILD}/contrib/libudfread/"
+  fi
+}
 
 configure_package() {
   if [ "${PROJECT}" = "Generic" ] && [ "${TARGET_ARCH}" = "x86_64" ]; then

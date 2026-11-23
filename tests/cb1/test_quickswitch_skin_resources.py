@@ -13,20 +13,38 @@ MEDIA = ROOT / 'projects/Generic/filesystem/usr/share/kodi/media'
 
 
 class QuickSwitchResources(unittest.TestCase):
-    def test_footer_is_a_single_line_with_bottom_padding(self):
+    def test_footer_is_a_separate_single_line_below_the_panel(self):
         definitions = ET.parse(MEDIA / 'cb1/IncludesDVProcessInfo.xml')
-        group = definitions.find("./include[@name='CB1PlaybackModeLayout']/control")
-        footer_group = group.find("control[@id='9103']")
-        divider = footer_group.find("control[@type='image']")
-        self.assertEqual(divider.findtext('height'), '1')
+        layout = definitions.find("./include[@name='CB1PlaybackModeLayout']")
+        panel = layout.find("control[@id='9100']")
+        self.assertIsNone(panel.find(".//control[@id='9103']"))
+        footer_group = layout.find("control[@id='9103']")
+        rows = panel.find("control[@id='6']")
+        self.assertEqual(int(footer_group.findtext('right')) + int(footer_group.findtext('width')),
+                         int(panel.findtext('right')) + int(panel.findtext('width')) - int(rows.findtext('left')))
+        self.assertEqual(footer_group.findtext('width'), rows.findtext('width'))
+        self.assertGreater(int(panel.findtext('bottom')),
+                           int(footer_group.findtext('bottom')) + int(footer_group.findtext('height')))
+        self.assertEqual(footer_group.findtext('visible'), '!String.IsEmpty(Container(6).ListItem.Label2)')
+        background = footer_group.find("control[@type='image']")
+        self.assertIsNotNone(background)
+        self.assertEqual(background.findtext('width'), footer_group.findtext('width'))
+        self.assertEqual(background.findtext('height'), footer_group.findtext('height'))
+        self.assertEqual(background.findtext('texture'), 'special://xbmc/media/cb1-chip.png')
+        self.assertEqual(background.find('texture').get('colordiffuse'), 'FF2C3438')
         footer = footer_group.find("control[@id='9102']")
         self.assertEqual(footer.get('type'), 'label')
+        row = definitions.find("./include[@name='CB1PlaybackModeRowContents']")
+        tick = row.find("control[@type='image']")
+        label = row.find("control[@type='label']")
+        icon = footer_group.find("control[label='ⓘ']")
+        self.assertIsNotNone(icon)
+        for tag in ('left', 'width'):
+            self.assertEqual(icon.findtext(tag), tick.findtext(tag))
+        self.assertEqual(footer.findtext('left'), label.findtext('left'))
         self.assertEqual(footer.findtext('label'), '$INFO[Container(6).ListItem.Label2]')
         self.assertEqual(footer.findtext('wrapmultiline'), 'false')
         self.assertEqual(footer.findtext('scroll'), 'false')
-        bottom = (int(footer_group.findtext('top')) + int(footer.findtext('top'))
-                  + int(footer.findtext('height')))
-        self.assertGreaterEqual(int(group.findtext('height')) - bottom, 12)
 
     def test_app_window_has_a_closed_include_and_asset_graph(self):
         definitions = ET.parse(MEDIA / 'cb1/IncludesDVProcessInfo.xml').getroot()
@@ -144,7 +162,7 @@ int main(){
 #include <vector>
 constexpr int LOGINFO=1;
 namespace DVBRIDGE {
-enum class OutputMode{PlayerLed};
+enum class OutputMode{PlayerLed,MasterReference};
 template<class... T>void DiagnosticLog(T...) {}
 }
 struct Value {
@@ -165,7 +183,7 @@ struct Option {int value;std::string label,label2;std::vector<std::pair<std::str
 struct Dialog {std::vector<CFileItem> items;void Add(const CFileItem& i){items.push_back(i);}};
 int main(){
  Dialog d;auto* dialog=&d;
- const bool settingsMenu=false, cb1Active=true, recommendMaster=false;
+ const bool settingsMenu=false, cb1Active=true, recommendMaster=false, recommendLldv=false;
  const int current=2;
  struct {int label,output;} choices[]{{10,0},{11,0},{12,0}};
  struct Strings {std::string Get(int id){return std::to_string(id);}} strings;

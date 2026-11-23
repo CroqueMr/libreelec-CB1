@@ -16,7 +16,9 @@ class StableVideoSettings(unittest.TestCase):
         self.assertEqual(ids[:8], [f"dvbridge.{name}" for name in
                          ("playback", "masteroutput", "hdr10source", "hdr10plussource", "hybridsource", "hlgsource",
                           "sdrpreset", "sdrgamut")])
-        for name in ("sdrpreset", "sdrgamut", "sdrpeak", "sdrgamma", "sdrblack"):
+        gamut = group.find("setting[@id='dvbridge.sdrgamut']")
+        self.assertIsNone(gamut.find("dependencies/dependency[@type='visible']"))
+        for name in ("sdrpreset", "sdrpeak", "sdrgamma", "sdrblack"):
             conditions = group.findall(f"setting[@id='dvbridge.{name}']/dependencies/dependency/or/condition")
             self.assertEqual({(c.get("setting"), c.text) for c in conditions},
                              {("dvbridge.outputmode", "6"), ("dvbridge.hdr10source", "4"),

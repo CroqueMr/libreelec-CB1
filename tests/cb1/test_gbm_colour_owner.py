@@ -41,7 +41,9 @@ def native_owner_program(root):
     members = header[header.index("  static void ApplyColorRangeSetting"):header.index("  // Claim no 3D")]
     depth = re.search(r"^  uint64_t GetEffectiveMaxBpc.*;", header, re.M)[0]
     members = depth + "\n" + members
-    program = (Path(__file__).with_name("gbm_colour_owner.cpp").read_text()
+    gamut = (root / "xbmc/windowing/gbm/SDROutputGamut.h").read_text().replace("#pragma once", "")
+    program = (gamut + "\nusing namespace KODI::WINDOWING::GBM;\n" +
+               Path(__file__).with_name("gbm_colour_owner.cpp").read_text()
                .replace("// NATIVE_CONSTANTS", constants + enums)
                .replace("// NATIVE_MEMBERS", members)
                .replace("// NATIVE_BODIES", bodies))
