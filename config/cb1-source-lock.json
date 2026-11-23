@@ -506,8 +506,7 @@
     "projects/Generic/patches/linux/linux-9981-amd-hdmi-vsif-ownership.patch": "d3f3b10a82d6e9b8138261c77395e61c1b1e4a103d903cceb58acd7224aaf963",
     "projects/Generic/patches/linux/linux-9982-amd-frl-opt-in.patch": "fb459b673e0303a8a404242198646f3a40c74c2aa7511c776a4288b669012c3a",
     "projects/Generic/linux/7.4-rc4/linux.x86_64.conf": "13a9c3fe27cd070eca5b890b41d4b03406c6bce11bdcf84106e95b56bb1b9cac",
-    "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e",
-    "projects/Generic/patches/linux/linux-9983-intel-preserve-tmds-depth.patch": "3af8ae03e5a4a84fb96692dece3ad60b782e6bb61733995b7100b13d7539199e"
+    "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {

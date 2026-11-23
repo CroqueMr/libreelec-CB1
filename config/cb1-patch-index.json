@@ -2437,11 +2437,5 @@
     "files": {
       "drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c": "drm/amd/display: keep HDMI FRL opt-in for CB1"
     }
-  },
-  "projects/Generic/patches/linux/linux-9983-intel-preserve-tmds-depth.patch": {
-    "owner": "Subject: drm/i915/hdmi: preserve the qualified TMDS 12 bpc policy",
-    "files": {
-      "drivers/gpu/drm/i915/display/intel_hdmi.c": "Subject: drm/i915/hdmi: preserve the qualified TMDS 12 bpc policy"
-    }
   }
 }
