@@ -44,7 +44,7 @@ class SDRFinalGUI(unittest.TestCase):
         self.assertEqual(code.count('const double source=expectedSDR'),2)
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory);cpp=root/'test.cpp';cpp.write_text(code)
-            built=subprocess.run(['c++','-std=c++20','-I'+str(ROOT/'CB1/src'),str(cpp),'-lEGL','-lGLESv2','-o',str(root/'test')],capture_output=True,text=True)
+            built=subprocess.run(['c++','-std=c++20','-I'+str(ROOT/'CB1/src'),'-I'+str(TREE/'xbmc'),str(cpp),'-lEGL','-lGLESv2','-o',str(root/'test')],capture_output=True,text=True)
             self.assertEqual(built.returncode,0,built.stderr)
             ran=subprocess.run([str(root/'test'),str(TREE/'system/shaders/GLES/2.0/gles_gui_composite.frag')],
                                env=dict(os.environ,EGL_PLATFORM='surfaceless',LIBGL_ALWAYS_SOFTWARE='1'),capture_output=True,text=True)
