@@ -1,15 +1,50 @@
-From b5ccfe741c7a5911fc763f209d3dbbc00f81944d Mon Sep 17 00:00:00 2001
+From bf5c0b325fbf1263c86fcca12ee473febc17a386 Mon Sep 17 00:00:00 2001
 From: CB1 <cb1@localhost>
-Date: Mon, 23 Nov 2026 01:10:44 +0100
+Date: Mon, 23 Nov 2026 01:26:26 +0100
 Subject: [PATCH] drm/amd/display: refresh static HDR on a reused HDMI backend
 
 Entering or leaving HDR passes through the full commit path even when
 the HDMI resources are unchanged. Refresh the packet before skipping
 the reused backend so the receiver sees HDR changes without retraining.
 ---
+ .../gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c | 22 ++++++++++++++++---
  .../amd/display/dc/hwss/dce110/dce110_hwseq.c | 22 ++++++++++++++++++-
- 1 file changed, 21 insertions(+), 1 deletion(-)
+ 2 files changed, 40 insertions(+), 4 deletions(-)
 
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
+index 1f9f539..8f81e1b 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
+@@ -8929,10 +8929,26 @@ static int fill_hdr_info_packet(const struct drm_connector_state *state,
+ 
+ 	memset(out, 0, sizeof(*out));
+ 
+-	if (!state->hdr_output_metadata)
+-		return 0;
++	if (!state->hdr_output_metadata) {
++		const struct drm_connector *connector = state->connector;
++		const struct dm_connector_state *dm_state = to_dm_connector_state(state);
++		const struct hdr_metadata_infoframe *sink =
++			&connector->display_info.hdr_sink_metadata.hdmi_type1;
++
++		/* Keep the transfer explicit on a wide HDMI signal. */
++		if (connector->connector_type != DRM_MODE_CONNECTOR_HDMIA ||
++		    !connector->display_info.is_hdmi ||
++		    state->colorspace != DRM_MODE_COLORIMETRY_BT2020_RGB ||
++		    !(sink->eotf & BIT(HDMI_EOTF_TRADITIONAL_GAMMA_SDR)) ||
++		    !(sink->metadata_type & BIT(HDMI_STATIC_METADATA_TYPE1)) ||
++		    dm_state->dv_standard || dm_state->lldv_format ||
++		    state->hdr10plus_metadata)
++			return 0;
+ 
+-	ret = drm_hdmi_infoframe_set_hdr_metadata(&frame, state);
++		ret = hdmi_drm_infoframe_init(&frame);
++	} else {
++		ret = drm_hdmi_infoframe_set_hdr_metadata(&frame, state);
++	}
+ 	if (ret)
+ 		return ret;
+ 
 diff --git a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c b/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
 index 37e9942..c02a84a 100644
 --- a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
