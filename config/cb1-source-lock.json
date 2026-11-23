@@ -41,7 +41,7 @@
     "projects/Generic/patches/linux/linux-9904-hdr10-conversion.patch": "f3461c390f88a4052887623744eb4680e562e66dacba9449755de7519d4b1c80",
     "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9005-hdr10plus-commit-transport.patch": "155f6348daa41431ce0ab436d6003a5c8f5f5216fcdc69afab6c8413d58c4f7a",
     "packages/graphics/nvidia-pascal-modeset/package.mk": "5ded5441420e96dc910ae691e1c85ac28456718f22e7ec33107fcc5426219711",
-    "packages/graphics/nvidia/package.mk": "75675bc955a06bc0deddd5319d8ee77fb58fbe430305a78403476faa5de39701",
+    "packages/graphics/nvidia/package.mk": "3660ff72304d0e0228739798f4ceb482f3d0f8655f2ade373b62f30df00896b6",
     "packages/graphics/nvidia/files/select-driver": "76ed996a61931867e75c28abf90d544edc8c4d89f0e5566b27cbb088c7148931",
     "projects/Generic/patches/linux/linux-9940-hdr10plus.patch": "cd44a2848195a2c4e0137345d345dfd922cf142b0a103420ce5dc19ae3e26029",
     "projects/Generic/patches/linux/linux-9900-05-drivers__gpu__drm__i915__display__intel_dv_lab_policy.h.patch": "f8d606ad767be8a20bc243e2b512804fffca3b8052d00a901aa265d091a36380",
@@ -362,7 +362,7 @@
     "tests/cb1/test_pascal_hdr10_scanout.py": "d065254563c1a94c03d08cd24dd9c47a6269f868c741cc1dc67788c9e0fd6ed4",
     "tests/cb1/test_output_window_teardown.py": "e5927c0750c9544b44c6be08d307ac9dc2d0f5cfb691c6048be31f6e2126e987",
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9008-optional-vsif-reference.patch": "5b1f0fea996844004f837559ce7acd714a23bbf5017a1cf12f1950c23bfceeb7",
-    "config/cb1-patch-index.json": "057e92a33a09f17fc9b8491e299308a1b6492e1bef10ebe795543d8db8a64f4b",
+    "config/cb1-patch-index.json": "f7514f8f39278e9fd3329d7da68cff1f3b289373e1b7f71857a98f6128181423",
     "projects/Generic/patches/linux/linux-9948-intel-hdmi-ready-recovery.patch": "c10f4aa258ca6d2be95a175006389362ccfad3566cff1e892f0b162faf486780",
     "projects/Generic/patches/linux/linux-9970-rx550-native-dv.patch": "1cbb750f5bf019430e7762785824169b0fafcf65f458267d2cec2412c8a0b204",
     "tests/cb1/test_bluray_overlay_order.py": "538775e911baa402d135669964fb31e021a121bf66ee06d95e1068777a9bf27c",
@@ -506,7 +506,8 @@
     "projects/Generic/patches/linux/linux-9981-amd-hdmi-vsif-ownership.patch": "d3f3b10a82d6e9b8138261c77395e61c1b1e4a103d903cceb58acd7224aaf963",
     "projects/Generic/patches/linux/linux-9982-amd-frl-opt-in.patch": "fb459b673e0303a8a404242198646f3a40c74c2aa7511c776a4288b669012c3a",
     "projects/Generic/linux/7.4-rc4/linux.x86_64.conf": "13a9c3fe27cd070eca5b890b41d4b03406c6bce11bdcf84106e95b56bb1b9cac",
-    "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e"
+    "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e",
+    "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": "80b22b516b8e8f6e5aa083c24518d19314dfafd04a135397b0acbf0ad29fc3e0"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {

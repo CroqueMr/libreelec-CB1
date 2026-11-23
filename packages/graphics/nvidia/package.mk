@@ -18,7 +18,7 @@ if [ "${VULKAN_SUPPORT}" = yes ]; then
   PKG_DEPENDS_TARGET+=" ${VULKAN} vulkan-tools"
 fi
 
-source "${PKG_DIR}/common.mk"
+source "${ROOT}/packages/graphics/nvidia/common.mk"
 
 post_makeinstall_target() {
   mkdir -p "${INSTALL}/usr/lib/nvidia-drivers/r620"

@@ -2431,5 +2431,11 @@
     "files": {
       "drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c": "drm/amd/display: keep HDMI FRL opt-in for CB1"
     }
+  },
+  "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": {
+    "owner": "Keep the effective RGB8 carrier owned by the active CB1 TV-led packet.",
+    "files": {
+      "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Keep TV-led link color and depth tied to the Dolby VSIF until its retirement."
+    }
   }
 }

@@ -78,6 +78,80 @@ int main(void){
 }
 '''.replace('@@NATIVE@@', native).replace('@@CEILING@@', str(ceiling)))
 
+    def test_r620_retained_tv_led_blob_owns_rgb8_until_retirement(self):
+        root = self.sources()[0]
+        native = (root / 'kernel-open/nvidia-drm/nvidia-drm-connector.c').read_text()
+        atomic = function(native, '__nv_drm_connector_atomic_check')
+        start = atomic.index('/* Handle color format changes */')
+        end = atomic.index('/* Encoding changes require a modeset', start)
+        wire = (root/'src/common/inc/nvkms-dv-vsif.h').read_text().replace('#include "nvtypes.h"', '')
+        admission = function(native, 'nv_drm_connector_cb1_tv_led')
+        code = r"""
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+typedef uint8_t NvU8, u8;
+typedef unsigned NvU32;
+typedef bool NvBool;
+#define NV_FALSE false
+#define NV_TRUE true
+#define EINVAL 22
+enum {
+ NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_UNKNOWN=0,
+ NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_8=8,
+ NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_FORMAT_RGB=1, Y444=3,
+};
+struct drm_property_blob { unsigned length; const NvU8 *data; };
+struct connector_state { int color_format, output_bpc, lldv_format; bool cb1_deep_color; };
+static int nv_drm_connector_translate_color_format(int n, NvU32 *value)
+{ *value=n; return 0; }
+static int nv_drm_connector_translate_output_bpc(int n, NvU32 *value)
+{ *value=n; return 0; }
+static NvU32 nvLldvNativeBpc(unsigned int n) { (void)n; return 12; }
+struct config {
+ struct { bool colorFormatChanged,colorBpcChanged; } flags;
+ struct { unsigned colorFormat,colorBpc; struct { bool enabled,deepColor; } cb1Hdr; } modeSetConfig;
+};
+@@POLICY@@
+static int apply(struct config *req_config,const struct drm_property_blob *blob)
+{
+ const bool tv_led=nv_drm_connector_cb1_tv_led(blob);
+ struct { bool max_bpc_property; } c={true},*connector=&c;
+ struct { u8 max_requested_bpc; bool hdr10plus_metadata; } s={12,false},
+   *new_connector_state=&s,*old_connector_state=&s;
+ struct connector_state n={.color_format=Y444,.output_bpc=6};
+ struct connector_state *nv_new_connector_state=&n,*nv_old_connector_state=&n;
+ unsigned nvkms_fmt,nvkms_bpc;
+ int ret;
+@@ATOMIC@@
+ return 0;
+}
+int main(void)
+{
+ NvU8 modern[27]={0x46,0xd0,0,2}, legacy[24]={3,12,0}, ll[27]={0x46,0xd0,0,3};
+ struct drm_property_blob Dolby={sizeof(modern),modern}, Legacy={sizeof(legacy),legacy};
+ struct drm_property_blob PlayerLed={sizeof(ll),ll};
+ struct config requested={.modeSetConfig={.colorFormat=Y444,.colorBpc=6}};
+ for (unsigned i=0;i<2;++i) {
+  assert(apply(&requested, i ? &Legacy : &Dolby)==0);
+  assert(requested.flags.colorFormatChanged && requested.flags.colorBpcChanged);
+  assert(requested.modeSetConfig.colorFormat==1 && requested.modeSetConfig.colorBpc==8);
+  requested.flags.colorFormatChanged=requested.flags.colorBpcChanged=false;
+  assert(apply(&requested, i ? &Legacy : &Dolby)==0);
+  assert(!requested.flags.colorFormatChanged && !requested.flags.colorBpcChanged);
+  assert(apply(&requested, NULL)==0);
+  assert(requested.flags.colorFormatChanged && requested.flags.colorBpcChanged);
+  assert(requested.modeSetConfig.colorFormat==Y444 && requested.modeSetConfig.colorBpc==6);
+ }
+ assert(!nv_drm_connector_cb1_tv_led(&PlayerLed));
+ modern[10]=1;
+ assert(!nv_drm_connector_cb1_tv_led(&Dolby));
+}
+"""
+        self.compile_run(code.replace('@@POLICY@@', wire + admission)
+                             .replace('@@ATOMIC@@', atomic[start:end]))
+
     def compile_run(self, program):
         with tempfile.TemporaryDirectory() as tmp:
             source, binary = Path(tmp)/'check.c', Path(tmp)/'check'
