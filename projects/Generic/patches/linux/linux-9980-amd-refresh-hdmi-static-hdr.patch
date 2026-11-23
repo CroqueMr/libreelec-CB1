@@ -1,6 +1,6 @@
-From bf5c0b325fbf1263c86fcca12ee473febc17a386 Mon Sep 17 00:00:00 2001
+From 858b706fe892beaa9d4eb6ea8b9d513c409f5fe0 Mon Sep 17 00:00:00 2001
 From: CB1 <cb1@localhost>
-Date: Mon, 23 Nov 2026 01:26:26 +0100
+Date: Mon, 23 Nov 2026 01:27:33 +0100
 Subject: [PATCH] drm/amd/display: refresh static HDR on a reused HDMI backend
 
 Entering or leaving HDR passes through the full commit path even when
@@ -12,7 +12,7 @@ the reused backend so the receiver sees HDR changes without retraining.
  2 files changed, 40 insertions(+), 4 deletions(-)
 
 diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
-index 1f9f539..8f81e1b 100644
+index 1f9f539..5752b05 100644
 --- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
 +++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
 @@ -8929,10 +8929,26 @@ static int fill_hdr_info_packet(const struct drm_connector_state *state,
@@ -24,7 +24,7 @@ index 1f9f539..8f81e1b 100644
 +	if (!state->hdr_output_metadata) {
 +		const struct drm_connector *connector = state->connector;
 +		const struct dm_connector_state *dm_state = to_dm_connector_state(state);
-+		const struct hdr_metadata_infoframe *sink =
++		const struct hdr_static_metadata *sink =
 +			&connector->display_info.hdr_sink_metadata.hdmi_type1;
 +
 +		/* Keep the transfer explicit on a wide HDMI signal. */
