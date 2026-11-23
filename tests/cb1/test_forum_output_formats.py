@@ -17,9 +17,12 @@ class OutputFormats(unittest.TestCase):
 #include <cassert>
 #include <chrono>
 #include "VideoProcessingInfo.h"
+#include "dvbridge_policy.h"
 namespace KODI::UTILS {enum class Eotf {TRADITIONAL_SDR,TRADITIONAL_HDR,PQ,HLG};}
 using KODI::UTILS::Eotf;
 Eotf eotf; Eotf GetEotf(){return eotf;}
+bool IsNativeSDRVideo(){return false;}
+bool NativeSDRBT2020Committed(){return false;}
 struct Cache {
  uint64_t generation=0; VideoProcessingInfo info;
  uint64_t GetVideoProcessingGeneration(){return generation;}
@@ -39,6 +42,7 @@ int main(){
  for(auto [input,output] : {std::pair{Eotf::TRADITIONAL_SDR,VideoOutputType::SDR},
       {Eotf::PQ,VideoOutputType::HDR10},{Eotf::HLG,VideoOutputType::HLG}}){
    eotf=input;++cache.generation;accepted(&drm);assert(cache.info.outputType==output);
+  assert(cache.info.output.gamut==DVBRIDGE_GAMUT_UNSET);
  }
  eotf=Eotf::PQ;drm.plus=true;++cache.generation;accepted(&drm);
  assert(cache.info.outputType==VideoOutputType::HDR10Plus);
@@ -51,8 +55,9 @@ int main(){
 '''.replace('BODY', code)
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary); (root / 'test.cpp').write_text(program)
+            policy = Path(__file__).resolve().parents[2]/'CB1/src'
             build = subprocess.run(['c++', '-std=c++20', '-I' + str(TREE/'xbmc/cores'),
-                                    str(root/'test.cpp'), '-o', str(root/'test')], capture_output=True, text=True)
+                                    '-I' + str(policy), str(root/'test.cpp'), '-o', str(root/'test')], capture_output=True, text=True)
             self.assertEqual(build.returncode, 0, build.stderr)
             run = subprocess.run([str(root/'test')], capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)

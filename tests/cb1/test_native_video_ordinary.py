@@ -17,6 +17,7 @@ class OrdinaryTests(unittest.TestCase):
             'VideoProcessingInfo CDataCacheCore::GetVideoProcessingInfo()'))
         program=r'''
 #include "VideoProcessingInfo.h"
+#include "dvbridge_policy.h"
 #include <cassert>
 #include <mutex>
 #include <memory>
@@ -39,6 +40,9 @@ struct DRM {bool accepted=true,hdr10plus=false; bool LastPageAccepted() const {r
  bool HDR10PlusActive() const {return hdr10plus;}};
 namespace KODI::UTILS {enum class Eotf {TRADITIONAL_SDR,PQ,HLG};}
 auto GetEotf(){return KODI::UTILS::Eotf::TRADITIONAL_SDR;}
+bool IsNativeSDRVideo() {return true;}
+bool wideSDRCommitted{};
+bool NativeSDRBT2020Committed() {return wideSDRCommitted;}
 namespace DVBRIDGE {
  uint64_t decodedGeneration{};
  struct StreamTelemetry {static VideoProcessingInfo Read() {VideoProcessingInfo info; info.informationGeneration=decodedGeneration; info.sourceBits=8; return info;}};
@@ -49,8 +53,14 @@ int main() {
  DRM drm; DVBRIDGE::decodedGeneration=cache.ResetVideoProcessingInfo();
  present(&drm,false); assert(cache.GetVideoProcessingInfo().sourceBits==8);
  assert(cache.GetVideoProcessingInfo().outputType==VideoOutputType::SDR);
+ assert(cache.GetVideoProcessingInfo().output.gamut==DVBRIDGE_GAMUT_BT709);
+ wideSDRCommitted=true; drm.accepted=false; present(&drm,false);
+ assert(cache.GetVideoProcessingInfo().output.gamut==DVBRIDGE_GAMUT_BT709);
+ drm.accepted=true; present(&drm,false);
+ assert(cache.GetVideoProcessingInfo().output.gamut==DVBRIDGE_GAMUT_BT2020);
  drm.hdr10plus=true; present(&drm,false);
  assert(cache.GetVideoProcessingInfo().outputType==VideoOutputType::HDR10Plus);
+ assert(cache.GetVideoProcessingInfo().output.gamut==DVBRIDGE_GAMUT_UNSET);
  drm.hdr10plus=false; present(&drm,false);
  assert(cache.GetVideoProcessingInfo().outputType==VideoOutputType::SDR);
  cache.ResetVideoProcessingInfo(); player.playing=false;
@@ -61,7 +71,8 @@ int main() {
 '''.replace('CACHE',cache).replace('SNIPPET',snippet)
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary); (root/'test.cpp').write_text(program)
-            build=subprocess.run(['c++','-std=c++20','-I'+str(TREE/'xbmc/cores'),str(root/'test.cpp'),'-o',str(root/'test')],capture_output=True,text=True)
+            policy=Path(__file__).resolve().parents[2]/'CB1/src'
+            build=subprocess.run(['c++','-std=c++20','-I'+str(TREE/'xbmc/cores'),'-I'+str(policy),str(root/'test.cpp'),'-o',str(root/'test')],capture_output=True,text=True)
             self.assertEqual(build.returncode,0,build.stderr)
             run=subprocess.run([str(root/'test')],capture_output=True,text=True)
             self.assertEqual(run.returncode,0,run.stderr)
