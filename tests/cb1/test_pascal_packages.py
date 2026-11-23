@@ -77,7 +77,7 @@ class PascalPackages(unittest.TestCase):
 
     def test_recipe_selects_one_matched_module_stack(self):
         for recipe, version, dependency in (
-            ('nvidia', '615.78.08', 'nvidia-open-kernel-modules'),
+            ('nvidia', '620.73.04', 'nvidia-open-kernel-modules'),
             ('nvidia-pascal', '580.196.07', 'nvidia-pascal-modeset'),
         ):
             with self.subTest(recipe=recipe):

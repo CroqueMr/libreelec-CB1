@@ -1,8 +1,10 @@
+Subject: [PATCH] Retain CB1 NVIDIA change 9008
+
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-drm/nvidia-drm-connector.c
-index 3820d62..07ac9dd 100644
+index c9669cd..968d5b9 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-connector.c
 +++ b/kernel-open/nvidia-drm/nvidia-drm-connector.c
-@@ -434,7 +434,7 @@ static int nv_drm_connector_atomic_set_property(
+@@ -496,7 +496,7 @@ static int nv_drm_connector_atomic_set_property(
      
  
      if (property == nv_dev->cb1_lldv_format_property) {
@@ -11,7 +13,7 @@ index 3820d62..07ac9dd 100644
          nv_connector_state->lldv_format = val;
          return 0;
      }
-@@ -728,7 +728,8 @@ static bool nv_drm_lldv_supported(struct drm_connector *connector,
+@@ -807,7 +807,8 @@ static bool nv_drm_lldv_supported(struct drm_connector *connector,
          return false;
  
      caps = dvbridge_parse_edid((const u8 *)drm_edid_raw(edid), drm_edid_size(edid));
@@ -22,10 +24,10 @@ index 3820d62..07ac9dd 100644
  
  static int
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-drv.c b/kernel-open/nvidia-drm/nvidia-drm-drv.c
-index ae254e4..f37da7f 100644
+index 7aebc85..f5f98d3 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-drv.c
 +++ b/kernel-open/nvidia-drm/nvidia-drm-drv.c
-@@ -717,7 +717,7 @@ static int nv_drm_create_properties(struct nv_drm_device *nv_dev)
+@@ -784,7 +784,7 @@ static int nv_drm_create_properties(struct nv_drm_device *nv_dev)
  
      {
          static const struct drm_prop_enum_list formats[] = {

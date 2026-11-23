@@ -19,7 +19,7 @@ typedef int NvBool;
 #define TRUE 1
 #define FALSE 0
 #define nvEvoLogDisp(...) ((void)0)
-typedef struct {struct {int smpte_st_2084_eotf,future_eotf;}supported_eotf;int static_metadata_type;} NVT_HDR_STATIC_METADATA;
+typedef struct {struct {int smpte_st_2084_eotf,hybrid_log_gamma_eotf;}supported_eotf;int static_metadata_type;} NVT_HDR_STATIC_METADATA;
 typedef struct {int HDMI3DSupported;NVT_HDR_STATIC_METADATA hdr_static_metadata_info;} NVT_EDID_INFO;
 typedef struct {struct {int valid;NVT_EDID_INFO info;}parsedEdid;int dp,hdmi;void*pDispEvo;char*name;} NVDpyEvoRec;
 static int major=1,minor=3,query=1;
@@ -30,9 +30,9 @@ static int nvDPDpyGetDpcdRevision(const NVDpyEvoRec*d,unsigned*a,unsigned*b){(vo
 int main(void){
  NVDpyEvoRec d={.hdmi=1};d.parsedEdid.valid=1;
  NVT_HDR_STATIC_METADATA*h=&d.parsedEdid.info.hdr_static_metadata_info;
- h->static_metadata_type=1;h->supported_eotf.future_eotf=1;
+ h->static_metadata_type=1;h->supported_eotf.hybrid_log_gamma_eotf=1;
  assert(nvDpyIsHDRCapable(&d));d.parsedEdid.info.HDMI3DSupported=1;assert(nvDpyIsHDRCapable(&d));
- h->supported_eotf.future_eotf=0;assert(!nvDpyIsHDRCapable(&d));h->supported_eotf.smpte_st_2084_eotf=1;
+ h->supported_eotf.hybrid_log_gamma_eotf=0;assert(!nvDpyIsHDRCapable(&d));h->supported_eotf.smpte_st_2084_eotf=1;
  assert(nvDpyIsHDRCapable(&d));h->static_metadata_type=0;assert(!nvDpyIsHDRCapable(&d));h->static_metadata_type=1;
  d.parsedEdid.valid=0;assert(!nvDpyIsHDRCapable(&d));d.parsedEdid.valid=1;
  d.hdmi=0;assert(!nvDpyIsHDRCapable(&d));d.dp=1;
@@ -41,10 +41,10 @@ int main(void){
 }
 '''.replace('@@NATIVE@@',native))
 
-    def test_matched_r615_native_ceiling_still_requires_edid_and_deepcolor(self):
+    def test_matched_r620_native_ceiling_still_requires_edid_and_deepcolor(self):
         root = self.sources()[0]
         config = Path(__file__).resolve().parents[2]/'packages/graphics/nvidia/files/hdr-depth.conf'
-        self.assertTrue(config.is_file(), 'matched R615 native ceiling configuration is absent')
+        self.assertTrue(config.is_file(), 'matched R620 native ceiling configuration is absent')
         ceiling = int(re.search(r'max_output_color_depth=(\d+)', config.read_text()).group(1))
         hdmi = (root/'src/nvidia-modeset/src/nvkms-hdmi.c').read_text()
         native = function((root/'kernel-open/nvidia-modeset/nvidia-modeset-linux.c').read_text(),
@@ -92,7 +92,7 @@ int main(void){
     def sources(self):
         roots = [os.environ.get('CB1_NVIDIA_SOURCE'), os.environ.get('CB1_PASCAL_SOURCE')]
         if not all(roots):
-            self.skipTest('requires privately replayed matched R615 and R580 source')
+            self.skipTest('requires privately replayed matched R620 and R580 source')
         return [Path(root) for root in roots]
 
     def test_requested_eotf_and_actual_vsif_owner(self):
@@ -102,6 +102,7 @@ int main(void){
             native = function((root/'src/nvidia-modeset/src/nvkms-hdmi.c').read_text(),
                               'SendHDRInfoFrame')
             modern = 'currentTransmitCtrl' in native
+            display_arg = 'const NVDpyEvoRec *pDpyEvo' in native
             lldv = 'nvDoviLowLatency' in native
             vsif = (root/'src/common/inc/nvkms-dv-vsif.h').read_text().replace('#include "nvtypes.h"', '') if lldv else ''
             program = r'''
@@ -137,11 +138,12 @@ typedef struct {NvU8 eotf,static_metadata_desc_id;
  NVT_HDR_INFOFRAME_MASTERING_DATA type1;} Payload;
 typedef struct {NVT_INFOFRAME_HEADER header; Payload payload;} NVT_HDR_INFOFRAME;
 typedef struct {struct {unsigned trad_gamma_sdr_eotf:1,trad_gamma_hdr_eotf:1,
- smpte_st_2084_eotf:1,future_eotf:1;} supported_eotf;
+ smpte_st_2084_eotf:1; union {unsigned future_eotf:1;unsigned hybrid_log_gamma_eotf:1;};} supported_eotf;
  unsigned static_metadata_type;} NVT_HDR_STATIC_METADATA;
 typedef struct {NVT_HDR_STATIC_METADATA hdr_static_metadata_info;
  int HDMI3DSupported;} NVT_EDID_INFO;
-typedef struct {struct {int Enable;}vendorSpecificCtrl;} NVDispHeadInfoFrameStateEvoRec;
+enum {NVT_HDMI_VS_BYTE4_HDMI_VID_FMT_3D=2};
+typedef struct {struct {int Enable,HDMIFormat;}vendorSpecificCtrl;} NVDispHeadInfoFrameStateEvoRec;
 typedef struct {struct {unsigned payloadSize;NvU8 payload[27];}hdmiVsifMetadata;
  int bypassComposition;
  struct {int state,eotf;struct NvKmsHDRStaticMetadata staticMetadata;}hdrInfoFrame;
@@ -149,6 +151,12 @@ typedef struct {struct {unsigned payloadSize;NvU8 payload[27];}hdmiVsifMetadata;
 typedef struct {struct {void (*SendHdmiInfoFrame)(); void (*DisableHdmiInfoFrame)();}*hal;
  struct {int supportsGenericSharedInfoFrames;}caps;} NVDevEvoRec;
 typedef struct {NVDevEvoRec *pDevEvo;NVDispHeadStateEvoRec headState[1];} NVDispEvoRec;
+typedef struct {const NVDispEvoRec*pDispEvo;struct {NVT_EDID_INFO info;}parsedEdid;} NVDpyEvoRec;
+static int nvDpyIsHDRCapable(const NVDpyEvoRec*d){
+ const NVT_HDR_STATIC_METADATA*h=&d->parsedEdid.info.hdr_static_metadata_info;
+ return h->static_metadata_type==1 &&
+     (h->supported_eotf.smpte_st_2084_eotf || h->supported_eotf.hybrid_log_gamma_eotf);
+}
 static unsigned writes,clears;static NvU8 eotf;
 static void disable(const NVDispEvoRec*d,NvU32 h,void*c,int type){
  (void)d;(void)c;assert(h==0 && type==NVT_INFOFRAME_TYPE_DYNAMIC_RANGE_MASTERING);clears++;
@@ -178,7 +186,7 @@ int main(void){
    for(unsigned type=0;type<=2;type++){
     edid.hdr_static_metadata_info.static_metadata_type=type;writes=0;
     @@CALL@@
-    assert(writes==(type==1 && requested<4 && (mask&(1u<<requested))?1u:0u));
+    assert(writes==(type==1 && @@SINK_SUPPORT@@ && requested<4 && (mask&(1u<<requested))?1u:0u));
     if(writes)assert(eotf==requested);
    }
   }
@@ -198,12 +206,17 @@ int main(void){
  @@LLDV_TEST@@
 }
 '''
-            call = 'SendHDRInfoFrame(&disp,0,'
-            if 'pInfoFrameState' in native:
-                call += '&info,'
-            if modern:
-                call += '&a,&b,'
-            call += '&edid);'
+            if display_arg:
+                call = ('SendHDRInfoFrame(&(NVDpyEvoRec){.pDispEvo=&disp,'
+                        '.parsedEdid={.info=edid}},0,&info,&a,&b);')
+            else:
+                call = 'SendHDRInfoFrame(&disp,0,'
+                if 'pInfoFrameState' in native:
+                    call += '&info,'
+                if modern:
+                    call += '&a,&b,'
+                call += '&edid);'
+            program = program.replace('@@SINK_SUPPORT@@','(mask&12)' if display_arg else '1')
             program = program.replace('@@LLDV_TEST@@', r'''
  disp.headState[0].bypassComposition=1;
  disp.headState[0].hdmiVsifMetadata.payloadSize=27;

@@ -18,7 +18,7 @@ class NvidiaPackages(unittest.TestCase):
                              'printf "%s\\n%s\\n%s\\n" "$PKG_VERSION" "$PKG_DEPENDS_TARGET" "$PKG_BUILD_FLAGS"')
         self.assertEqual(result.returncode, 0, result.stderr)
         version, deps, flags = result.stdout.splitlines()
-        self.assertEqual(version, '615.78.08')
+        self.assertEqual(version, '620.73.04')
         self.assertIn('nvidia-open-kernel-modules', deps.split())
         self.assertIn('nvidia_egl-gbm', deps.split())
         self.assertIn('-strip', flags.split())
@@ -26,7 +26,7 @@ class NvidiaPackages(unittest.TestCase):
                               'printf "%s\\n%s\\n" "$PKG_VERSION" "$PKG_COMMIT"')
         self.assertEqual(modules.returncode, 0, modules.stderr)
         self.assertEqual(modules.stdout.splitlines(),
-                         [version, '1a82fbfda8f321b056eb3568850f9316c5e465c5'])
+                         [version, 'a4b95f6a2db0bba10ccaccef79190a3c18dcf14a'])
 
     def test_dual_decoder_bridge_revision(self):
         result = self.recipe('packages/multimedia/nvidia-vaapi-driver/package.mk',
@@ -44,14 +44,14 @@ class NvidiaPackages(unittest.TestCase):
             # A complete manifest supplies every copied file without executing vendor code.
             files = ['10_nvidia.json', '10_nvidia_wayland.json',
                      'libnvidia-egl-wayland.so.1.1.20',
-                     'nvidia-smi', 'nvidia-application-profiles-615.78.08-rc']
-            files += [name + '.615.78.08' for name in
+                     'nvidia-smi', 'nvidia-application-profiles-620.73.04-rc']
+            files += [name + '.620.73.04' for name in
                       ('libnvidia-allocator.so', 'libEGL_nvidia.so', 'libnvidia-eglcore.so',
                        'libnvidia-glsi.so', 'libGLESv2_nvidia.so', 'libcuda.so',
                        'libnvcuvid.so', 'libnvidia-gpucomp.so', 'libnvidia-tls.so', 'libnvidia-ml.so')]
             for name in files:
                 if '/' not in name:
-                    (payload / name.replace('${PKG_VERSION}', '615.78.08')).touch()
+                    (payload / name.replace('${PKG_VERSION}', '620.73.04')).touch()
             (payload / 'firmware').mkdir()
             for name in ('gsp_test.bin', 'ucodes_test.bin'):
                 (payload / 'firmware' / name).write_bytes(b'firmware')
@@ -71,9 +71,9 @@ class NvidiaPackages(unittest.TestCase):
             self.assertEqual(result.returncode, 0, result.stderr)
             self.assertEqual(shared.read_bytes(), b'source-built-common-egl-gbm')
             self.assertFalse(shared.is_symlink())
-            self.assertFalse((installed/'usr/lib/nvidia-drivers/r615/usr/lib/libnvidia-egl-gbm.so.1.1.3').exists())
-            self.assertEqual((installed / 'usr/lib/nvidia-drivers/r615/usr/share/licenses/nvidia/LICENSE').read_bytes(), b'test-license')
-            self.assertTrue((installed / 'usr/lib/kernel-overlays/nvidia-r615/lib/firmware/nvidia/615.78.08/ucodes_test.bin').is_file())
+            self.assertFalse((installed/'usr/lib/nvidia-drivers/r620/usr/lib/libnvidia-egl-gbm.so.1.1.3').exists())
+            self.assertEqual((installed / 'usr/lib/nvidia-drivers/r620/usr/share/licenses/nvidia/LICENSE').read_bytes(), b'test-license')
+            self.assertTrue((installed / 'usr/lib/kernel-overlays/nvidia-r620/lib/firmware/nvidia/620.73.04/ucodes_test.bin').is_file())
             self.assertTrue((installed / 'usr/lib/libnvcuvid.so.1').is_symlink())
             self.assertEqual(os.readlink(installed/'usr/lib/libnvcuvid.so.1'),
                              '/run/nvidia-driver/usr/lib/libnvcuvid.so.1')

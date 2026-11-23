@@ -98,7 +98,7 @@ int main(void){
 }
 '''.replace('@@NATIVE@@',native))
 
-    def test_r615_flip_uses_raw_tmds_and_keeps_hdr_layer_conflicts(self):
+    def test_r620_flip_uses_raw_tmds_and_keeps_hdr_layer_conflicts(self):
         root=self.sources()[0]
         native=function((root/'src/nvidia-modeset/src/nvkms-hw-flip.c').read_text(),
                         'ValidateHdmiVsif')

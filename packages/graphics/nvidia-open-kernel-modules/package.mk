@@ -2,9 +2,9 @@
 # Copyright (C) 2026-present Hades
 
 PKG_NAME="nvidia-open-kernel-modules"
-PKG_VERSION="615.78.08"
-PKG_COMMIT="1a82fbfda8f321b056eb3568850f9316c5e465c5"
-PKG_SHA256="590ee6a5a780f946322edd17f9d235c6664eb7e6839073ac0d68c0f263e7184f"
+PKG_VERSION="620.73.04"
+PKG_COMMIT="a4b95f6a2db0bba10ccaccef79190a3c18dcf14a"
+PKG_SHA256="ffe12eaa1f5f316d9af8f0c3995ddc45d2ae598a250df920c9d1b37f116028c4"
 PKG_ARCH="x86_64"
 PKG_LICENSE="MIT OR GPL-2.0-only"
 PKG_SITE="https://github.com/NVIDIA/open-gpu-kernel-modules"
@@ -43,9 +43,9 @@ make_target() {
 }
 
 makeinstall_target() {
-  mkdir -p ${INSTALL}/$(get_full_module_dir nvidia-r615)/nvidia
-    cp -P kernel-open/nvidia.ko         ${INSTALL}/$(get_full_module_dir nvidia-r615)/nvidia
-    cp -P kernel-open/nvidia-drm.ko     ${INSTALL}/$(get_full_module_dir nvidia-r615)/nvidia
-    cp -P kernel-open/nvidia-uvm.ko     ${INSTALL}/$(get_full_module_dir nvidia-r615)/nvidia
-    cp -P kernel-open/nvidia-modeset.ko ${INSTALL}/$(get_full_module_dir nvidia-r615)/nvidia
+  mkdir -p ${INSTALL}/$(get_full_module_dir nvidia-r620)/nvidia
+    cp -P kernel-open/nvidia.ko         ${INSTALL}/$(get_full_module_dir nvidia-r620)/nvidia
+    cp -P kernel-open/nvidia-drm.ko     ${INSTALL}/$(get_full_module_dir nvidia-r620)/nvidia
+    cp -P kernel-open/nvidia-uvm.ko     ${INSTALL}/$(get_full_module_dir nvidia-r620)/nvidia
+    cp -P kernel-open/nvidia-modeset.ko ${INSTALL}/$(get_full_module_dir nvidia-r620)/nvidia
 }

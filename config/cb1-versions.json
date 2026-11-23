@@ -13,7 +13,7 @@
     "version": "22.0 RC2",
     "revision": "d686683a55d50e576dd282f53fb2bf9914931b38",
     "modified": true,
-    "source_revision": "8a61102fefb5edbc2aff867010cc461579dfca2c"
+    "source_revision": "cb945c5c0ce654eed7d2988626dad4fa0e1f145a"
   },
   "Linux": {
     "version": "7.4-rc4",
@@ -53,7 +53,7 @@
     "modified": false
   },
   "NVIDIA": {
-    "version": "615.78.08",
+    "version": "620.73.04",
     "modified": true
   },
   "NVIDIA R580": {
@@ -66,8 +66,8 @@
     "modified": true
   },
   "NVIDIA Open Kernel Modules": {
-    "version": "615.78.08",
-    "revision": "1a82fbfda8f321b056eb3568850f9316c5e465c5",
+    "version": "620.73.04",
+    "revision": "a4b95f6a2db0bba10ccaccef79190a3c18dcf14a",
     "modified": true
   },
   "NVIDIA VAAPI Driver": {

@@ -58,7 +58,7 @@ nvidia_overlay_conflicts() {
 
 select_nvidia_driver() {
   local sys="$1" lib="$2" run="$3" pci vendor class device branch
-  local seen615=no seen580=no boot_branch= selected=r615 present=no module payload
+  local seen620=no seen580=no boot_branch= selected=r620 present=no module payload
   local boot_count=0 unknown_primary=no
   NVIDIA_OVERLAY=
   mkdir -p "${run}/modprobe.d" || return 1
@@ -75,7 +75,7 @@ select_nvidia_driver() {
     device=$(tr 'A-F' 'a-f' <"${pci}/device")
     branch=$(awk -v id="${device#0x}" '$1 == id { print $2; exit }' "${lib}/nvidia-drivers/pci-branches")
     case "${branch}" in
-      r615) seen615=yes ;;
+      r620) seen620=yes ;;
       r580) seen580=yes ;;
       *)
         log "NVIDIA ${pci##*/} ${device}: unsupported PCI ID"
@@ -95,10 +95,10 @@ select_nvidia_driver() {
     log "NVIDIA unknown boot GPU: no automatic NVIDIA overlay"
   elif [ "${boot_count}" = 1 ]; then
     selected="${boot_branch}"
-  elif [ "${seen580}" = yes ] && [ "${seen615}" = no ]; then
+  elif [ "${seen580}" = yes ] && [ "${seen620}" = no ]; then
     selected=r580
   fi
-  if [ "${seen615}" = yes ] && [ "${seen580}" = yes ]; then
+  if [ "${seen620}" = yes ] && [ "${seen580}" = yes ]; then
     log "NVIDIA mixed driver families: selected ${selected}; other family unavailable this boot"
   fi
 
@@ -121,7 +121,7 @@ select_nvidia_driver() {
         log "NVIDIA ${selected}: missing ${module}.ko"; return 1;
       }
     done
-    if [ "${selected}" = r615 ]; then
+    if [ "${selected}" = r620 ]; then
       [ -r "${payload}/hdr-depth.conf" ] || return 1
       cp "${payload}/hdr-depth.conf" "${run}/modprobe.d/nvidia-hdr-depth.conf" || return 1
     fi

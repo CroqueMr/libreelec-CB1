@@ -1,17 +1,10 @@
-From: CB1 <cb1@localhost>
 Subject: [PATCH] drm/nvkms: native player-led 422/12 from an integer RGB16 primary
 
-Keep the packed RGB8 carriers intact. A separate enum requests native
-YCbCr422, limited range, 12 bpc and BT.2020 CSC from ABGR16161616.
-Reuse the per-head integer composition bypass and the existing passthrough
-validation, retaining OCSC1 while disabling the FP16 LUT/composition path.
-Do not require static HDR EDID signaling for this Dolby-signaled route,
-and clear a previous static HDR packet on hardware with separate slots.
-
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-drm/nvidia-drm-connector.c
+index 968d5b9..8c25915 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-connector.c
 +++ b/kernel-open/nvidia-drm/nvidia-drm-connector.c
-@@ -416,7 +416,8 @@
+@@ -472,7 +472,8 @@ static int nv_drm_connector_atomic_set_property(
          nv_connector_state->cb1_deep_color = val;
          return 0;
      }
@@ -21,7 +14,7 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
          property == nv_dev->cb1_output_bpc_property ||
          property == nv_dev->cb1_hdr10plus_status_property) {
          return -EINVAL;
-@@ -434,7 +435,7 @@
+@@ -496,7 +497,7 @@ static int nv_drm_connector_atomic_set_property(
      
  
      if (property == nv_dev->cb1_lldv_format_property) {
@@ -30,7 +23,7 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
          nv_connector_state->lldv_format = val;
          return 0;
      }
-@@ -504,6 +505,16 @@
+@@ -583,6 +584,16 @@ static int nv_drm_connector_atomic_get_property(
          return 0;
      }
  
@@ -47,7 +40,7 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
      if (property == nv_dev->cb1_output_bpc_property) {
          *val = nv_drm_connector_current_output_bpc(connector, state);
          return 0;
-@@ -696,6 +707,7 @@
+@@ -775,6 +786,7 @@ static bool nv_drm_lldv_supported(struct drm_connector *connector,
  {
      const struct nv_drm_connector *nv_connector = to_nv_connector(connector);
      const struct drm_edid *edid = nv_connector->edid;
@@ -55,7 +48,7 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
      const struct drm_display_mode *mode = &state->mode;
      const unsigned int vic = drm_match_cea_mode(mode);
      struct dvbridge_sink_caps caps;
-@@ -713,12 +725,14 @@
+@@ -792,12 +804,14 @@ static bool nv_drm_lldv_supported(struct drm_connector *connector,
          state->plane_mask != drm_plane_mask(crtc->primary) ||
          state->ctm || state->gamma_lut || state->degamma_lut ||
          conn->hdr_output_metadata || conn->hdr10plus_metadata ||
@@ -73,7 +66,7 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
          plane->fb->width != 3840 || plane->fb->height != 2160 ||
          plane->src_x || plane->src_y || plane->src_w != 3840U << 16 ||
          plane->src_h != 2160U << 16 || plane->crtc_x || plane->crtc_y ||
-@@ -729,7 +743,7 @@
+@@ -808,7 +822,7 @@ static bool nv_drm_lldv_supported(struct drm_connector *connector,
  
      caps = dvbridge_parse_edid((const u8 *)drm_edid_raw(edid), drm_edid_size(edid));
      return dvbridge_lldv_422(caps) && !caps.legacy_vsif &&
@@ -82,17 +75,20 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
  }
  
  static int
-@@ -817,7 +831,8 @@
-      * this head; a change needs a modeset.
-      */
-     {
--        const NvU32 bpc = (req_config->modeSetConfig.cb1Hdr.enabled ||
-+        const NvU32 bpc = nv_new_connector_state->lldv_format == 3 ? 12 :
-+            (req_config->modeSetConfig.cb1Hdr.enabled ||
-             req_config->modeSetConfig.cb1Hdr.deepColor) ?
-             (new_connector_state->max_requested_bpc >= 12 ? 12 : 10) :
-             nv_drm_connector_requested_bpc(new_connector_state);
-@@ -915,12 +930,15 @@
+@@ -931,8 +945,10 @@ __nv_drm_connector_atomic_check(struct drm_connector *connector,
+     if (connector->max_bpc_property) {
+         const u8 max_bpc = new_connector_state->max_requested_bpc;
+ 
+-        if (req_config->modeSetConfig.cb1Hdr.enabled ||
+-            req_config->modeSetConfig.cb1Hdr.deepColor) {
++        if (nv_new_connector_state->lldv_format == 3) {
++            nvkms_bpc = 12;
++        } else if (req_config->modeSetConfig.cb1Hdr.enabled ||
++                   req_config->modeSetConfig.cb1Hdr.deepColor) {
+             nvkms_bpc = max_bpc >= 12 ? 12 : 10;
+         } else if (nvkms_bpc > max_bpc) {
+             return -EINVAL;
+@@ -1044,12 +1060,15 @@ __nv_drm_connector_atomic_check(struct drm_connector *connector,
      }
  
      req_config->flags.colorimetryChanged =
@@ -110,7 +106,7 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
              break;
          case DRM_MODE_COLORIMETRY_BT601_YCC:
              req_config->modeSetConfig.colorimetry =
-@@ -1059,9 +1077,12 @@
+@@ -1188,9 +1207,12 @@ nv_drm_connector_new(struct drm_device *dev,
          drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
  
          if (nv_connector->type == NVKMS_CONNECTOR_TYPE_HDMI &&
@@ -125,9 +121,10 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-
          if (nv_dev->nv_connector_hdmi_vsif_metadata_property) {
              drm_object_attach_property(&nv_connector->base.base,
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-drv.c b/kernel-open/nvidia-drm/nvidia-drm-drv.c
+index f5f98d3..cb187bb 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-drv.c
 +++ b/kernel-open/nvidia-drm/nvidia-drm-drv.c
-@@ -717,11 +717,16 @@
+@@ -784,12 +784,17 @@ static int nv_drm_create_properties(struct nv_drm_device *nv_dev)
  
      {
          static const struct drm_prop_enum_list formats[] = {
@@ -138,17 +135,19 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-drv.c b/kernel-open/nvidia-drm/nv
          nv_dev->cb1_lldv_format_property = drm_property_create_enum(nv_dev->dev,
              DRM_MODE_PROP_ATOMIC, "CB1_LLDV_FORMAT", formats, ARRAY_SIZE(formats));
      }
-+
+ 
 +    nv_dev->cb1_native_lldv_active_property = drm_property_create_bool(nv_dev->dev,
 +        0, "CB1_NATIVE_LLDV_ACTIVE");
 +    if (!nv_dev->cb1_native_lldv_active_property) return -ENOMEM;
- 
++
      nv_dev->cb1_native_tmds_property = drm_property_create_bool(nv_dev->dev,
          0, "CB1_NATIVE_TMDS");
+     if (!nv_dev->cb1_native_tmds_property) return -ENOMEM;
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-priv.h b/kernel-open/nvidia-drm/nvidia-drm-priv.h
+index 50483df..a86d389 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-priv.h
 +++ b/kernel-open/nvidia-drm/nvidia-drm-priv.h
-@@ -104,6 +104,7 @@
+@@ -119,6 +119,7 @@ struct nv_drm_device {
      struct drm_property *cb1_hdr10plus_status_property;
      struct drm_property *cb1_deep_color_property;
      struct drm_property *cb1_lldv_format_property;
@@ -157,23 +156,25 @@ diff --git a/kernel-open/nvidia-drm/nvidia-drm-priv.h b/kernel-open/nvidia-drm/n
      MIGDeviceId gpu_mig_device;
  
 diff --git a/src/nvidia-modeset/include/nvkms-hw-flip.h b/src/nvidia-modeset/include/nvkms-hw-flip.h
+index 929e2b3..1ea224a 100644
 --- a/src/nvidia-modeset/include/nvkms-hw-flip.h
 +++ b/src/nvidia-modeset/include/nvkms-hw-flip.h
-@@ -27,6 +27,10 @@
- 
+@@ -28,6 +28,10 @@
  #include "nvkms-types.h"
  #include "nvkms-flip-workarea.h"
-+
+ 
 +NvBool nvIsNativeLldvColor(const struct NvKmsHdmiVsifMetadata *vsif,
 +                           const NVDpyAttributeColor *color);
 +NvBool nvIsNativeLldvSurface(const NVFlipEvoHwState *flip);
- 
++
  NvBool nvIsLayerDirty(const struct NvKmsFlipCommonParams *pParams,
                        const NvU32 layer);
+ 
 diff --git a/src/nvidia-modeset/include/nvkms-modeset-types.h b/src/nvidia-modeset/include/nvkms-modeset-types.h
+index 59cfe2d..bf36622 100644
 --- a/src/nvidia-modeset/include/nvkms-modeset-types.h
 +++ b/src/nvidia-modeset/include/nvkms-modeset-types.h
-@@ -52,6 +52,7 @@
+@@ -53,6 +53,7 @@ typedef struct {
      NvBool colorRangeSpecified      : 1;
      NvBool hs10bpcHint              : 1;
      NvBool hdmiVsifMetadataEnabled  : 1;
@@ -182,24 +183,26 @@ diff --git a/src/nvidia-modeset/include/nvkms-modeset-types.h b/src/nvidia-modes
  } NVProposedModeSetStateOneApiHead;
  
 diff --git a/src/nvidia-modeset/kapi/include/nvkms-kapi-cb1.h b/src/nvidia-modeset/kapi/include/nvkms-kapi-cb1.h
+index 594b530..0d87fad 100644
 --- a/src/nvidia-modeset/kapi/include/nvkms-kapi-cb1.h
 +++ b/src/nvidia-modeset/kapi/include/nvkms-kapi-cb1.h
-@@ -10,6 +10,11 @@
-     NvKmsDispHandle disp;
+@@ -11,6 +11,11 @@ struct NvKmsCb1FaultParams {
      NVDpyId dpy;
      NvU32 head;
-+};
+ };
 +#define NVKMS_IOCTL_KAPI_NATIVE_LLDV_ACTIVE 0x10002U
 +struct NvKmsNativeLldvQueryParams {
 +    struct NvKmsCb1FaultParams display;
 +    NvBool active;
- };
++};
  enum {NV_CB1_SET_MODE, NV_CB1_FLIP, NV_CB1_QUERY};
  struct NvKmsCb1KapiParams {
+     union {
 diff --git a/src/nvidia-modeset/kapi/interface/nvkms-kapi.h b/src/nvidia-modeset/kapi/interface/nvkms-kapi.h
+index 193f223..4ddf0ed 100644
 --- a/src/nvidia-modeset/kapi/interface/nvkms-kapi.h
 +++ b/src/nvidia-modeset/kapi/interface/nvkms-kapi.h
-@@ -1690,6 +1690,8 @@
+@@ -1707,6 +1707,8 @@ struct NvKmsKapiFunctionsTable {
                                 NvU32 *status);
      NvBool (*markHdr10PlusFault)(struct NvKmsKapiDevice *device,
                                  NvKmsKapiDisplay display, NvU32 head);
@@ -209,9 +212,10 @@ diff --git a/src/nvidia-modeset/kapi/interface/nvkms-kapi.h b/src/nvidia-modeset
  
  /** @} */
 diff --git a/src/nvidia-modeset/kapi/src/nvkms-kapi.c b/src/nvidia-modeset/kapi/src/nvkms-kapi.c
+index 99e5720..5daacb0 100644
 --- a/src/nvidia-modeset/kapi/src/nvkms-kapi.c
 +++ b/src/nvidia-modeset/kapi/src/nvkms-kapi.c
-@@ -2593,6 +2593,21 @@
+@@ -2609,6 +2609,21 @@ static NvBool GetHdr10PlusState(struct NvKmsKapiDevice *device,
      return potential;
  }
  
@@ -233,7 +237,7 @@ diff --git a/src/nvidia-modeset/kapi/src/nvkms-kapi.c b/src/nvidia-modeset/kapi/
  static NvBool MarkHdr10PlusFault(struct NvKmsKapiDevice *device,
                                   NvKmsKapiDisplay display, NvU32 head)
  {
-@@ -3401,6 +3416,38 @@
+@@ -3419,6 +3434,38 @@ static NvBool GetOutputTransferFunction(
   * Helper function to convert NvKmsKapiRequestedModeSetConfig
   * to NvKmsSetModeParams.
   */
@@ -272,9 +276,9 @@ diff --git a/src/nvidia-modeset/kapi/src/nvkms-kapi.c b/src/nvidia-modeset/kapi/
  static NvBool NvKmsKapiRequestedModeSetConfigToKms(
      struct NvKmsKapiDevice *device,
      const struct NvKmsKapiRequestedModeSetConfig *requestedConfig,
-@@ -3539,20 +3586,8 @@
-         paramsHead->flip.postcompColorPassthrough.enabled =
-             headModeSetConfig->postcompColorPassthrough;
+@@ -3576,20 +3623,8 @@ static NvBool NvKmsKapiRequestedModeSetConfigToKms(
+             (headModeSetConfig->colorBpc !=
+              NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_UNKNOWN);
  
 -        if (nvDoviLowLatency(headModeSetConfig->hdmiVsifMetadata.payload,
 -                            headModeSetConfig->hdmiVsifMetadata.payloadSize)) {
@@ -292,10 +296,10 @@ diff --git a/src/nvidia-modeset/kapi/src/nvkms-kapi.c b/src/nvidia-modeset/kapi/
 -        }
 +        if (!ConfigureLldvOutput(headModeSetConfig, tf, paramsHead))
 +            return NV_FALSE;
+     }
  
-         if (headModeSetConfig->colorBpc != 0) {
-             paramsHead->colorBpcSpecified = NV_TRUE;
-@@ -4324,6 +4359,7 @@
+     return NV_TRUE;
+@@ -4365,6 +4400,7 @@ NvBool nvKmsKapiGetFunctionsTableInternal
  
      funcsTable->getDisplayMode      = GetDisplayMode;
      funcsTable->getCurrentOutputBpc = GetCurrentOutputBpc;
@@ -304,25 +308,27 @@ diff --git a/src/nvidia-modeset/kapi/src/nvkms-kapi.c b/src/nvidia-modeset/kapi/
      funcsTable->markHdr10PlusFault = MarkHdr10PlusFault;
      funcsTable->validateDisplayMode = ValidateDisplayMode;
 diff --git a/src/nvidia-modeset/src/nvkms-flip.c b/src/nvidia-modeset/src/nvkms-flip.c
+index 9a28099..c332b25 100644
 --- a/src/nvidia-modeset/src/nvkms-flip.c
 +++ b/src/nvidia-modeset/src/nvkms-flip.c
-@@ -159,7 +159,15 @@
+@@ -158,8 +158,16 @@ static NvBool UpdateProposedFlipStateOneApiHead(
          &pDispEvo->apiHeadState[apiHead];
      const NVDpyEvoRec *pDpyEvo =
          nvGetOneArbitraryDpyEvo(pApiHeadState->activeDpys, pDispEvo);
 +    const NvU32 primaryHead = nvGetPrimaryHwHead(pDispEvo, apiHead);
 +    const struct NvKmsHdmiVsifMetadata *vsif;
      NvU32 layer;
-+
+ 
 +    if (primaryHead == NV_INVALID_HEAD)
 +        return FALSE;
 +    vsif = pParams->hdmiVsifMetadata.specified ?
 +        &pParams->hdmiVsifMetadata.vsifMetadata :
 +        &pDispEvo->headState[primaryHead].hdmiVsifMetadata;
- 
++
      if (pParams->tf.specified) {
          pProposedApiHead->dirty.hdr = TRUE;
-@@ -222,7 +230,8 @@
+         pProposedApiHead->hdr.tf = pParams->tf.val;
+@@ -232,7 +240,8 @@ static NvBool UpdateProposedFlipStateOneApiHead(
          // XXX HDR TODO: Handle other colorimetries
          if (pProposedApiHead->hdr.infoFrameOverride ||
              (pProposedApiHead->hdr.staticMetadataLayerMask != 0) ||
@@ -332,28 +338,28 @@ diff --git a/src/nvidia-modeset/src/nvkms-flip.c b/src/nvidia-modeset/src/nvkms-
                  NVKMS_OUTPUT_COLORIMETRY_BT2100)) {
              const NVDpyEvoRec *pDpyEvoIter;
  
-@@ -623,6 +632,13 @@
+@@ -633,6 +642,13 @@ NvBool nvFlipEvo(NVDevEvoPtr pDevEvo,
              {
                  NVProposedFlipStateOneApiHead *proposed =
-                     &pWorkArea->disp[sd].apiHead[apiHead].proposedFlipState;
-+                const NVFlipEvoHwState *flip = &pWorkArea->sd[sd].head[head].newState;
+                     &pWorkArea->disp[0].apiHead[apiHead].proposedFlipState;
++                const NVFlipEvoHwState *flip = &pWorkArea->sd[0].head[head].newState;
 +                const NvBool native = nvIsNativeLldvColor(&flip->hdmiVsifMetadata,
 +                                                         &proposed->hdr.dpyColor);
 +                /* Enter/leave this pipeline only through a full modeset. */
 +                if (native != nvIsNativeLldvSurface(flip) ||
 +                    native != nvIsNativeLldvColor(&pDispEvo->headState[head].hdmiVsifMetadata,
 +                                                 &pApiHeadState->attributes.color)) goto done;
-                 const struct NvKmsCb1Hdr *intent = nvGetCb1HdrIntent(pOpenDev, sd, apiHead);
+                 const struct NvKmsCb1Hdr *intent = nvGetCb1HdrIntent(pOpenDev, 0, apiHead);
                  const NVDpyEvoRec *dpy = nvGetOneArbitraryDpyEvo(pApiHeadState->activeDpys, pDispEvo);
                  if (intent) proposed->cb1Hdr = *intent;
 diff --git a/src/nvidia-modeset/src/nvkms-hdmi.c b/src/nvidia-modeset/src/nvkms-hdmi.c
+index 6b98089..de9d8a0 100644
 --- a/src/nvidia-modeset/src/nvkms-hdmi.c
 +++ b/src/nvidia-modeset/src/nvkms-hdmi.c
-@@ -858,6 +858,22 @@
-         &pEdidInfo->hdr_static_metadata_info;
+@@ -979,6 +979,22 @@ SendHDRInfoFrame(const NVDpyEvoRec *pDpyEvo, const NvU32 head,
      NvEvoInfoFrameTransmitFrequency frequency =
          NV_EVO_INFOFRAME_TRANSMIT_FREQUENCY_INIT;
-+
+ 
 +    /* LLDV has its own EOTF signaling. Clear a previous HDR10 packet rather
 +     * than emitting the normal SDR transition packet alongside Dolby VSIF. */
 +    if (pHeadState->bypassComposition &&
@@ -369,10 +375,12 @@ diff --git a/src/nvidia-modeset/src/nvkms-hdmi.c b/src/nvidia-modeset/src/nvkms-
 +        /* On older hardware the Dolby VSIF already owns the shared slot. */
 +        return;
 +    }
- 
-     /* EDID bit 3 (named future_eotf by the timing library) advertises HLG. */
-     if (pHdrInfo->static_metadata_type != 1) {
++
+     if (!nvDpyIsHDRCapable(pDpyEvo)) {
+         return;
+     }
 diff --git a/src/nvidia-modeset/src/nvkms-hw-flip.c b/src/nvidia-modeset/src/nvkms-hw-flip.c
+index 02721ae..e83aeb0 100644
 --- a/src/nvidia-modeset/src/nvkms-hw-flip.c
 +++ b/src/nvidia-modeset/src/nvkms-hw-flip.c
 @@ -22,6 +22,7 @@
@@ -383,7 +391,7 @@ diff --git a/src/nvidia-modeset/src/nvkms-hw-flip.c b/src/nvidia-modeset/src/nvk
  #include "nvkms-evo.h"
  #include "nvkms-hw-flip.h"
  #include "nvkms-utils-flip.h"
-@@ -1752,6 +1753,23 @@
+@@ -1905,6 +1906,23 @@ static NvU32 ValidateCompositionDepth(const NVFlipEvoHwState *pFlipState,
      return TRUE;
  }
  
@@ -407,22 +415,23 @@ diff --git a/src/nvidia-modeset/src/nvkms-hw-flip.c b/src/nvidia-modeset/src/nvk
  static NvBool ValidateColorPassthroughFlipState(const NVDevEvoRec *pDevEvo,
                                                  const NvU32 head,
                                                  const NVHwModeTimingsEvo *pTimings,
-@@ -1760,7 +1778,14 @@
+@@ -1913,8 +1931,15 @@ static NvBool ValidateColorPassthroughFlipState(const NVDevEvoRec *pDevEvo,
      const NVFlipChannelEvoHwState *pHwState =
          &pFlipState->layer[NVKMS_MAIN_LAYER];
      const NVSurfaceEvoRec *pMainSurface = pHwState->pSurfaceEvo[NVKMS_LEFT];
 +    const NvBool nativeLldv = nvIsNativeLldvSurface(pFlipState);
      NvU32 layer;
-+
+ 
 +    /* Keep the output CSC active; neither passthrough flag has this contract. */
 +    if (nativeLldv && (pHwState->precompColorPassthrough ||
 +                      pFlipState->postcompColorPassthrough ||
 +                      pFlipState->hdrInfoFrame.enabled))
 +        return FALSE;
- 
++
      if (!pDevEvo->hal->caps.supportsColorPassthrough) {
          if (pHwState->precompColorPassthrough ||
-@@ -1776,14 +1801,21 @@
+             pFlipState->postcompColorPassthrough) {
+@@ -1929,14 +1954,21 @@ static NvBool ValidateColorPassthroughFlipState(const NVDevEvoRec *pDevEvo,
          }
      }
  
@@ -446,7 +455,7 @@ diff --git a/src/nvidia-modeset/src/nvkms-hw-flip.c b/src/nvidia-modeset/src/nvk
              if (pMainSurface) {
                  if ((pMainSurface->format != NvKmsSurfaceMemoryFormatRF16GF16BF16AF16) &&
                      (pMainSurface->format != NvKmsSurfaceMemoryFormatRF16GF16BF16XF16)) {
-@@ -1844,13 +1876,13 @@
+@@ -1997,13 +2029,13 @@ static NvBool ValidateColorPassthroughFlipState(const NVDevEvoRec *pDevEvo,
      }
  
      /* Validate postcomp color passthrough (per-head). */
@@ -463,9 +472,10 @@ diff --git a/src/nvidia-modeset/src/nvkms-hw-flip.c b/src/nvidia-modeset/src/nvk
          }
  
 diff --git a/src/nvidia-modeset/src/nvkms-modeset.c b/src/nvidia-modeset/src/nvkms-modeset.c
+index 15aa2aa..e4cfccf 100644
 --- a/src/nvidia-modeset/src/nvkms-modeset.c
 +++ b/src/nvidia-modeset/src/nvkms-modeset.c
-@@ -1219,11 +1219,16 @@
+@@ -1342,11 +1342,16 @@ AssignProposedModeSetHwState(NVDevEvoRec *pDevEvo,
                  }
              }
  
@@ -483,7 +493,7 @@ diff --git a/src/nvidia-modeset/src/nvkms-modeset.c b/src/nvidia-modeset/src/nvk
                      NVKMS_OUTPUT_COLORIMETRY_BT2100)) {
                  const NVDpyEvoRec *pDpyEvo;
  
-@@ -2175,7 +2180,9 @@
+@@ -2299,7 +2304,9 @@ ValidateProposedFlipHwStateOneSubDev(
                  &pProposedSd->head[head].flip,
                  &pProposedDisp->head[head].timings.viewPort.possibleUsage);
  
@@ -494,7 +504,7 @@ diff --git a/src/nvidia-modeset/src/nvkms-modeset.c b/src/nvidia-modeset/src/nvk
                                            head,
                                            &pProposedDisp->head[head].timings,
                                            pProposedDisp->head[head].pConnectorEvo,
-@@ -2891,7 +2898,8 @@
+@@ -3018,7 +3025,8 @@ ApplyProposedModeSetHwStateOneHeadPreUpdate(
      NVDispHeadStateEvoPtr pHeadState = &pDispEvo->headState[head];
      NVEvoUpdateState *updateState = &pModesetUpdateState->updateState;
  
@@ -505,6 +515,7 @@ diff --git a/src/nvidia-modeset/src/nvkms-modeset.c b/src/nvidia-modeset/src/nvk
          pProposedApiHead->postcompColorPassthrough;
      pHeadState->activeRmId = pProposedApiHead->activeRmId;
 diff --git a/src/nvidia-modeset/src/nvkms.c b/src/nvidia-modeset/src/nvkms.c
+index 6f0a100..4364afb 100644
 --- a/src/nvidia-modeset/src/nvkms.c
 +++ b/src/nvidia-modeset/src/nvkms.c
 @@ -26,6 +26,7 @@
@@ -515,7 +526,7 @@ diff --git a/src/nvidia-modeset/src/nvkms.c b/src/nvidia-modeset/src/nvkms.c
  
  #include "nvkms-types.h"
  #include "nvkms-utils.h"
-@@ -5057,6 +5058,25 @@
+@@ -4892,6 +4893,25 @@ static NvBool UnregisterVblankIntrCallback(struct NvKmsPerOpen *pOpen,
   * \return  Return TRUE if the ioctl operation was successfully
   *          performed.  Otherwise, return FALSE.
   */
@@ -541,7 +552,7 @@ diff --git a/src/nvidia-modeset/src/nvkms.c b/src/nvidia-modeset/src/nvkms.c
  NvBool nvKmsIoctl(
      void *pOpenVoid,
      const NvU32 cmdOpaque,
-@@ -5194,6 +5214,15 @@
+@@ -5029,6 +5049,15 @@ NvBool nvKmsIoctl(
          dpy->pDispEvo->headState[nvGetPrimaryHwHead(dpy->pDispEvo, p->head)].cb1HdrLedger.status = 2;
          return TRUE;
      }
@@ -550,7 +561,7 @@ diff --git a/src/nvidia-modeset/src/nvkms.c b/src/nvidia-modeset/src/nvkms.c
 +        const NVDpyEvoRec *dpy;
 +        if (pOpen->clientType != NVKMS_CLIENT_KERNEL_SPACE ||
 +            paramSize != sizeof(*p) || !p) return FALSE;
-+        dpy = GetPerOpenDpy(pOpen, p->display.device, p->display.disp, p->display.dpy);
++        dpy = GetPerOpenDpy(pOpen, p->display.device, p->display.dpy);
 +        p->active = CurrentNativeLldvActive(dpy, p->display.head);
 +        return TRUE;
 +    }

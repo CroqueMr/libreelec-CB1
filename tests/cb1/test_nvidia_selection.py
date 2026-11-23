@@ -155,9 +155,9 @@ class NvidiaSelection(unittest.TestCase):
         generator = importlib.util.module_from_spec(spec); spec.loader.exec_module(generator)
         current = {'chips': [{'devid': '0x1b80', 'legacybranch': '580.xx'}, {'devid': '0x1e04'}]}
         legacy = {'chips': [{'devid': '0x1b80'}]}
-        self.assertEqual(generator.table(current, legacy), '1b80 r580\n1e04 r615\n')
+        self.assertEqual(generator.table(current, legacy), '1b80 r580\n1e04 r620\n')
         current['chips'].append({'devid': '0x137d', 'legacybranch': '580.xx'})
-        self.assertEqual(generator.table(current, legacy), '1b80 r580\n1e04 r615\n')
+        self.assertEqual(generator.table(current, legacy), '1b80 r580\n1e04 r620\n')
         with self.assertRaises(ValueError):
             generator.table(current, {'chips': []})
         current['chips'].append({'devid': '0x1B80'})
@@ -168,7 +168,7 @@ class NvidiaSelection(unittest.TestCase):
         lib, run, sys = base/'usr/lib', base/'run', base/'sys'
         (sys/'bus/pci/devices').mkdir(parents=True)
         run.mkdir()
-        for branch, version in [('r615', '615.78.08'), ('r580', '580.196.07')]:
+        for branch, version in [('r620', '620.73.04'), ('r580', '580.196.07')]:
             payload = lib/'nvidia-drivers'/branch
             (payload/'usr/lib').mkdir(parents=True)
             (payload/'driver-version').write_text(version+'\n')
@@ -185,8 +185,8 @@ class NvidiaSelection(unittest.TestCase):
             modules.mkdir(parents=True)
             for name in ('nvidia', 'nvidia-modeset', 'nvidia-drm', 'nvidia-uvm'):
                 (modules/(name+'.ko')).write_bytes(branch.encode())
-        (lib/'nvidia-drivers/pci-branches').write_text('1b80 r580\n1c82 r580\n1e04 r615\n2b85 r615\n')
-        (lib/'nvidia-drivers/r615/hdr-depth.conf').write_text('options nvidia-modeset max_output_color_depth=12\n')
+        (lib/'nvidia-drivers/pci-branches').write_text('1b80 r580\n1c82 r580\n1e04 r620\n2b85 r620\n')
+        (lib/'nvidia-drivers/r620/hdr-depth.conf').write_text('options nvidia-modeset max_output_color_depth=12\n')
         for i, (vendor, device, boot, cls) in enumerate(devices):
             path = sys/'bus/pci/devices'/('0000:01:%02x.0' % i)
             path.mkdir()
@@ -202,13 +202,13 @@ class NvidiaSelection(unittest.TestCase):
 
     def test_known_no_unknown_and_non_display_devices(self):
         for devices, branch, overlay in [
-            ([], 'r615', ''),
+            ([], 'r620', ''),
             ([('0x10de', '0x1b80', '0', '0x030000')], 'r580', 'nvidia-r580'),
-            ([('0x10de', '0x1E04', '0', '0x030200')], 'r615', 'nvidia-r615'),
-            ([('0x10de', '0xffff', '0', '0x030000')], 'r615', ''),
-            ([('0x10de', '0x1b80', '0', '0x040300')], 'r615', ''),
-            ([('0x1002', '0x1b80', '1', '0x030000')], 'r615', ''),
-            ([('0x10de', '0xffff', '1', '0x030000'), ('0x10de', '0x1b80', '0', '0x030000')], 'r615', ''),
+            ([('0x10de', '0x1E04', '0', '0x030200')], 'r620', 'nvidia-r620'),
+            ([('0x10de', '0xffff', '0', '0x030000')], 'r620', ''),
+            ([('0x10de', '0x1b80', '0', '0x040300')], 'r620', ''),
+            ([('0x1002', '0x1b80', '1', '0x030000')], 'r620', ''),
+            ([('0x10de', '0xffff', '1', '0x030000'), ('0x10de', '0x1b80', '0', '0x030000')], 'r620', ''),
             ([('0x10de', '0x1b80', '0', '0x030000'), ('0x10de', '0x1c82', '0', '0x030000')], 'r580', 'nvidia-r580'),
         ]:
             with self.subTest(devices=devices), tempfile.TemporaryDirectory() as tmp:
@@ -217,10 +217,10 @@ class NvidiaSelection(unittest.TestCase):
                 self.assertEqual(result.returncode, 0, result.stderr)
                 self.assertEqual(result.stdout, overlay)
                 self.assertEqual((fixture[2]/'nvidia-driver').resolve(), fixture[1]/'nvidia-drivers'/branch)
-                self.assertEqual((fixture[2]/'modprobe.d/nvidia-hdr-depth.conf').exists(), branch == 'r615' and bool(overlay))
+                self.assertEqual((fixture[2]/'modprobe.d/nvidia-hdr-depth.conf').exists(), branch == 'r620' and bool(overlay))
 
     def test_multiple_and_mixed_devices_prefer_known_boot_display(self):
-        for first_boot, second_boot, expected in [('1', '0', 'r580'), ('0', '1', 'r615'), ('0', '0', 'r615')]:
+        for first_boot, second_boot, expected in [('1', '0', 'r580'), ('0', '1', 'r620'), ('0', '0', 'r620')]:
             with self.subTest(expected=expected), tempfile.TemporaryDirectory() as tmp:
                 fixture = self.fixture(Path(tmp), [('0x10de', '0x1b80', first_boot, '0x030000'),
                     ('0x10de', '0x1e04', second_boot, '0x030000')])
@@ -246,7 +246,7 @@ class NvidiaSelection(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0)
             self.assertFalse((fixture[2]/'nvidia-driver').is_symlink())
 
-    def test_repeat_setup_removes_r615_only_option(self):
+    def test_repeat_setup_removes_r620_only_option(self):
         with tempfile.TemporaryDirectory() as tmp:
             fixture = self.fixture(Path(tmp), [('0x10de', '0x1e04', '1', '0x030000')])
             self.assertEqual(self.select(fixture).returncode, 0)

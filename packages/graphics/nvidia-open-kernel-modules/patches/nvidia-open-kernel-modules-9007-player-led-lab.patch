@@ -1,5 +1,7 @@
+Subject: [PATCH] Retain CB1 NVIDIA change 9007
+
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.c b/kernel-open/nvidia-drm/nvidia-drm-connector.c
-index 10c8838..4588cd6 100644
+index 4fb5210..c9669cd 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-connector.c
 +++ b/kernel-open/nvidia-drm/nvidia-drm-connector.c
 @@ -45,6 +45,12 @@
@@ -15,15 +17,15 @@ index 10c8838..4588cd6 100644
  #include <drm/drm_sysfs.h>
  #include <drm/drm_hdr10plus.h>
  
-@@ -361,6 +367,7 @@ static struct drm_connector_state* nv_drm_connector_atomic_duplicate_state(struc
- 
+@@ -415,6 +421,7 @@ static struct drm_connector_state* nv_drm_connector_atomic_duplicate_state(struc
+     nv_drm_new_connector_state->cb1_deep_color = nv_drm_old_connector_state->cb1_deep_color;
      nv_drm_new_connector_state->hdmi_vsif_metadata =
          nv_drm_old_connector_state->hdmi_vsif_metadata;
 +    nv_drm_new_connector_state->lldv_format = nv_drm_old_connector_state->lldv_format;
      if (nv_drm_new_connector_state->hdmi_vsif_metadata) {
          drm_property_blob_get(nv_drm_new_connector_state->hdmi_vsif_metadata);
      }
-@@ -426,7 +433,16 @@ static int nv_drm_connector_atomic_set_property(
+@@ -488,7 +495,16 @@ static int nv_drm_connector_atomic_set_property(
      }
      
  
@@ -40,7 +42,7 @@ index 10c8838..4588cd6 100644
          return nv_drm_atomic_replace_property_blob_from_id_size_range(
                      nv_dev->dev,
                      &nv_connector_state->hdmi_vsif_metadata,
-@@ -501,6 +517,10 @@ static int nv_drm_connector_atomic_get_property(
+@@ -586,6 +602,10 @@ static int nv_drm_connector_atomic_get_property(
          return 0;
      }
  
@@ -51,10 +53,10 @@ index 10c8838..4588cd6 100644
      if (property == nv_dev->nv_connector_hdmi_vsif_metadata_property) {
          *val = nv_connector_state->hdmi_vsif_metadata ?
              nv_connector_state->hdmi_vsif_metadata->base.id : 0;
-@@ -664,6 +684,53 @@ static NvU32 nv_drm_connector_requested_bpc(
-     return 0;
- }
+@@ -743,6 +763,53 @@ static const NvU32 __nv_drm_connector_supported_colorspaces =
+ #endif
  
+ #if defined(NV_DRM_CONNECTOR_ATTACH_HDR_OUTPUT_METADATA_PROPERTY_PRESENT)
 +static bool nv_drm_lldv_enabled;
 +module_param_named(enable_lldv_lab, nv_drm_lldv_enabled, bool, 0444);
 +MODULE_PARM_DESC(enable_lldv_lab, "Legacy CB1 parameter; LLDV is selected per HDMI connector");
@@ -105,17 +107,17 @@ index 10c8838..4588cd6 100644
  static int
  __nv_drm_connector_atomic_check(struct drm_connector *connector,
                                  nv_drm_atomic_state_base_t *state)
-@@ -684,6 +751,7 @@ __nv_drm_connector_atomic_check(struct drm_connector *connector,
-     struct NvKmsKapiHeadRequestedConfig *req_config;
+@@ -771,6 +838,7 @@ __nv_drm_connector_atomic_check(struct drm_connector *connector,
+     int ret;
  
      if (!crtc) {
 +        nv_new_connector_state->lldv_format = 0;
          return 0;
      }
  
-@@ -761,28 +829,31 @@ __nv_drm_connector_atomic_check(struct drm_connector *connector,
-         }
-     }
+@@ -883,28 +951,31 @@ __nv_drm_connector_atomic_check(struct drm_connector *connector,
+         (!!new_connector_state->hdr10plus_metadata != !!old_connector_state->hdr10plus_metadata);
+     req_config->modeSetConfig.colorBpc = nvkms_bpc;
  
 -    /* Handle HDMI VSIF metadata changes */
 -    req_config->flags.hdmiVsifMetadataChanged =
@@ -165,8 +167,8 @@ index 10c8838..4588cd6 100644
 +        *head_vsif = next;
      }
  
-     /*
-@@ -986,6 +1057,11 @@ nv_drm_connector_new(struct drm_device *dev,
+     /* Handle ALLM enable changes */
+@@ -1115,6 +1186,11 @@ nv_drm_connector_new(struct drm_device *dev,
          }
          drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
  
@@ -179,23 +181,23 @@ index 10c8838..4588cd6 100644
              drm_object_attach_property(&nv_connector->base.base,
                                         nv_dev->nv_connector_hdmi_vsif_metadata_property,
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-connector.h b/kernel-open/nvidia-drm/nvidia-drm-connector.h
-index 04d87c7..fadc147 100644
+index 514a318..ba5f5b0 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-connector.h
 +++ b/kernel-open/nvidia-drm/nvidia-drm-connector.h
-@@ -86,6 +86,7 @@ struct nv_drm_connector_state {
-        enum nv_drm_dithering_mode dithering_mode;
-        struct drm_property_blob *hdcp_topology_blob;
+@@ -102,6 +102,7 @@ struct nv_drm_connector_state {
+        enum nv_drm_connector_output_bpc output_bpc;
         struct drm_property_blob *hdmi_vsif_metadata;
+        enum nv_drm_allm_mode allmMode;
 +    NvU8 lldv_format;
  };
  
  static inline struct nv_drm_connector_state *to_nv_drm_connector_state(
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-drv.c b/kernel-open/nvidia-drm/nvidia-drm-drv.c
-index 859701c..ae254e4 100644
+index fd8758a..7aebc85 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-drv.c
 +++ b/kernel-open/nvidia-drm/nvidia-drm-drv.c
-@@ -715,6 +715,14 @@ static int nv_drm_create_properties(struct nv_drm_device *nv_dev)
-         return -ENOMEM;
+@@ -782,6 +782,14 @@ static int nv_drm_create_properties(struct nv_drm_device *nv_dev)
+         }
      }
  
 +    {
@@ -210,7 +212,7 @@ index 859701c..ae254e4 100644
          0, "CB1_NATIVE_TMDS");
      if (!nv_dev->cb1_native_tmds_property) return -ENOMEM;
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-modeset.c b/kernel-open/nvidia-drm/nvidia-drm-modeset.c
-index 3e0ab8e..81c1741 100644
+index 5571878..038be87 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-modeset.c
 +++ b/kernel-open/nvidia-drm/nvidia-drm-modeset.c
 @@ -30,6 +30,7 @@
@@ -221,7 +223,7 @@ index 3e0ab8e..81c1741 100644
  
  #if defined(NV_DRM_DRMP_H_PRESENT)
  #include <drm/drmP.h>
-@@ -578,6 +579,15 @@ int nv_drm_atomic_check(struct drm_device *dev,
+@@ -584,6 +585,15 @@ int nv_drm_atomic_check(struct drm_device *dev,
          }
      }
      for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
@@ -238,10 +240,10 @@ index 3e0ab8e..81c1741 100644
          {
              struct drm_plane_state *primary =
 diff --git a/kernel-open/nvidia-drm/nvidia-drm-priv.h b/kernel-open/nvidia-drm/nvidia-drm-priv.h
-index 60eae53..d029946 100644
+index f0a6cf8..50483df 100644
 --- a/kernel-open/nvidia-drm/nvidia-drm-priv.h
 +++ b/kernel-open/nvidia-drm/nvidia-drm-priv.h
-@@ -103,6 +103,7 @@ struct nv_drm_device {
+@@ -118,6 +118,7 @@ struct nv_drm_device {
      struct drm_property *cb1_native_tmds_property;
      struct drm_property *cb1_hdr10plus_status_property;
      struct drm_property *cb1_deep_color_property;
@@ -275,7 +277,7 @@ index 6c35ab7..c12e415 100644
   * modern Dolby packets must never enter this timing rewrite. */
  static inline NvBool nvDoviLegacy(const NvU8 *p, NvU32 size)
 diff --git a/src/nvidia-modeset/kapi/src/nvkms-kapi.c b/src/nvidia-modeset/kapi/src/nvkms-kapi.c
-index 56cd1a7..f9ac95a 100644
+index cb71841..99e5720 100644
 --- a/src/nvidia-modeset/kapi/src/nvkms-kapi.c
 +++ b/src/nvidia-modeset/kapi/src/nvkms-kapi.c
 @@ -34,6 +34,7 @@
@@ -286,10 +288,11 @@ index 56cd1a7..f9ac95a 100644
  #include "nvkms-kapi-cb1.h"
  #include "nvkms-kapi-private.h"
  #include "nvkms-kapi-internal.h"
-@@ -3538,6 +3539,21 @@ static NvBool NvKmsKapiRequestedModeSetConfigToKms(
-         paramsHead->flip.postcompColorPassthrough.enabled =
-             headModeSetConfig->postcompColorPassthrough;
- 
+@@ -3574,6 +3575,21 @@ static NvBool NvKmsKapiRequestedModeSetConfigToKms(
+         paramsHead->colorBpcSpecified =
+             (headModeSetConfig->colorBpc !=
+              NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_UNKNOWN);
++
 +        if (nvDoviLowLatency(headModeSetConfig->hdmiVsifMetadata.payload,
 +                            headModeSetConfig->hdmiVsifMetadata.payloadSize)) {
 +            if (headModeSetConfig->hdrInfoFrame.enabled ||
@@ -304,15 +307,14 @@ index 56cd1a7..f9ac95a 100644
 +            paramsHead->colorRange = NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL;
 +            paramsHead->flip.dithering.specified = NV_TRUE;
 +        }
-+
-         if (headModeSetConfig->colorBpc != 0) {
-             paramsHead->colorBpcSpecified = NV_TRUE;
-             paramsHead->colorBpc =
+     }
+ 
+     return NV_TRUE;
 diff --git a/src/nvidia-modeset/src/nvkms-hdmi.c b/src/nvidia-modeset/src/nvkms-hdmi.c
-index 8e21ddc..464f08b 100644
+index 6da3012..6b98089 100644
 --- a/src/nvidia-modeset/src/nvkms-hdmi.c
 +++ b/src/nvidia-modeset/src/nvkms-hdmi.c
-@@ -710,6 +710,15 @@ static void SendVideoInfoFrame(const NVDispEvoRec *pDispEvo,
+@@ -709,6 +709,15 @@ static void SendVideoInfoFrame(const NVDispEvoRec *pDispEvo,
      NVT_STATUS status;
  
      CalculateVideoInfoFrameColorFormat(pDpyColor, hdTimings, pEdidInfo, &videoCtrl);
@@ -328,7 +330,7 @@ index 8e21ddc..464f08b 100644
  
      if (nvDoviLegacy(pDispEvo->headState[head].hdmiVsifMetadata.payload,
                       pDispEvo->headState[head].hdmiVsifMetadata.payloadSize) &&
-@@ -726,6 +735,9 @@ static void SendVideoInfoFrame(const NVDispEvoRec *pDispEvo,
+@@ -725,6 +734,9 @@ static void SendVideoInfoFrame(const NVDispEvoRec *pDispEvo,
                            "Error in constructing Video InfoFrame");
          return;
      }
@@ -339,7 +341,7 @@ index 8e21ddc..464f08b 100644
      UpdateInfoFrameFlipStatePre(currentTransmitCtrl, newTransmitCtrl, NV_EVO_INFOFRAME_TRANSMIT_FREQUENCY_EVERY_FRAME, NV_TRUE);
      pDevEvo->hal->SendHdmiInfoFrame(
 diff --git a/src/nvidia-modeset/src/nvkms-modeset.c b/src/nvidia-modeset/src/nvkms-modeset.c
-index bb51d56..1e1e519 100644
+index e580751..15aa2aa 100644
 --- a/src/nvidia-modeset/src/nvkms-modeset.c
 +++ b/src/nvidia-modeset/src/nvkms-modeset.c
 @@ -97,6 +97,7 @@
@@ -350,7 +352,7 @@ index bb51d56..1e1e519 100644
  #include "nvkms-modeset-types.h"
  #include "nvkms-modeset-workarea.h"
  #include "nvkms-attributes.h"
-@@ -230,6 +231,13 @@ nvGetHwModeTimings(const NVDispEvoRec *pDispEvo,
+@@ -250,6 +251,13 @@ nvGetHwModeTimings(const NVDispEvoRec *pDispEvo,
          return FALSE;
      }
  
