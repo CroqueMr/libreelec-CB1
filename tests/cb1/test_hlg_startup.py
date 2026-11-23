@@ -132,7 +132,9 @@ struct Window {
 struct Manager {
  Window renderer;Window* m_pRenderer=&renderer;std::mutex m_presentlock;
  bool m_aiFullscreenRequested=true,m_aiFullscreenWanted=true,m_aiGuiReady=false;
- bool m_aiQueueReady=true,m_bTriggerUpdateResolution=false;
+ enum class ResolutionUpdate { IDLE, REQUESTED };
+ ResolutionUpdate m_resolutionUpdate=ResolutionUpdate::IDLE;
+ bool m_aiQueueReady=true;
  double m_aiStartPts=9000000;
  struct Event{void notifyAll(){}}m_presentevent;
  void FrameMove(){@READY@}
@@ -225,7 +227,7 @@ int main(){
   if(guard==3)m.renderer.context.source.m_active=false; // Stopped session.
   if(guard==4){stored->ints["dvbridge.sdrpreset"]++;FrameOutputSettings();}
   if(guard==5)m.m_aiStartPts=DVD_NOPTS_VALUE;
-  if(guard==6)m.m_bTriggerUpdateResolution=true;
+  if(guard==6)m.m_resolutionUpdate=decltype(m.m_resolutionUpdate)::REQUESTED;
   if(guard==7)windows.fullscreen=false;
   if(guard==8)m.renderer.context.source.m_preferences.method=99;
   if(guard==9)m.renderer.context.source.m_binding={}; // Rejected/unbound preparation.

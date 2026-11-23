@@ -28,6 +28,7 @@ struct DRM {RESOLUTION_INFO mode; bool accepts=true; int staged=1;
 struct CWinSystemGbmGLESContext {
  CDVBridgeState m_dvState; DRM drm; DRM* m_DRM=&drm; bool restore=true; int observed=0;
  struct Context{bool Quarantined(){return false;}}context;
+ bool m_dvModeSwitchDeferred=false;
  Context* m_dvContext=&context;bool RetireDVContext(){return true;}
  bool EndDVBridge(){observed=drm.staged;return restore;}
  bool PrepareNvidiaModeRestore(const RESOLUTION_INFO&);
