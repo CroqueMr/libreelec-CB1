@@ -119,6 +119,12 @@ int main(){
   values=ET.parse(PANEL).find('./variable[@name="DVOutputFormat"]').findall('value')
   for signal in ('sdr','hlg','hdr10','hdr10plus','dolbyvision'):
    self.assertTrue(any('videooutputhdrtype),'+signal+')' in v.get('condition','') for v in values))
+  sdr=[(v.text,v.get('condition')) for v in values if 'videooutputhdrtype),sdr)' in v.get('condition','')]
+  output_is_sdr='String.IsEqual(Player.Process(videooutputhdrtype),sdr)'
+  self.assertEqual(sdr, [
+   (f'SDR {gamut}',f'{output_is_sdr} + String.IsEqual(Window(playerprocessinfo).Property(DV.SDROutputGamut),{gamut})')
+   for gamut in ('BT.709','BT.2020')
+  ]+[('SDR',output_is_sdr)])
   self.assertEqual(values[-1].text,'Kodi output')
  def test_requested_panel_fields_are_removed(self):
   panel=ET.parse(PANEL)
