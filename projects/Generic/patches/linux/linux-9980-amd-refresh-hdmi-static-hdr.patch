@@ -1,0 +1,56 @@
+From b5ccfe741c7a5911fc763f209d3dbbc00f81944d Mon Sep 17 00:00:00 2001
+From: CB1 <cb1@localhost>
+Date: Mon, 23 Nov 2026 01:10:44 +0100
+Subject: [PATCH] drm/amd/display: refresh static HDR on a reused HDMI backend
+
+Entering or leaving HDR passes through the full commit path even when
+the HDMI resources are unchanged. Refresh the packet before skipping
+the reused backend so the receiver sees HDR changes without retraining.
+---
+ .../amd/display/dc/hwss/dce110/dce110_hwseq.c | 22 ++++++++++++++++++-
+ 1 file changed, 21 insertions(+), 1 deletion(-)
+
+diff --git a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c b/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
+index 37e9942..c02a84a 100644
+--- a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
++++ b/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
+@@ -2654,6 +2654,17 @@ static void dce110_setup_audio_dto(
+ 	}
+ }
+ 
++static bool dce110_static_hdr_packet_changed(const struct dc_stream_state *old,
++					    const struct dc_stream_state *new)
++{
++	bool old_valid = old->hdr_static_metadata.valid && !old->use_dynamic_meta;
++	bool new_valid = new->hdr_static_metadata.valid && !new->use_dynamic_meta;
++
++	return old_valid != new_valid ||
++	       (new_valid && memcmp(&old->hdr_static_metadata, &new->hdr_static_metadata,
++	                            sizeof(new->hdr_static_metadata)));
++}
++
+ enum dc_status dce110_apply_ctx_to_hw(
+ 		struct dc *dc,
+ 		struct dc_state *context)
+@@ -2723,8 +2734,17 @@ enum dc_status dce110_apply_ctx_to_hw(
+ 			continue;
+ 		}
+ 
+-		if (pipe_ctx_old->stream && !pipe_need_reprogram(pipe_ctx_old, pipe_ctx))
++		if (pipe_ctx_old->stream && !pipe_need_reprogram(pipe_ctx_old, pipe_ctx)) {
++			/* A reused HDMI backend still needs the new static HDR packet. */
++			if (resource_is_pipe_type(pipe_ctx, OTG_MASTER) &&
++			    !pipe_ctx->stream->dpms_off &&
++			    dc_is_hdmi_tmds_signal(pipe_ctx->stream->signal) &&
++			    dce110_static_hdr_packet_changed(pipe_ctx_old->stream, pipe_ctx->stream)) {
++				resource_build_info_frame(pipe_ctx);
++				dc->hwss.update_info_frame(pipe_ctx);
++			}
+ 			continue;
++		}
+ 
+ 		if (pipe_ctx->top_pipe || pipe_ctx->prev_odm_pipe)
+ 			continue;
+-- 
+2.43.0
+
