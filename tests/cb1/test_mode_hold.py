@@ -7,6 +7,110 @@ from test_native_video_source import TREE, body
 
 
 class ModeHoldTests(unittest.TestCase):
+    def test_desktop_resolution_survives_transient_display_retirement(self):
+        source = (TREE / 'xbmc/windowing/GraphicContext.cpp').read_text()
+        retry = body(source, 'void CGraphicContext::RetryDesktopResolution(bool initial)')
+        flip = body(source, 'void CGraphicContext::Flip(')
+        self.assertLess(flip.index('PresentRender('), flip.index('RetryDesktopResolution('))
+        switch = body(source, 'bool CGraphicContext::SetVideoResolutionInternal(')
+        self.assertLess(switch.index('m_desktopResolutionRequest.reset()'),
+                        switch.index('res == lastRes'))
+        program = r'''
+#include <algorithm>
+#include <cassert>
+#include <chrono>
+#include <mutex>
+#include <optional>
+using namespace std::chrono_literals;
+enum RESOLUTION { RES_DESKTOP=16, FILM=37, OTHER=38 };
+enum { ADJUST_REFRESHRATE_ON_START=3 };
+struct CSettings {
+ static constexpr int SETTING_VIDEOPLAYER_ADJUSTREFRESHRATE=0;
+ CSettings* GetSettings(){return this;}
+ int mode=2;
+ int GetInt(int){return mode;}
+};
+struct CApplicationPlayer {
+ bool playing=false;
+ bool IsPlaying(){return playing;}
+};
+struct Components {
+ CApplicationPlayer player;
+ template<class T> T* GetComponent(){return &player;}
+};
+struct CDisplaySettings {
+ RESOLUTION current=RES_DESKTOP;
+ RESOLUTION GetCurrentResolution(){return current;}
+ static CDisplaySettings& GetInstance(){static CDisplaySettings d;return d;}
+};
+struct CServiceBroker {
+ static Components& GetAppComponents(){static Components app;return app;}
+ static CSettings* GetSettingsComponent(){static CSettings settings;return &settings;}
+};
+enum { LOGDEBUG, LOGINFO, LOGWARNING };
+struct CLog { template<class... Args> static void Log(Args&&...) {} };
+enum Result { ACCEPTED, DEFERRED, FAILED };
+bool deferred=false;
+bool ConsumeDesktopModeDeferral(){bool value=deferred;deferred=false;return value;}
+struct CGraphicContext : std::recursive_mutex {
+ struct DesktopResolutionRequest {
+  RESOLUTION resolution;
+  std::chrono::steady_clock::time_point deadline;
+ };
+ std::optional<DesktopResolutionRequest> m_desktopResolutionRequest;
+ bool m_bFullScreenRoot=true,m_bFullScreenVideo=false;
+ RESOLUTION displayed=FILM;
+ Result result=ACCEPTED;
+ int attempts=0;
+ bool SetVideoResolutionInternal(RESOLUTION res,bool,bool desktopRestore){
+  assert(desktopRestore);
+  ++attempts;
+  if(result==DEFERRED) deferred=true;
+  if(result==ACCEPTED) displayed=res;
+  return result==ACCEPTED;
+ }
+ void RetryDesktopResolution(bool initial) RETRY
+ void request(){m_desktopResolutionRequest={{RES_DESKTOP,std::chrono::steady_clock::now()+2s}};}
+};
+int main(){
+ CGraphicContext ctx;
+ ctx.request();ctx.result=DEFERRED;ctx.RetryDesktopResolution(true);
+ assert(ctx.attempts==1 && ctx.m_desktopResolutionRequest && ctx.displayed==FILM);
+ ctx.result=ACCEPTED;ctx.RetryDesktopResolution(false);
+ assert(ctx.attempts==2 && !ctx.m_desktopResolutionRequest && ctx.displayed==RES_DESKTOP);
+
+ ctx.request();ctx.result=FAILED;deferred=true;ctx.RetryDesktopResolution(true);
+ assert(ctx.attempts==3 && !ctx.m_desktopResolutionRequest);
+
+ ctx.request();CServiceBroker::GetAppComponents().player.playing=true;
+ ctx.RetryDesktopResolution(false);
+ assert(ctx.attempts==3 && !ctx.m_desktopResolutionRequest);
+ CServiceBroker::GetAppComponents().player.playing=false;
+
+ ctx.request();CServiceBroker::GetSettingsComponent()->mode=ADJUST_REFRESHRATE_ON_START;
+ ctx.RetryDesktopResolution(false);
+ assert(ctx.attempts==3 && !ctx.m_desktopResolutionRequest);
+ CServiceBroker::GetSettingsComponent()->mode=2;
+
+ ctx.request();CDisplaySettings::GetInstance().current=OTHER;
+ ctx.RetryDesktopResolution(false);
+ assert(ctx.attempts==3 && !ctx.m_desktopResolutionRequest);
+ CDisplaySettings::GetInstance().current=RES_DESKTOP;
+
+ ctx.request();ctx.m_desktopResolutionRequest->deadline=std::chrono::steady_clock::now()-1s;
+ ctx.result=DEFERRED;ctx.RetryDesktopResolution(false);
+ assert(ctx.attempts==4 && !ctx.m_desktopResolutionRequest);
+ ctx.request();ctx.m_desktopResolutionRequest->deadline=std::chrono::steady_clock::now()-1s;
+ ctx.result=ACCEPTED;ctx.RetryDesktopResolution(false);
+ assert(ctx.attempts==5 && !ctx.m_desktopResolutionRequest);
+}
+'''.replace('RETRY', retry)
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / 'desktop-restore'
+            subprocess.run(['c++', '-std=c++20', '-Wall', '-Wextra', '-Werror', '-x', 'c++',
+                            '-', '-o', str(binary)], input=program, text=True, check=True)
+            subprocess.run([str(binary)], check=True)
+
     def test_disc_stream_changes_delegate_resolution_to_the_render_thread(self):
         source = (TREE / 'xbmc/cores/VideoPlayer/VideoPlayer.cpp').read_text()
         opening = body(source, 'bool CVideoPlayer::OpenVideoStream(')
