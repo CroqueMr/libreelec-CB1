@@ -40,7 +40,7 @@ int drm_scdc_readb(i2c_adapter*bus,u8 offset,u8*value){bus->reads.push_back(offs
 struct drm_device{struct{int connection_mutex=1;}mode_config;};
 struct intel_display{drm_device*drm;int resets=0,result=0;};
 struct drm_crtc_state{virtual ~drm_crtc_state()=default;};
-struct intel_crtc_state:drm_crtc_state{struct{bool active=true;}hw;bool hdmi_high_tmds_clock_ratio=true,hdmi_scrambling=true;};
+struct intel_crtc_state:drm_crtc_state{struct{bool active=true;}hw;struct{bool enable=false;}frl;bool hdmi_high_tmds_clock_ratio=true,hdmi_scrambling=true;};
 struct drm_crtc{int mutex=2;drm_crtc_state*state;};
 struct intel_crtc{drm_crtc base;int pipe=0;};
 struct commit{bool hw_done=true;};
@@ -71,6 +71,12 @@ struct Fixture{
  intel_hdmi hdmi{&connector};intel_encoder encoder{&display,&hdmi};
 };
 int main(){int failures=0,cases=0;auto check=[&](bool good,const std::string&name){++cases;failures+=!good;if(!good)std::cout<<"FAIL "<<name<<'\n';};
+ {
+  Fixture f;f.state.frl.enable=true;f.commit.hw_done=false;kms=true;admissions=0;lock_error=0;
+  drm_modeset_acquire_ctx ctx;const auto result=intel_hdmi_reset_link(&f.encoder,&ctx);
+  check(!result&&f.bus.reads.empty()&&!admissions&&!f.display.resets,
+        "FRL uses neither TMDS SCDC nor the TMDS completion waiter");
+ }
  auto has=[](const char*text){for(const auto&m:messages)if(m.find(text)!=std::string::npos)return true;return false;};
  for(bool debug:{false,true})for(int scenario=0;scenario<17;++scenario){
   Fixture f;messages.clear();lock_error=0;kms=debug;admissions=0;

@@ -2451,5 +2451,39 @@
     "files": {
       "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Keep TV-led link color and depth tied to the Dolby VSIF until its retirement."
     }
+  },
+  "projects/Generic/patches/linux/linux-9983-intel-native-hdmi-frl-lab.patch": {
+    "owner": "Port the upstream Intel FRL single-pipe path and keep it opt-in.",
+    "files": {
+      "drivers/gpu/drm/display/drm_scdc_helper.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/Makefile": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_audio.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_bios.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_bios.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_cx0_phy.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_cx0_phy.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_cx0_phy_regs.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_ddi.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_ddi.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_ddi_buf_trans.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_display.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_display_params.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_display_params.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_display_regs.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_display_types.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_dpll.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_hdmi.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_hdmi.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_hdmi_frl_dfm.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_hdmi_frl_dfm.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_hdmi_frl_dfm_regs.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_lt_phy.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_lt_phy.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_modeset_verify.c": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/i915/display/intel_vbt_defs.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "drivers/gpu/drm/xe/Makefile": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "include/drm/display/drm_scdc.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport.",
+      "include/drm/display/drm_scdc_helper.h": "Qualify opt-in Intel HDMI FRL while preserving the existing CB1 transport."
+    }
   }
 }
