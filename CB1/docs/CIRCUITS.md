@@ -1,6 +1,6 @@
 # Engine and circuits
 
-**CB1 1.1** is the engine version for R1.1.0. The table lists the identifiers reported by Player Information.
+**CB1 1.1** is the engine version for the R1.1 series. The table lists the identifiers reported by Player Information.
 
 | Circuit | Version |
 | --- | --- |
