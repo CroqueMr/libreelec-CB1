@@ -120,13 +120,14 @@ struct CServiceBroker {
 };
 struct CGraphicContext:std::recursive_mutex {
  RESOLUTION m_Resolution=FILM;bool m_bFullScreenRoot=true;
+ std::optional<RESOLUTION> m_desktopResolutionRequest;
  int m_iScreenWidth=3840,m_iScreenHeight=2160;float m_fFPSOverride=0;
  struct Rect{void SetRect(int,int,float,float){}}m_scissors;
  bool IsValidResolution(RESOLUTION res){return res==0 || res==1;}
  void SetStereoView(RenderStereoView){}
  RESOLUTION_INFO GetResInfo(RESOLUTION res){return CDisplaySettings::GetInstance().GetResolutionInfo(res);}
  void UpdateInternalStateWithResolution(RESOLUTION res) @UPDATE@
- bool SetVideoResolutionInternal(RESOLUTION res,bool forceUpdate) @GRAPHICS@
+ bool SetVideoResolutionInternal(RESOLUTION res,bool forceUpdate,bool desktopRestore=false) @GRAPHICS@
 };
 bool CWinSystemGbmGLESContext::PrepareNvidiaModeRestore(const RESOLUTION_INFO& res) @NVIDIA@
 bool CWinSystemGbmGLESContext::SetFullScreen(bool fullScreen,RESOLUTION_INFO& res,bool blankOtherDisplays) @WINDOW@
