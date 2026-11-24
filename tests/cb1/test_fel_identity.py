@@ -65,3 +65,7 @@ class FELIdentityAfterLoss(unittest.TestCase):
     def test_native_layer_timestamps_allow_recovery_after_loss(self):
         frames = self.replay("timed-base", "timed-enhancement")
         self.assertEqual(frames, [frame for frame in range(110) if frame not in (44, 45)])
+
+    def test_unresolved_recovery_reports_failure_after_all_exact_pairs(self):
+        frames = self.replay("unresolved-tail", expected_statuses=(10,))
+        self.assertEqual(frames, list(range(44)))
