@@ -1,17 +1,31 @@
-From 173c21209fcd8abb583779d87918e915b2de232b Mon Sep 17 00:00:00 2001
+From e38fc33949b00f4ce2c669ceee64920e1a83b666 Mon Sep 17 00:00:00 2001
 From: CB1 <cb1@users.noreply.github.com>
-Date: Tue, 24 Nov 2026 18:14:45 +0100
+Date: Tue, 24 Nov 2026 18:19:04 +0100
 Subject: [PATCH] io_uring: handle the resource update flags in Linux 7.4
 
 Kernel commit a5819c456b71 reuses the reserved word as flags.
 The flagged buffer update may use extended descriptors. Print the
 address until the tracer has a decoder for that layout.
 ---
- configure.ac              |  2 ++
- src/io_uring.c            | 16 ++++++++++++++++
- tests/io_uring_register.c | 17 +++++++++++++++++
- 3 files changed, 35 insertions(+)
+ bundled/linux/include/uapi/linux/io_uring.h |  2 +-
+ configure.ac                                |  2 ++
+ src/io_uring.c                              | 16 ++++++++++++++++
+ tests/io_uring_register.c                   | 17 +++++++++++++++++
+ 4 files changed, 36 insertions(+), 1 deletion(-)
 
+diff --git a/bundled/linux/include/uapi/linux/io_uring.h b/bundled/linux/include/uapi/linux/io_uring.h
+index 909fb7a..5142320 100644
+--- a/bundled/linux/include/uapi/linux/io_uring.h
++++ b/bundled/linux/include/uapi/linux/io_uring.h
+@@ -790,7 +790,7 @@ struct io_uring_rsrc_update {
+ 
+ struct io_uring_rsrc_update2 {
+ 	__u32 offset;
+-	__u32 resv;
++	__u32 flags;
+ 	__aligned_u64 data;
+ 	__aligned_u64 tags;
+ 	__u32 nr;
 diff --git a/configure.ac b/configure.ac
 index 9bec14b..b1cc81c 100644
 --- a/configure.ac
