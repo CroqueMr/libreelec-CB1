@@ -1,4 +1,4 @@
-"""Run the independent R615 typed packet/slot admission and accepted ledger."""
+"""Run the independent R620 typed packet/slot admission and accepted ledger."""
 import os
 from pathlib import Path
 import subprocess
@@ -7,7 +7,7 @@ import unittest
 from test_hdr10_transport import function
 
 
-@unittest.skipUnless(os.environ.get('CB1_NVIDIA_SOURCE'), 'requires replayed native R615')
+@unittest.skipUnless(os.environ.get('CB1_NVIDIA_SOURCE'), 'requires replayed native R620')
 class NvidiaHdr10PlusTransport(unittest.TestCase):
     def test_failed_generic_disable_blocks_vrr_handoff_on_same_reassigned_head(self):
         root=Path(os.environ['CB1_NVIDIA_SOURCE'])
@@ -19,7 +19,7 @@ class NvidiaHdr10PlusTransport(unittest.TestCase):
 #include <assert.h>
 #include <stddef.h>
 #include "nvkms-cb1-hdr.h"
-#define NVKMS_DPY_VRR_TYPE_NONE 0
+#define NVKMS_VRR_TYPE_NONE 0
 #define NVKMS_SET_MODE_ONE_HEAD_STATUS_INVALID_FLIP 6
 #define TRUE NV_TRUE
 #define FALSE NV_FALSE
@@ -467,7 +467,7 @@ int main(void){
 #include "timing/nvtiming.h"
 #define FALSE NV_FALSE
 enum {NVKMS_MAIN_LAYER=0,NVKMS_INFOFRAME_EOTF_ST2084=2,NVKMS_INFOFRAME_EOTF_HLG=3,
- NVKMS_OUTPUT_COLORIMETRY_BT2100=2,NVKMS_DPY_VRR_TYPE_NONE=0,NVKMS_CONNECTOR_SIGNAL_FORMAT_TMDS=2};
+ NVKMS_OUTPUT_COLORIMETRY_BT2100=2,NVKMS_VRR_TYPE_NONE=0,NVKMS_CONNECTOR_SIGNAL_FORMAT_TMDS=2};
 typedef struct {struct {int supportsGenericSharedInfoFrames;}caps;int ada,swAcr;} NVDevEvoRec;
 typedef struct {NVDevEvoRec*pDevEvo;} NVDispEvoRec;
 typedef struct {NVDispEvoRec*pDispEvo;int hdmi,dp;struct {int signalFormat;}*pConnectorEvo;

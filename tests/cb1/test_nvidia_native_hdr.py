@@ -19,7 +19,7 @@ typedef int NvBool;
 #define TRUE 1
 #define FALSE 0
 #define nvEvoLogDisp(...) ((void)0)
-typedef struct {struct {int smpte_st_2084_eotf,future_eotf;}supported_eotf;int static_metadata_type;} NVT_HDR_STATIC_METADATA;
+typedef struct {struct {int smpte_st_2084_eotf,hybrid_log_gamma_eotf;}supported_eotf;int static_metadata_type;} NVT_HDR_STATIC_METADATA;
 typedef struct {int HDMI3DSupported;NVT_HDR_STATIC_METADATA hdr_static_metadata_info;} NVT_EDID_INFO;
 typedef struct {struct {int valid;NVT_EDID_INFO info;}parsedEdid;int dp,hdmi;void*pDispEvo;char*name;} NVDpyEvoRec;
 static int major=1,minor=3,query=1;
@@ -30,9 +30,9 @@ static int nvDPDpyGetDpcdRevision(const NVDpyEvoRec*d,unsigned*a,unsigned*b){(vo
 int main(void){
  NVDpyEvoRec d={.hdmi=1};d.parsedEdid.valid=1;
  NVT_HDR_STATIC_METADATA*h=&d.parsedEdid.info.hdr_static_metadata_info;
- h->static_metadata_type=1;h->supported_eotf.future_eotf=1;
+ h->static_metadata_type=1;h->supported_eotf.hybrid_log_gamma_eotf=1;
  assert(nvDpyIsHDRCapable(&d));d.parsedEdid.info.HDMI3DSupported=1;assert(nvDpyIsHDRCapable(&d));
- h->supported_eotf.future_eotf=0;assert(!nvDpyIsHDRCapable(&d));h->supported_eotf.smpte_st_2084_eotf=1;
+ h->supported_eotf.hybrid_log_gamma_eotf=0;assert(!nvDpyIsHDRCapable(&d));h->supported_eotf.smpte_st_2084_eotf=1;
  assert(nvDpyIsHDRCapable(&d));h->static_metadata_type=0;assert(!nvDpyIsHDRCapable(&d));h->static_metadata_type=1;
  d.parsedEdid.valid=0;assert(!nvDpyIsHDRCapable(&d));d.parsedEdid.valid=1;
  d.hdmi=0;assert(!nvDpyIsHDRCapable(&d));d.dp=1;
@@ -41,10 +41,10 @@ int main(void){
 }
 '''.replace('@@NATIVE@@',native))
 
-    def test_matched_r615_native_ceiling_still_requires_edid_and_deepcolor(self):
+    def test_matched_r620_native_ceiling_still_requires_edid_and_deepcolor(self):
         root = self.sources()[0]
         config = Path(__file__).resolve().parents[2]/'packages/graphics/nvidia/files/hdr-depth.conf'
-        self.assertTrue(config.is_file(), 'matched R615 native ceiling configuration is absent')
+        self.assertTrue(config.is_file(), 'matched R620 native ceiling configuration is absent')
         ceiling = int(re.search(r'max_output_color_depth=(\d+)', config.read_text()).group(1))
         hdmi = (root/'src/nvidia-modeset/src/nvkms-hdmi.c').read_text()
         native = function((root/'kernel-open/nvidia-modeset/nvidia-modeset-linux.c').read_text(),
@@ -78,6 +78,80 @@ int main(void){
 }
 '''.replace('@@NATIVE@@', native).replace('@@CEILING@@', str(ceiling)))
 
+    def test_r620_retained_tv_led_blob_owns_rgb8_until_retirement(self):
+        root = self.sources()[0]
+        native = (root / 'kernel-open/nvidia-drm/nvidia-drm-connector.c').read_text()
+        atomic = function(native, '__nv_drm_connector_atomic_check')
+        start = atomic.index('/* Handle color format changes */')
+        end = atomic.index('/* Encoding changes require a modeset', start)
+        wire = (root/'src/common/inc/nvkms-dv-vsif.h').read_text().replace('#include "nvtypes.h"', '')
+        admission = function(native, 'nv_drm_connector_cb1_tv_led')
+        code = r"""
+#include <assert.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <string.h>
+typedef uint8_t NvU8, u8;
+typedef unsigned NvU32;
+typedef bool NvBool;
+#define NV_FALSE false
+#define NV_TRUE true
+#define EINVAL 22
+enum {
+ NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_UNKNOWN=0,
+ NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_8=8,
+ NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_FORMAT_RGB=1, Y444=3,
+};
+struct drm_property_blob { unsigned length; const NvU8 *data; };
+struct connector_state { int color_format, output_bpc, lldv_format; bool cb1_deep_color; };
+static int nv_drm_connector_translate_color_format(int n, NvU32 *value)
+{ *value=n; return 0; }
+static int nv_drm_connector_translate_output_bpc(int n, NvU32 *value)
+{ *value=n; return 0; }
+static NvU32 nvLldvNativeBpc(unsigned int n) { (void)n; return 12; }
+struct config {
+ struct { bool colorFormatChanged,colorBpcChanged; } flags;
+ struct { unsigned colorFormat,colorBpc; struct { bool enabled,deepColor; } cb1Hdr; } modeSetConfig;
+};
+@@POLICY@@
+static int apply(struct config *req_config,const struct drm_property_blob *blob)
+{
+ const bool tv_led=nv_drm_connector_cb1_tv_led(blob);
+ struct { bool max_bpc_property; } c={true},*connector=&c;
+ struct { u8 max_requested_bpc; bool hdr10plus_metadata; } s={12,false},
+   *new_connector_state=&s,*old_connector_state=&s;
+ struct connector_state n={.color_format=Y444,.output_bpc=6};
+ struct connector_state *nv_new_connector_state=&n,*nv_old_connector_state=&n;
+ unsigned nvkms_fmt,nvkms_bpc;
+ int ret;
+@@ATOMIC@@
+ return 0;
+}
+int main(void)
+{
+ NvU8 modern[27]={0x46,0xd0,0,2}, legacy[24]={3,12,0}, ll[27]={0x46,0xd0,0,3};
+ struct drm_property_blob Dolby={sizeof(modern),modern}, Legacy={sizeof(legacy),legacy};
+ struct drm_property_blob PlayerLed={sizeof(ll),ll};
+ struct config requested={.modeSetConfig={.colorFormat=Y444,.colorBpc=6}};
+ for (unsigned i=0;i<2;++i) {
+  assert(apply(&requested, i ? &Legacy : &Dolby)==0);
+  assert(requested.flags.colorFormatChanged && requested.flags.colorBpcChanged);
+  assert(requested.modeSetConfig.colorFormat==1 && requested.modeSetConfig.colorBpc==8);
+  requested.flags.colorFormatChanged=requested.flags.colorBpcChanged=false;
+  assert(apply(&requested, i ? &Legacy : &Dolby)==0);
+  assert(!requested.flags.colorFormatChanged && !requested.flags.colorBpcChanged);
+  assert(apply(&requested, NULL)==0);
+  assert(requested.flags.colorFormatChanged && requested.flags.colorBpcChanged);
+  assert(requested.modeSetConfig.colorFormat==Y444 && requested.modeSetConfig.colorBpc==6);
+ }
+ assert(!nv_drm_connector_cb1_tv_led(&PlayerLed));
+ modern[10]=1;
+ assert(!nv_drm_connector_cb1_tv_led(&Dolby));
+}
+"""
+        self.compile_run(code.replace('@@POLICY@@', wire + admission)
+                             .replace('@@ATOMIC@@', atomic[start:end]))
+
     def compile_run(self, program):
         with tempfile.TemporaryDirectory() as tmp:
             source, binary = Path(tmp)/'check.c', Path(tmp)/'check'
@@ -92,7 +166,7 @@ int main(void){
     def sources(self):
         roots = [os.environ.get('CB1_NVIDIA_SOURCE'), os.environ.get('CB1_PASCAL_SOURCE')]
         if not all(roots):
-            self.skipTest('requires privately replayed matched R615 and R580 source')
+            self.skipTest('requires privately replayed matched R620 and R580 source')
         return [Path(root) for root in roots]
 
     def test_requested_eotf_and_actual_vsif_owner(self):
@@ -102,6 +176,7 @@ int main(void){
             native = function((root/'src/nvidia-modeset/src/nvkms-hdmi.c').read_text(),
                               'SendHDRInfoFrame')
             modern = 'currentTransmitCtrl' in native
+            display_arg = 'const NVDpyEvoRec *pDpyEvo' in native
             lldv = 'nvDoviLowLatency' in native
             vsif = (root/'src/common/inc/nvkms-dv-vsif.h').read_text().replace('#include "nvtypes.h"', '') if lldv else ''
             program = r'''
@@ -137,11 +212,12 @@ typedef struct {NvU8 eotf,static_metadata_desc_id;
  NVT_HDR_INFOFRAME_MASTERING_DATA type1;} Payload;
 typedef struct {NVT_INFOFRAME_HEADER header; Payload payload;} NVT_HDR_INFOFRAME;
 typedef struct {struct {unsigned trad_gamma_sdr_eotf:1,trad_gamma_hdr_eotf:1,
- smpte_st_2084_eotf:1,future_eotf:1;} supported_eotf;
+ smpte_st_2084_eotf:1; union {unsigned future_eotf:1;unsigned hybrid_log_gamma_eotf:1;};} supported_eotf;
  unsigned static_metadata_type;} NVT_HDR_STATIC_METADATA;
 typedef struct {NVT_HDR_STATIC_METADATA hdr_static_metadata_info;
  int HDMI3DSupported;} NVT_EDID_INFO;
-typedef struct {struct {int Enable;}vendorSpecificCtrl;} NVDispHeadInfoFrameStateEvoRec;
+enum {NVT_HDMI_VS_BYTE4_HDMI_VID_FMT_3D=2};
+typedef struct {struct {int Enable,HDMIFormat;}vendorSpecificCtrl;} NVDispHeadInfoFrameStateEvoRec;
 typedef struct {struct {unsigned payloadSize;NvU8 payload[27];}hdmiVsifMetadata;
  int bypassComposition;
  struct {int state,eotf;struct NvKmsHDRStaticMetadata staticMetadata;}hdrInfoFrame;
@@ -149,6 +225,12 @@ typedef struct {struct {unsigned payloadSize;NvU8 payload[27];}hdmiVsifMetadata;
 typedef struct {struct {void (*SendHdmiInfoFrame)(); void (*DisableHdmiInfoFrame)();}*hal;
  struct {int supportsGenericSharedInfoFrames;}caps;} NVDevEvoRec;
 typedef struct {NVDevEvoRec *pDevEvo;NVDispHeadStateEvoRec headState[1];} NVDispEvoRec;
+typedef struct {const NVDispEvoRec*pDispEvo;struct {NVT_EDID_INFO info;}parsedEdid;} NVDpyEvoRec;
+static int nvDpyIsHDRCapable(const NVDpyEvoRec*d){
+ const NVT_HDR_STATIC_METADATA*h=&d->parsedEdid.info.hdr_static_metadata_info;
+ return h->static_metadata_type==1 &&
+     (h->supported_eotf.smpte_st_2084_eotf || h->supported_eotf.hybrid_log_gamma_eotf);
+}
 static unsigned writes,clears;static NvU8 eotf;
 static void disable(const NVDispEvoRec*d,NvU32 h,void*c,int type){
  (void)d;(void)c;assert(h==0 && type==NVT_INFOFRAME_TYPE_DYNAMIC_RANGE_MASTERING);clears++;
@@ -178,7 +260,7 @@ int main(void){
    for(unsigned type=0;type<=2;type++){
     edid.hdr_static_metadata_info.static_metadata_type=type;writes=0;
     @@CALL@@
-    assert(writes==(type==1 && requested<4 && (mask&(1u<<requested))?1u:0u));
+    assert(writes==(type==1 && @@SINK_SUPPORT@@ && requested<4 && (mask&(1u<<requested))?1u:0u));
     if(writes)assert(eotf==requested);
    }
   }
@@ -198,12 +280,17 @@ int main(void){
  @@LLDV_TEST@@
 }
 '''
-            call = 'SendHDRInfoFrame(&disp,0,'
-            if 'pInfoFrameState' in native:
-                call += '&info,'
-            if modern:
-                call += '&a,&b,'
-            call += '&edid);'
+            if display_arg:
+                call = ('SendHDRInfoFrame(&(NVDpyEvoRec){.pDispEvo=&disp,'
+                        '.parsedEdid={.info=edid}},0,&info,&a,&b);')
+            else:
+                call = 'SendHDRInfoFrame(&disp,0,'
+                if 'pInfoFrameState' in native:
+                    call += '&info,'
+                if modern:
+                    call += '&a,&b,'
+                call += '&edid);'
+            program = program.replace('@@SINK_SUPPORT@@','(mask&12)' if display_arg else '1')
             program = program.replace('@@LLDV_TEST@@', r'''
  disp.headState[0].bypassComposition=1;
  disp.headState[0].hdmiVsifMetadata.payloadSize=27;

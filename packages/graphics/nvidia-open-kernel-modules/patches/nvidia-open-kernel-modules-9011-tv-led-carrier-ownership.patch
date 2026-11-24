@@ -1,0 +1,68 @@
+Subject: [PATCH] nvidia-drm: keep the CB1 TV-led Dolby VSIF on RGB8
+
+Take ownership of the effective HDMI carrier while a CB1 TV-led Dolby
+packet remains attached to the connector. Preserve ordinary stored
+vendor choices so the next non-Dolby commit can apply them again.
+
+--- a/kernel-open/nvidia-drm/nvidia-drm-connector.c
++++ b/kernel-open/nvidia-drm/nvidia-drm-connector.c
+@@ -860,6 +860,15 @@
+         (format != 2 || dvbridge_lldv_422_12(caps));
+ }
+ 
++static bool nv_drm_connector_cb1_tv_led(const struct drm_property_blob *blob)
++{
++    static const NvU8 modern[27] = {0x46, 0xd0, 0, 2};
++
++    return blob &&
++        ((blob->length == sizeof(modern) && !memcmp(blob->data, modern, sizeof(modern))) ||
++         nvDoviLegacy(blob->data, blob->length));
++}
++
+ static int
+ __nv_drm_connector_atomic_check(struct drm_connector *connector,
+                                 nv_drm_atomic_state_base_t *state)
+@@ -874,6 +883,8 @@
+         to_nv_drm_connector_state(new_connector_state);
+     struct nv_drm_connector_state *nv_old_connector_state =
+         to_nv_drm_connector_state(old_connector_state);
++    const bool tv_led =
++        nv_drm_connector_cb1_tv_led(nv_new_connector_state->hdmi_vsif_metadata);
+     struct drm_crtc *crtc = new_connector_state->crtc;
+     static const enum NvKmsAllmMode allmModeMap[] = {
+         [NV_DRM_ALLM_MODE_DISABLED]        = NVKMS_ALLM_MODE_DISABLED,
+@@ -895,6 +906,11 @@
+     if (to_nv_connector(connector)->type != NVKMS_CONNECTOR_TYPE_HDMI &&
+         (nv_new_connector_state->hdmi_vsif_metadata || new_connector_state->hdr10plus_metadata) &&
+         !nv_drm_connector_dual_tmds(connector, to_nv_encoder(new_connector_state->best_encoder)))
++        return -EINVAL;
++
++    if (tv_led && (new_connector_state->hdr_output_metadata ||
++                   nv_new_connector_state->cb1_deep_color ||
++                   nv_new_connector_state->dithering_mode != NV_DRM_DITHERING_MODE_OFF))
+         return -EINVAL;
+ 
+     crtc_state = drm_atomic_get_new_crtc_state(state, crtc);
+@@ -969,6 +985,11 @@
+     if (ret != 0) {
+         return ret;
+     }
++    /* An independent connector update must not reinterpret a retained Dolby tunnel. */
++    if (tv_led)
++        nvkms_fmt = NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_FORMAT_RGB;
++    req_config->flags.colorFormatChanged |=
++        req_config->modeSetConfig.colorFormat != nvkms_fmt;
+     req_config->modeSetConfig.colorFormat = nvkms_fmt;
+ 
+     /* Resolve the standard HDMI limit and the vendor request together. */
+@@ -977,7 +998,9 @@
+     if (ret != 0) {
+         return ret;
+     }
+-    if (connector->max_bpc_property) {
++    if (tv_led) {
++        nvkms_bpc = NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_8;
++    } else if (connector->max_bpc_property) {
+         const u8 max_bpc = new_connector_state->max_requested_bpc;
+ 
+         if (nv_new_connector_state->lldv_format) {

@@ -1,4 +1,4 @@
-"""Execute R615's actual native LLDV format, bandwidth and Dolby EDID gates."""
+"""Execute R620's actual native LLDV format, bandwidth and Dolby EDID gates."""
 import os
 from pathlib import Path
 import unittest
@@ -7,7 +7,7 @@ from test_hdr10_transport import function
 import test_nvidia_native_hdr as native_hdr
 
 
-@unittest.skipUnless(os.environ.get('CB1_NVIDIA_SOURCE'), 'matched R615 source required')
+@unittest.skipUnless(os.environ.get('CB1_NVIDIA_SOURCE'), 'matched R620 source required')
 class NvidiaNativeLldvFormats(unittest.TestCase):
     compile_run = native_hdr.NvidiaNativeHdr.compile_run
 

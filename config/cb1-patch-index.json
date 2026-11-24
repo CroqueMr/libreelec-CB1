@@ -160,13 +160,7 @@
     "summary": "Expose NVIDIA HDMI depth and transport controls",
     "component": "nvidia-open-kernel-modules",
     "files": {
-      "kernel-open/common/inc/nvkms-kapi.h": "Expose NVIDIA HDMI depth and transport controls.",
-      "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Expose NVIDIA HDMI depth and transport controls.",
-      "kernel-open/nvidia-drm/nvidia-drm-connector.h": "Expose NVIDIA HDMI depth and transport controls.",
-      "kernel-open/nvidia-drm/nvidia-drm-drv.c": "Expose NVIDIA HDMI depth and transport controls.",
-      "kernel-open/nvidia-drm/nvidia-drm-priv.h": "Expose NVIDIA HDMI depth and transport controls.",
-      "src/nvidia-modeset/kapi/interface/nvkms-kapi.h": "Expose NVIDIA HDMI depth and transport controls.",
-      "src/nvidia-modeset/kapi/src/nvkms-kapi.c": "Expose NVIDIA HDMI depth and transport controls."
+      "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Expose NVIDIA HDMI depth and transport controls."
     }
   },
   "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9002-nvkms-integer-rate-twins-of-1000-1001-timings.patch": {
@@ -2450,6 +2444,12 @@
       "kernel-open/nvidia-drm/nvidia-drm-crtc.c": "Use the Linux 7.4 DRM API while preserving the private state owner and compatible old-kernel path.",
       "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Use the Linux 7.4 DRM API while preserving the private state owner and compatible old-kernel path.",
       "kernel-open/nvidia-drm/nvidia-drm-drv.c": "Use the Linux 7.4 DRM API while preserving the private state owner and compatible old-kernel path."
+    }
+  },
+  "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": {
+    "owner": "Keep the effective RGB8 carrier owned by the active CB1 TV-led packet.",
+    "files": {
+      "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Keep TV-led link color and depth tied to the Dolby VSIF until its retirement."
     }
   }
 }

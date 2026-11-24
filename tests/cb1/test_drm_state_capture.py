@@ -75,7 +75,11 @@ struct CDRMObject {
   bool SupportsProperty(const char* name) const {return props.contains(name);}
   std::optional<uint64_t> ReadPropertyValue(const char* name) const {return GetPropertyValue(name);}
   bool IsConnected() const {return true;}
-  std::optional<uint64_t> GetPropertyEnumValue(const char* name,const char*) const {
+  std::optional<uint64_t> GetPropertyEnumValue(const char* name,const char* value) const {
+    if (std::string(name)=="NV_CONNECTOR_COLOR_FORMAT")
+      return std::string(value)=="RGB" ? std::optional<uint64_t>(1) : std::nullopt;
+    if (std::string(name)=="NV_CONNECTOR_OUTPUT_BPC")
+      return std::string(value)=="auto" ? std::optional<uint64_t>(0) : std::nullopt;
     return badEnum==name ? std::nullopt : GetPropertyValue(name);
   }
   unsigned GetId() const {return 30;}
@@ -88,13 +92,14 @@ struct CDRMAtomic {
   CDRMObject crtc,plane,reconnected;
   CDRMObject* selected=&connector;
   std::map<std::string,uint64_t> staged;
+  bool acceptProperties=true;
   CDRMObject* GetConnector() {return selected;}
   CDRMObject* GetCrtc() {return &crtc;}
   CDRMObject* GetGuiPlane() {return &plane;}
   CDRMObject* GetVideoPlane() {return nullptr;}
   int GetFileDescriptor() const {return 4;}
   bool AddProperty(CDRMObject* object,const char* name,uint64_t value) {
-    if(!object->props.contains(name)) return false;
+    if(!acceptProperties || !object->props.contains(name)) return false;
     staged[name]=value; return true;
   }
 };
@@ -245,6 +250,31 @@ int main() {
   assert(clones==0);
   drm.connector.props["NV_HDMI_VSIF_METADATA"]=33;
   assert(!state.CapturePlayerLed(drm) && !state.Captured());
+
+  // R620 vendor defaults belong to the transport while its capture is active.
+  drm.connector.props["NV_HDMI_VSIF_METADATA"]=0;
+  drm.connector.props["NV_CONNECTOR_COLOR_FORMAT"]=2; // YCbCr422
+  drm.connector.props["NV_CONNECTOR_OUTPUT_BPC"]=1; // 6 bpc
+  assert(state.Capture(drm));
+  assert(state.Stage(drm,false));
+  assert(drm.staged.at("NV_CONNECTOR_COLOR_FORMAT")==1);
+  assert(drm.staged.at("NV_CONNECTOR_OUTPUT_BPC")==0);
+  assert(drm.staged.at("max bpc")==8);
+  drm.acceptProperties=false;
+  assert(!state.StagePlayerLed(drm,3,12) && state.Captured());
+  drm.acceptProperties=true;
+  assert(state.StagePlayerLed(drm,3,12));
+  assert(drm.staged.at("NV_CONNECTOR_COLOR_FORMAT")==1);
+  assert(drm.staged.at("NV_CONNECTOR_OUTPUT_BPC")==0);
+  assert(drm.staged.at("CB1_LLDV_FORMAT")==3 && drm.staged.at("max bpc")==12);
+  assert(state.StagePlayerLed(drm,6,10));
+  assert(drm.staged.at("CB1_LLDV_FORMAT")==6 && drm.staged.at("max bpc")==10);
+  assert(state.Stage(drm,true));
+  assert(drm.staged.at("NV_CONNECTOR_COLOR_FORMAT")==2);
+  assert(drm.staged.at("NV_CONNECTOR_OUTPUT_BPC")==1);
+  assert(drm.staged.at("CB1_LLDV_FORMAT")==0 && drm.staged.at("max bpc")==12);
+  state.Restored();
+  assert(clones==0);
 }
 '''
         with tempfile.TemporaryDirectory() as temporary:

@@ -21,6 +21,7 @@ class NvidiaHdmiVic(unittest.TestCase):
                 'SendVideoInfoFrame', 'SendVendorSpecificInfoFrame',
                 'SendHDRInfoFrame', 'nvUpdateHdmiInfoFrames'))
             modern = 'currentTransmitCtrl' in native
+            display_arg = 'const NVDpyEvoRec *pDpyEvo' in function(source,'SendHDRInfoFrame')
             helpers = ''
             for name in ('nvHdmiCtaVic', 'nvHdmiUseCtaVic'):
                 if re.search(r'\b'+name+r'\s*\(', source):
@@ -28,6 +29,10 @@ class NvidiaHdmiVic(unittest.TestCase):
             if modern:
                 helpers += '\n'.join(function(source, name) for name in (
                     'UpdateInfoFrameFlipStatePre', 'UpdateInfoFrameFlipStatePost'))
+            if display_arg:
+                helpers += '\n'+'\n'.join(function(source,name) for name in (
+                    'IsHdmi3DVendorSpecificInfoFrameEnabled','UpdateVendorSpecificInfoFrame',
+                    'SendUserDefinedVSIF'))
             sdk = '\n'.join(line for line in private.splitlines()
                             if line.startswith(('#define nvt_nvu8_set_bits', '#define nvt_get_bits')))
             sdk += '\n'+re.search(r'static const NVT_VIDEO_INFOFRAME DEFAULT_VIDEO_INFOFRAME[^;]+;', timing)[0]
@@ -77,7 +82,8 @@ typedef struct {struct {
  }*hal;
  struct {NvBool supportsGenericSharedInfoFrames;}caps;} NVDevEvoRec;
 struct NVDispEvoRec {NVDevEvoRec*pDevEvo; NVDispHeadStateEvoRec headState[1];};
-typedef struct {struct {NvBool valid;NVT_EDID_INFO info;}parsedEdid;NvBool hdmi;} NVDpyEvoRec;
+typedef struct {struct {NvBool valid;NVT_EDID_INFO info;}parsedEdid;
+ const NVDispEvoRec*pDispEvo;NvU32 apiHead;NvBool hdmi;} NVDpyEvoRec;
 static NvU8 avi[32],hdr[32],vendor[32];static unsigned hdr_count,vendor_count,disabled;
 static int hdr_frequency;
 static void send(const NVDispEvoRec*d,NvU32 head,@@CTRLTYPE@@ control,
@@ -95,6 +101,14 @@ static void disable(const NVDispEvoRec*d,NvU32 head,@@DISABLECTRL@@ int type){
  (void)d;(void)head;@@IGNORECTRL@@ assert(type==NVT_INFOFRAME_TYPE_VENDOR_SPECIFIC);disabled++;
 }
 static NvBool nvDpyIsHdmiEvo(const NVDpyEvoRec*d){return d->hdmi;}
+static NvBool nvDpyIsHDRCapable(const NVDpyEvoRec*d){
+ const NVT_HDR_STATIC_METADATA*h=&d->parsedEdid.info.hdr_static_metadata_info;
+ return d->parsedEdid.valid && h->static_metadata_type==1 &&
+     (h->supported_eotf.smpte_st_2084_eotf || h->supported_eotf.@@HLG_CAP@@);
+}
+static NvBool GetAllmActive(const NVDispEvoRec*d,const NVDpyEvoRec*o,NvU32 h){
+ (void)d;(void)o;(void)h;return NV_FALSE;
+}
 static NvBool nvCb1VsifValid(const struct NvKmsCb1Vsif*v){return v->payloadSize<=27;}
 static void CalculateVideoInfoFrameColorFormat(const NVDpyAttributeColor*c,NvU32 h,
  const NVT_EDID_INFO*e,NVT_VIDEO_INFOFRAME_CTRL*v){(void)c;(void)h;(void)e;(void)v;}
@@ -111,12 +125,12 @@ static void run(NVDispEvoRec*d,NVDpyEvoRec*display,NVDispHeadInfoFrameStateEvoRe
 }
 int main(void){
  typeof(*((NVDevEvoRec*)0)->hal) hal={send,disable};NVDevEvoRec dev={.hal=&hal};
- NVDispEvoRec disp={.pDevEvo=&dev};NVDpyEvoRec display={.hdmi=NV_TRUE};
+ NVDispEvoRec disp={.pDevEvo=&dev};NVDpyEvoRec display={.pDispEvo=&disp,.hdmi=NV_TRUE};
  NVT_EDID_INFO*edid=&display.parsedEdid.info;display.parsedEdid.valid=NV_TRUE;
  edid->ext861.revision=NVT_CEA861_REV_F;
  edid->hdr_static_metadata_info.static_metadata_type=1;
  edid->hdr_static_metadata_info.supported_eotf.smpte_st_2084_eotf=1;
- edid->hdr_static_metadata_info.supported_eotf.future_eotf=1;
+ edid->hdr_static_metadata_info.supported_eotf.@@HLG_CAP@@=1;
  disp.headState[0].hdrInfoFrame.eotf=NVKMS_INFOFRAME_EOTF_ST2084;
  NVDispHeadInfoFrameStateEvoRec info={0};info.vendorSpecificCtrl.Enable=1;
  info.vendorSpecificCtrl.VSIFVersion=NVT_VSIF_VERSION_H14B_VSIF;
@@ -166,7 +180,7 @@ int main(void){
  info.vendorSpecificCtrl.HDMIFormat=NVT_HDMI_VS_BYTE4_HDMI_VID_FMT_EXT;
  info.vendorSpecificCtrl.VSIFVersion=NVT_VSIF_VERSION_H14B_VSIF;
  edid->hdr_static_metadata_info.supported_eotf.smpte_st_2084_eotf=0;
- edid->hdr_static_metadata_info.supported_eotf.future_eotf=0;
+ edid->hdr_static_metadata_info.supported_eotf.@@HLG_CAP@@=0;
  run(&disp,&display,&info);assert(vendor_count==1 && avi[6]==0);
  /* Player-led overrides only AVI color fields and retains the selected CTA VIC. */
  info.ctrl.video_format_id=93;info.vendorSpecificCtrl.HDMI_VIC=0;
@@ -189,6 +203,7 @@ int main(void){
                 '@@IGNORECTRL@@': ('(void)control;' if modern else ''),
                 '@@FREQ@@': ('control->frequency' if modern else 'control'),
                 '@@UPDATEARGS@@': ('&fs,&ctrl,' if modern else ''),
+                '@@HLG_CAP@@': ('hybrid_log_gamma_eotf' if display_arg else 'future_eotf'),
             }
             for marker, value in replacements.items():
                 program = program.replace(marker, value)

@@ -25,7 +25,7 @@ def table(current, legacy):
     result = {}
     for device, branch in current.items():
         if branch is None:
-            result[device] = 'r615'
+            result[device] = 'r620'
         elif branch == '580.xx':
             if device not in legacy or legacy[device] is not None:
                 # Retirement hints are not a support list for the pinned R580 payload.
