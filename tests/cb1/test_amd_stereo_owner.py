@@ -73,7 +73,7 @@ class AMDNativeStereo(unittest.TestCase):
             self.assertEqual(ran.returncode, 0, ran.stderr)
 
     def test_real_stream_entry_rejects_unrepresentable_stereo_before_allocation(self):
-        source = self.source('amdgpu_dm/amdgpu_dm.c')
+        source = self.source('amdgpu_dm/amdgpu_dm_connector.c')
         owner = function(source.replace('struct dc_stream_state *\ncreate_stream_for_sink',
                                         'struct dc_stream_state *create_stream_for_sink'),
                          'create_stream_for_sink')
@@ -132,7 +132,7 @@ int main(void)
 
     def test_native_hdmi_packet_replaces_3d_with_explicit_2d(self):
         kernel = Path(os.environ['CB1_KERNEL_SOURCE'])
-        source = self.source('amdgpu_dm/amdgpu_dm.c')
+        source = self.source('amdgpu_dm/amdgpu_dm_connector.c')
         owner = function(source.replace('struct dc_stream_state *\ncreate_stream_for_sink',
                                         'struct dc_stream_state *create_stream_for_sink'),
                          'create_stream_for_sink')
@@ -177,6 +177,7 @@ struct dc_stream_state {
     struct { int hdmi_vic,h_total,v_total,display_color_depth;
              enum dc_timing_3d_format timing_3d_format; } timing;
     enum view_3d_format view_format;
+    struct dc_info_packet cb1_mode_vsp_infopacket;
     struct dc_info_packet vsp_infopacket;
 };
 static int drm_mode_hdmi_vic(const struct drm_connector *c,const struct drm_display_mode *m)
@@ -316,12 +317,12 @@ int main(void)
 ''')
 
     def test_frame_packing_keeps_native_crtc_doubling_with_scaling(self):
-        source = self.source('amdgpu_dm/amdgpu_dm.c')
+        source = self.source('amdgpu_dm/amdgpu_dm_connector.c')
         drm = (Path(os.environ['CB1_KERNEL_SOURCE'])/'drivers/gpu/drm/drm_modes.c').read_text()
         owners = '\n'.join((function(drm, 'drm_mode_set_crtcinfo'),
             function(source, 'copy_crtc_timing_for_drm_display_mode'),
             function(source, 'decide_crtc_timing_for_drm_display_mode')))
-        self.run_c(MODES + owners + r'''
+        self.run_c(MODES + "#define STATIC_IFN_KUNIT static\n" + owners + r'''
 int main(void)
 {
     struct drm_display_mode base={.clock=74250,.hdisplay=1920,.htotal=2750,
@@ -351,45 +352,45 @@ int main(void)
 ''')
 
     def test_freesync_video_cannot_replace_stereo_with_2d_base(self):
-        source = self.source('amdgpu_dm/amdgpu_dm.c')
+        source = self.source('amdgpu_dm/amdgpu_dm_connector.c')
         self.run_c(MODES + r'''
 struct amdgpu_dm_connector { struct drm_display_mode *highest; };
-static struct drm_display_mode *get_highest_refresh_rate_mode(
+static struct drm_display_mode *amdgpu_dm_get_highest_refresh_rate_mode(
     struct amdgpu_dm_connector *c,bool use_preferred)
 { (void)use_preferred; return c->highest; }
-''' + function(source, 'is_freesync_video_mode') + r'''
+''' + function(source, 'amdgpu_dm_is_freesync_video_mode') + r'''
 int main(void)
 {
     struct drm_display_mode base={.clock=74250,.hdisplay=1920,.vdisplay=1080};
     struct drm_display_mode mode=base;
     struct amdgpu_dm_connector c={&base};
-    assert(is_freesync_video_mode(&mode,&c));
+    assert(amdgpu_dm_is_freesync_video_mode(&mode,&c));
     const unsigned layouts[]={1,7,8};
     for(unsigned i=0;i<3;++i) {
         mode.flags=layouts[i]<<14;
-        assert(!is_freesync_video_mode(&mode,&c));
+        assert(!amdgpu_dm_is_freesync_video_mode(&mode,&c));
     }
-    assert(!is_freesync_video_mode(NULL,&c));
+    assert(!amdgpu_dm_is_freesync_video_mode(NULL,&c));
 }
 ''')
 
     def test_freesync_reuse_cannot_hide_changed_stereo_layout(self):
-        source = self.source('amdgpu_dm/amdgpu_dm.c')
+        source = self.source('amdgpu_dm/amdgpu_dm_freesync.c')
         self.run_c(MODES + r'''
 struct drm_crtc_state { struct drm_display_mode mode; };
-''' + function(source, 'is_timing_unchanged_for_freesync') + r'''
+''' + function(source, 'amdgpu_dm_is_timing_unchanged_for_freesync') + r'''
 int main(void)
 {
     struct drm_crtc_state old={.mode={.clock=74250,.vtotal=1125,
         .vsync_start=1084,.vsync_end=1089}},next=old;
     next.mode.vtotal=1200;next.mode.vsync_start=1159;next.mode.vsync_end=1164;
-    assert(is_timing_unchanged_for_freesync(&old,&next));
+    assert(amdgpu_dm_is_timing_unchanged_for_freesync(&old,&next));
     next.mode.flags=DRM_MODE_FLAG_3D_TOP_AND_BOTTOM;
-    assert(!is_timing_unchanged_for_freesync(&old,&next));
+    assert(!amdgpu_dm_is_timing_unchanged_for_freesync(&old,&next));
     old.mode.flags=DRM_MODE_FLAG_3D_TOP_AND_BOTTOM;
-    assert(is_timing_unchanged_for_freesync(&old,&next));
+    assert(amdgpu_dm_is_timing_unchanged_for_freesync(&old,&next));
     next.mode.flags=DRM_MODE_FLAG_3D_SIDE_BY_SIDE_HALF;
-    assert(!is_timing_unchanged_for_freesync(&old,&next));
+    assert(!amdgpu_dm_is_timing_unchanged_for_freesync(&old,&next));
 }
 ''')
 

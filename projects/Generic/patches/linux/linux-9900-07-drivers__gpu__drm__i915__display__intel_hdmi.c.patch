@@ -1,6 +1,5 @@
-SPD source-device selection from big-fella, adapted via dangerouslaser/libreelec-yblod:
-https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d5a2c69081497528b8
-
+diff --git a/drivers/gpu/drm/i915/display/intel_hdmi.c b/drivers/gpu/drm/i915/display/intel_hdmi.c
+index 744c2fc..d120835 100644
 --- a/drivers/gpu/drm/i915/display/intel_hdmi.c
 +++ b/drivers/gpu/drm/i915/display/intel_hdmi.c
 @@ -30,6 +30,7 @@
@@ -20,7 +19,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  #include "intel_audio.h"
  #include "intel_connector.h"
  #include "intel_cx0_phy.h"
-@@ -146,6 +149,26 @@
+@@ -146,6 +149,26 @@ static u32 g4x_infoframe_enable(unsigned int type)
  	}
  }
  
@@ -47,7 +46,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  static u32 hsw_infoframe_enable(unsigned int type)
  {
  	switch (type) {
-@@ -528,6 +551,7 @@
+@@ -528,6 +551,7 @@ void hsw_write_infoframe(struct intel_encoder *encoder,
  	int i;
  	u32 val = intel_de_read(display, ctl_reg);
  
@@ -55,7 +54,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  	data_size = hsw_dip_data_size(display, type);
  
  	drm_WARN_ON(display->drm, len > data_size);
-@@ -568,6 +592,9 @@
+@@ -568,6 +592,9 @@ void hsw_read_infoframe(struct intel_encoder *encoder,
  	u32 *data = frame;
  	int i;
  
@@ -65,7 +64,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  	for (i = 0; i < len; i += 4)
  		*data++ = intel_de_read(display,
  					hsw_dip_data_reg(display, cpu_transcoder, type, i >> 2));
-@@ -623,16 +650,30 @@
+@@ -623,16 +650,30 @@ u32 intel_hdmi_infoframes_enabled(struct intel_encoder *encoder,
  	struct intel_display *display = to_intel_display(encoder);
  	struct intel_digital_port *dig_port = enc_to_dig_port(encoder);
  	u32 val, ret = 0;
@@ -97,7 +96,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  				ret |= BIT(i);
  		} else {
  			if (val & g4x_infoframe_enable(type))
-@@ -666,7 +707,7 @@
+@@ -666,7 +707,7 @@ static void intel_write_infoframe(struct intel_encoder *encoder,
  				  const union hdmi_infoframe *frame)
  {
  	struct intel_digital_port *dig_port = enc_to_dig_port(encoder);
@@ -106,7 +105,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  	ssize_t len;
  
  	if ((crtc_state->infoframes.enable &
-@@ -769,6 +810,35 @@
+@@ -769,6 +810,35 @@ intel_hdmi_compute_avi_infoframe(struct intel_encoder *encoder,
  	}
  
  	drm_hdmi_avi_infoframe_content_type(frame, conn_state);
@@ -142,7 +141,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  
  	/* TODO: handle pixel repetition for YCBCR420 outputs */
  
-@@ -779,6 +849,10 @@
+@@ -779,6 +849,10 @@ intel_hdmi_compute_avi_infoframe(struct intel_encoder *encoder,
  	return true;
  }
  
@@ -153,15 +152,15 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  static bool
  intel_hdmi_compute_spd_infoframe(struct intel_encoder *encoder,
  				 struct intel_crtc_state *crtc_state,
-@@ -787,6 +861,7 @@
+@@ -786,6 +860,7 @@ intel_hdmi_compute_spd_infoframe(struct intel_encoder *encoder,
+ {
  	struct intel_display *display = to_intel_display(crtc_state);
  	struct hdmi_spd_infoframe *frame = &crtc_state->infoframes.spd.spd;
 +	const int sdi = READ_ONCE(hdmi_spd_sdi);
  	int ret;
  
  	if (!crtc_state->has_infoframe)
- 		return true;
-@@ -802,7 +877,8 @@
+@@ -802,7 +877,8 @@ intel_hdmi_compute_spd_infoframe(struct intel_encoder *encoder,
  	if (drm_WARN_ON(encoder->base.dev, ret))
  		return false;
  
@@ -171,7 +170,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  
  	ret = hdmi_spd_infoframe_check(frame);
  	if (drm_WARN_ON(encoder->base.dev, ret))
-@@ -827,6 +903,36 @@
+@@ -827,6 +903,36 @@ intel_hdmi_compute_hdmi_infoframe(struct intel_encoder *encoder,
  
  	crtc_state->infoframes.enable |=
  		intel_hdmi_infoframe_enable(HDMI_INFOFRAME_TYPE_VENDOR);
@@ -208,7 +207,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  
  	ret = drm_hdmi_vendor_infoframe_from_display_mode(frame,
  							  conn_state->connector,
-@@ -850,7 +956,7 @@
+@@ -850,7 +956,7 @@ intel_hdmi_compute_drm_infoframe(struct intel_encoder *encoder,
  	struct hdmi_drm_infoframe *frame = &crtc_state->infoframes.drm.drm;
  	int ret;
  
@@ -217,7 +216,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  		return true;
  
  	if (!crtc_state->has_infoframe)
-@@ -858,6 +964,8 @@
+@@ -858,6 +964,8 @@ intel_hdmi_compute_drm_infoframe(struct intel_encoder *encoder,
  
  	if (!conn_state->hdr_output_metadata)
  		return true;
@@ -226,7 +225,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  
  	crtc_state->infoframes.enable |=
  		intel_hdmi_infoframe_enable(HDMI_INFOFRAME_TYPE_DRM);
-@@ -1226,6 +1334,55 @@
+@@ -1226,6 +1334,55 @@ static void vlv_set_infoframes(struct intel_encoder *encoder,
  			      &crtc_state->infoframes.hdmi);
  }
  
@@ -282,18 +281,18 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  void intel_hdmi_fastset_infoframes(struct intel_encoder *encoder,
  				   const struct intel_crtc_state *crtc_state,
  				   const struct drm_connector_state *conn_state)
-@@ -1234,6 +1391,10 @@
- 	intel_reg_t reg = HSW_TVIDEO_DIP_CTL(display,
+@@ -1235,6 +1392,10 @@ void intel_hdmi_fastset_infoframes(struct intel_encoder *encoder,
  					    crtc_state->cpu_transcoder);
  	u32 val = intel_de_read(display, reg);
-+
+ 
 +	/* Changed GMP HDR packets use a full modeset; unchanged ones need no write. */
 +	if (intel_hdmi_uses_gmp_hdr(crtc_state))
 +		return;
- 
++
  	if ((crtc_state->infoframes.enable &
  		intel_hdmi_infoframe_enable(HDMI_INFOFRAME_TYPE_DRM)) == 0 &&
-@@ -2298,6 +2459,28 @@
+ 			(val & VIDEO_DIP_ENABLE_DRM_GLK) == 0)
+@@ -2298,6 +2459,28 @@ static int intel_hdmi_compute_output_format(struct intel_encoder *encoder,
  	return intel_hdmi_compute_clock(encoder, crtc_state, respect_downstream_limits);
  }
  
@@ -322,7 +321,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  static int intel_hdmi_compute_formats(struct intel_encoder *encoder,
  				      struct intel_crtc_state *crtc_state,
  				      const struct drm_connector_state *conn_state,
-@@ -2307,6 +2490,7 @@
+@@ -2307,6 +2490,7 @@ static int intel_hdmi_compute_formats(struct intel_encoder *encoder,
  	struct intel_connector *connector = to_intel_connector(conn_state->connector);
  	const struct drm_display_mode *adjusted_mode = &crtc_state->hw.adjusted_mode;
  	const struct drm_display_info *info = &connector->base.display_info;
@@ -330,11 +329,10 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  	int ret;
  
  	if (drm_mode_is_420_only(info, adjusted_mode)) {
-@@ -2326,6 +2510,22 @@
- 		ret = intel_hdmi_compute_output_format(encoder, crtc_state, connector,
+@@ -2327,6 +2511,22 @@ static int intel_hdmi_compute_formats(struct intel_encoder *encoder,
  						       respect_downstream_limits,
  						       INTEL_OUTPUT_FORMAT_RGB);
-+
+ 
 +		if (!ret && intel_dvbridge_hdr_retry_420(
 +			    intel_dvbridge_hdr_deep_requested(display, conn_state),
 +			    respect_downstream_limits,
@@ -350,10 +348,11 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
 +			if (ret || crtc_state->pipe_bpp < 30)
 +				return ret ? ret : -EINVAL;
 +		}
- 
++
  		if (ret && drm_mode_is_420_also(info, adjusted_mode))
  			ret = intel_hdmi_compute_output_format(encoder, crtc_state, connector,
-@@ -2398,6 +2598,11 @@
+ 							       respect_downstream_limits,
+@@ -2398,18 +2598,37 @@ int intel_hdmi_compute_config(struct intel_encoder *encoder,
  
  	if (!intel_link_bw_compute_pipe_bpp(pipe_config))
  		return -EINVAL;
@@ -363,9 +362,8 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
 +	    !intel_dvbridge_hdr_deep_requested(display, conn_state))
 +		return -EINVAL;
  
- 	pipe_config->has_audio =
- 		intel_hdmi_has_audio(encoder, pipe_config, conn_state) &&
-@@ -2408,12 +2613,26 @@
+ 	/*
+ 	 * Try to respect downstream TMDS clock limits first, if
  	 * that fails assume the user might know something we don't.
  	 */
  	ret = intel_hdmi_compute_formats(encoder, pipe_config, conn_state, true);
@@ -393,11 +391,10 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  		return ret;
  	}
  
-@@ -2423,6 +2642,60 @@
- 
+@@ -2424,6 +2643,60 @@ int intel_hdmi_compute_config(struct intel_encoder *encoder,
  	pipe_config->limited_color_range =
  		intel_hdmi_limited_color_range(pipe_config, conn_state);
-+
+ 
 +	if (to_intel_digital_connector_state(conn_state)->dv_lab_standard) {
 +		struct dvbridge_sink_caps caps = connector->dv_sink_caps;
 +		struct intel_dv_lab_link link = {
@@ -451,10 +448,11 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
 +		}
 +		pipe_config->dither_force_disable = true;
 +	}
- 
++
  	if (conn_state->picture_aspect_ratio)
  		adjusted_mode->picture_aspect_ratio =
-@@ -2490,6 +2763,7 @@
+ 			conn_state->picture_aspect_ratio;
+@@ -2490,6 +2763,7 @@ intel_hdmi_unset_edid(struct drm_connector *_connector)
  
  	drm_edid_free(connector->detect_edid);
  	connector->detect_edid = NULL;
@@ -462,7 +460,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  }
  
  static void
-@@ -2555,6 +2829,7 @@
+@@ -2555,6 +2829,7 @@ intel_hdmi_set_edid(struct drm_connector *_connector)
  	struct ref_tracker *wakeref;
  	const struct drm_edid *drm_edid;
  	bool connected = false;
@@ -470,7 +468,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  
  	wakeref = intel_display_power_get(display, POWER_DOMAIN_GMBUS);
  
-@@ -2569,11 +2844,15 @@
+@@ -2569,11 +2844,15 @@ intel_hdmi_set_edid(struct drm_connector *_connector)
  	}
  
  	/* Below we depend on display info having been updated */
@@ -487,7 +485,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  		intel_hdmi_dp_dual_mode_detect(&connector->base);
  
  		connected = true;
-@@ -2600,16 +2879,29 @@
+@@ -2600,16 +2879,29 @@ intel_hdmi_detect(struct drm_connector *_connector, bool force)
  	drm_dbg_kms(display->drm, "[CONNECTOR:%d:%s]\n",
  		    connector->base.base.id, connector->base.name);
  
@@ -519,7 +517,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  		goto out;
  
  	intel_hdmi_unset_edid(&connector->base);
-@@ -2620,8 +2912,10 @@
+@@ -2620,8 +2912,10 @@ intel_hdmi_detect(struct drm_connector *_connector, bool force)
  out:
  	intel_display_power_put(display, POWER_DOMAIN_GMBUS, wakeref);
  
@@ -531,7 +529,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  
  	return status;
  }
-@@ -2634,6 +2928,8 @@
+@@ -2634,6 +2928,8 @@ intel_hdmi_force(struct drm_connector *_connector)
  
  	drm_dbg_kms(display->drm, "[CONNECTOR:%d:%s]\n",
  		    connector->base.base.id, connector->base.name);
@@ -540,7 +538,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  
  	if (!intel_display_driver_check_access(display))
  		return;
-@@ -2714,6 +3010,20 @@
+@@ -2714,6 +3010,20 @@ intel_hdmi_add_properties(struct intel_hdmi *intel_hdmi, struct drm_connector *_
  	struct intel_connector *connector = to_intel_connector(_connector);
  	struct intel_display *display = to_intel_display(intel_hdmi);
  
@@ -561,22 +559,24 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  	intel_attach_force_audio_property(&connector->base);
  	intel_attach_broadcast_rgb_property(&connector->base);
  	intel_attach_aspect_ratio_property(&connector->base);
-@@ -2721,8 +3031,10 @@
+@@ -2721,8 +3031,10 @@ intel_hdmi_add_properties(struct intel_hdmi *intel_hdmi, struct drm_connector *_
  	intel_attach_hdmi_colorspace_property(&connector->base);
  	drm_connector_attach_content_type_property(&connector->base);
  
+-	if (DISPLAY_VER(display) >= 10)
 +	if (DISPLAY_VER(display) >= 10 || intel_hdmi_has_gmp_hdr(display))
-+		drm_connector_attach_hdr_output_metadata_property(&connector->base);
- 	if (DISPLAY_VER(display) >= 10)
--		drm_connector_attach_hdr_output_metadata_property(&connector->base);
+ 		drm_connector_attach_hdr_output_metadata_property(&connector->base);
++	if (DISPLAY_VER(display) >= 10)
 +		drm_connector_attach_hdr10plus_metadata_property(&connector->base);
  
  	if (!HAS_GMCH(display))
  		drm_connector_attach_max_bpc_property(&connector->base, 8, 12);
+diff --git a/drivers/gpu/drm/i915/display/intel_hdmi.h b/drivers/gpu/drm/i915/display/intel_hdmi.h
+index c95ed37..383681e 100644
 --- a/drivers/gpu/drm/i915/display/intel_hdmi.h
 +++ b/drivers/gpu/drm/i915/display/intel_hdmi.h
-@@ -15,6 +15,8 @@
- struct drm_connector_state;
+@@ -16,6 +16,8 @@ struct drm_connector_state;
+ struct drm_display_mode;
  struct drm_encoder;
  struct intel_connector;
 +struct intel_atomic_state;
@@ -584,7 +584,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  struct intel_crtc_state;
  struct intel_digital_port;
  struct intel_encoder;
-@@ -30,6 +32,9 @@
+@@ -31,6 +33,9 @@ int intel_hdmi_compute_config(struct intel_encoder *encoder,
  			      struct intel_crtc_state *pipe_config,
  			      struct drm_connector_state *conn_state);
  void intel_hdmi_encoder_shutdown(struct intel_encoder *encoder);
@@ -594,7 +594,7 @@ https://github.com/dangerouslaser/libreelec-yblod/commit/3b3a983f93d1ac33affb42d
  bool intel_hdmi_handle_sink_scrambling(struct intel_encoder *encoder,
  				       struct drm_connector *connector,
  				       bool high_tmds_clock_ratio,
-@@ -39,6 +44,7 @@
+@@ -40,6 +45,7 @@ void intel_infoframe_init(struct intel_digital_port *dig_port);
  u32 intel_hdmi_infoframes_enabled(struct intel_encoder *encoder,
  				  const struct intel_crtc_state *crtc_state);
  u32 intel_hdmi_infoframe_enable(unsigned int type);

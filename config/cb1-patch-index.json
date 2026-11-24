@@ -180,22 +180,7 @@
     "summary": "Expose progressive 1080p half-SBS modes on HDMI 3D displays",
     "component": "linux",
     "files": {
-      "drivers/gpu/drm/drm_edid.c": "Expose owned EDID allocation size and the existing native AVI VIC admission policy."
-    }
-  },
-  "projects/Generic/patches/linux/0102-wifi-mt76-mt7921-keep-join-roc-until-authorized.patch": {
-    "summary": "Keep the MT7921/MT7922 join ROC until the station is authorized (mainline 6f591a4bb5d9)",
-    "component": "linux",
-    "files": {
-      "drivers/net/wireless/mediatek/mt76/mt7921/main.c": "Keep the join ROC after a successful association and release it on authorization, disassociation or station removal.",
-      "drivers/net/wireless/mediatek/mt76/mt792x.h": "Track the held join ROC per interface."
-    }
-  },
-  "projects/Generic/patches/linux/0103-wifi-mt76-mt7925-keep-join-roc-until-authorized.patch": {
-    "summary": "Keep the MT7925 join ROC until the station is authorized (mainline ac22c8c723c6)",
-    "component": "linux",
-    "files": {
-      "drivers/net/wireless/mediatek/mt76/mt7925/main.c": "Keep the join ROC after a successful non-MLO association and release it on authorization, disassociation or station removal."
+      "drivers/gpu/drm/drm_edid.c\t2026-09-04 19:39:10": "Expose progressive 1080p half-SBS modes on HDMI 3D displays"
     }
   },
   "projects/Generic/patches/linux/0104-wifi-mt76-mt7925-track-join-roc-ownership.patch": {
@@ -445,12 +430,15 @@
     "component": "linux",
     "files": {
       "drivers/gpu/drm/amd/display/amdgpu_dm/Makefile": "Build the native AMD Standard-DV adapter with Display Core.",
-      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h": "Track connector-local independent boolean DV and HDR10 properties with scalar atomic lifecycle.",
-      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h": "Declare native DV and independent HDR10 metadata/final-depth validation interfaces.",
-      "drivers/gpu/drm/amd/display/dc/dc_stream.h": "Retain the packed RGB8 tunnel marker independently of normal color state.",
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c": "Native AMD connector, HDR/DV presentation and progressive stereo packet/timing lifecycle.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h": "Track connector-local independent boolean DV and HDR10 properties with scalar atomic lifecycle.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "Protect Standard-DV v2 transport on explicit AMD DCN native HDMI families",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.h": "Protect Standard-DV v2 transport on explicit AMD DCN native HDMI families",
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c": "Native byte-tunnel admission, owned sink capabilities and effective neutral-color guards.",
-      "drivers/gpu/drm/amd/display/dc/core/dc_resource.c": "Native stream and pipe reprogramming decisions, deterministic vendor packets and generation-specific linebuffer depth."
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h": "Declare native DV and independent HDR10 metadata/final-depth validation interfaces.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_freesync.c": "Protect Standard-DV v2 transport on explicit AMD DCN native HDMI families",
+      "drivers/gpu/drm/amd/display/dc/core/dc_resource.c": "Native stream and pipe reprogramming decisions, deterministic vendor packets and generation-specific linebuffer depth.",
+      "drivers/gpu/drm/amd/display/dc/dc_stream.h": "Retain the packed RGB8 tunnel marker independently of normal color state."
     }
   },
   "packages/mediacenter/kodi/patches/9902-headers-only.patch": {
@@ -1235,34 +1223,6 @@
       "src/gbm-platform.c": "Validate display before access and return the pbuffer hook reference on every path."
     }
   },
-  "projects/Generic/patches/linux/linux-9950-01-wcl-single-scaler.patch": {
-    "summary": "WCL has one scaler per pipe",
-    "component": "linux",
-    "files": {
-      "drivers/gpu/drm/i915/display/intel_display_device.c": "WCL has one scaler per pipe."
-    }
-  },
-  "projects/Generic/patches/linux/linux-9950-02-wcl-disable-joiner.patch": {
-    "summary": "Reject unsupported WCL DP pipe joining",
-    "component": "linux",
-    "files": {
-      "drivers/gpu/drm/i915/display/intel_dp.c": "Reject unsupported WCL DP pipe joining."
-    }
-  },
-  "projects/Generic/patches/linux/linux-9950-03-cdclk-pipe-mask.patch": {
-    "summary": "Prerequisite: explicit CD2X pipe-select mask helper",
-    "component": "linux",
-    "files": {
-      "drivers/gpu/drm/i915/display/intel_cdclk.c": "Prerequisite: explicit CD2X pipe-select mask helper."
-    }
-  },
-  "projects/Generic/patches/linux/linux-9950-04-ptl-cdclk-probe.patch": {
-    "summary": "Do not sanitize absent PTL+ CD2X pipe-select fields",
-    "component": "linux",
-    "files": {
-      "drivers/gpu/drm/i915/display/intel_cdclk.c": "Do not sanitize absent PTL+ CD2X pipe-select fields."
-    }
-  },
   "projects/Generic/patches/linux/linux-9950-05-gmbus-fw-access.patch": {
     "summary": "Prerequisite: forcewake register access and posting-read helper under GMBUS mutex",
     "component": "linux",
@@ -1297,13 +1257,6 @@
     "component": "linux",
     "files": {
       "drivers/gpu/drm/i915/display/intel_gmbus.c": "Keep write-only masks set and preserve sibling GPIO direction/output state."
-    }
-  },
-  "projects/Generic/patches/linux/linux-9950-02a-cdclk-register-fields.patch": {
-    "summary": "Prerequisite: define CD2X pipe-select register masks used by the CDCLK helper",
-    "component": "linux",
-    "files": {
-      "drivers/gpu/drm/i915/display/intel_display_regs.h": "Import exact upstream register definitions without changing valid BXT/ICL/TGL pipe encodings."
     }
   },
   "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzz-bluray-menu-lifetime.patch": {
@@ -1524,8 +1477,10 @@
     "files": {
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c": "Carry the format request through connector state and native HDMI modesets.",
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h": "Retain the player-led property and connector format value.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "AMD player-led Dolby Vision experimental transport",
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c": "Signal 4:2:2 low latency and protect the packed RGB8 carrier.",
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h": "Share byte-preserving transport admission with the display state.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_freesync.c": "AMD player-led Dolby Vision experimental transport",
       "drivers/gpu/drm/amd/display/dc/core/dc_resource.c": "Rebuild the DC stream when the DV signalling mode changes.",
       "drivers/gpu/drm/amd/display/dc/dc_stream.h": "Keep the low-latency identity with the candidate stream."
     }
@@ -1907,12 +1862,6 @@
       "xbmc/video/dialogs/GUIDialogVideoSettings.cpp": "Expose the two resolution preferences during playback."
     }
   },
-  "projects/Generic/patches/linux/linux-9947-amd-native-lldv-rgb10-lab.patch": {
-    "owner": "AMD native LLDV validation",
-    "files": {
-      "AMD HDMI transport": "Qualify RGB10 scanout and HDMI YCbCr 4:2:2 for the existing test path."
-    }
-  },
   "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzz-lldv-amd-rgb10-lab.patch": {
     "owner": "Present AMD RGB10 LLDV through the native GBM lifecycle.",
     "files": {
@@ -1980,8 +1929,8 @@
   "projects/Generic/patches/linux/linux-9947-amd-hdmi-rgb-range.patch": {
     "owner": "Backport AMD HDMI RGB quantization for Linux 7.2.6.",
     "files": {
-      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c": "Apply CTA RGB range defaults to actual HDMI signals and honor explicit BT.2020 RGB range preferences.",
-      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_helpers.c": "Pass the sink RGB quantization selection capability to Display Core."
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "Backport AMD HDMI RGB quantization for Linux 7.2.6.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/tests/amdgpu_dm_connector_test.c": "Backport AMD HDMI RGB quantization for Linux 7.2.6."
     }
   },
   "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-stable-playback-availability.patch": {
@@ -2195,12 +2144,12 @@
   "projects/Generic/patches/linux/linux-9978-amd-native-lldv-y444.patch": {
     "owner": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
     "files": {
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
       "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
-      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
-      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
-      "drivers/gpu/drm/amd/display/dc/dc_stream.h": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
       "drivers/gpu/drm/amd/display/dc/core/dc_resource.c": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
+      "drivers/gpu/drm/amd/display/dc/dc_stream.h": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
       "drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
       "drivers/gpu/drm/amd/display/dc/hwss/dcn20/dcn20_hwseq.c": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout.",
       "drivers/gpu/drm/amd/display/dc/hwss/dcn401/dcn401_hwseq.c": "Validate native AMD LLDV 4:4:4 10-bit EDID, bandwidth and scanout."
@@ -2447,6 +2396,46 @@
       "xbmc/windowing/gbm/WinSystemGbmEGLContext.h": "Declare NVIDIA drawable retirement helpers.",
       "xbmc/windowing/gbm/drm/DRMUtils.cpp": "Recognize the NVIDIA DRM backend from the selected device.",
       "xbmc/windowing/gbm/drm/DRMUtils.h": "Keep the EGL/GBM ownership quirk scoped to NVIDIA."
+    }
+  },
+  "projects/Generic/patches/linux/linux-9942-intel-hdr10plus-internal-recovery.patch": {
+    "owner": "From: lessbones <8473322+lessbones@users.noreply.github.com>",
+    "files": {
+      "drivers/gpu/drm/i915/display/intel_display.c": "From: lessbones <8473322+lessbones@users.noreply.github.com>"
+    }
+  },
+  "projects/Generic/patches/linux/linux-9971-amd-native-lldv-rgb10-lab.patch": {
+    "owner": "--- a/include/drm/drm_dvbridge.h",
+    "files": {
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "--- a/include/drm/drm_dvbridge.h",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c": "--- a/include/drm/drm_dvbridge.h",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h": "--- a/include/drm/drm_dvbridge.h",
+      "drivers/gpu/drm/amd/display/dc/core/dc_resource.c": "--- a/include/drm/drm_dvbridge.h",
+      "drivers/gpu/drm/amd/display/dc/dc_stream.h": "--- a/include/drm/drm_dvbridge.h",
+      "drivers/gpu/drm/amd/display/dc/hwss/dcn20/dcn20_hwseq.c": "--- a/include/drm/drm_dvbridge.h",
+      "include/drm/drm_dvbridge.h": "--- a/include/drm/drm_dvbridge.h"
+    }
+  },
+  "projects/Generic/patches/linux/linux-9980-amd-refresh-hdmi-static-hdr.patch": {
+    "owner": "drm/amd/display: refresh static HDR on a reused HDMI backend",
+    "files": {
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "drm/amd/display: refresh static HDR on a reused HDMI backend",
+      "drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c": "drm/amd/display: refresh static HDR on a reused HDMI backend"
+    }
+  },
+  "projects/Generic/patches/linux/linux-9981-amd-hdmi-vsif-ownership.patch": {
+    "owner": "drm/amd/display: preserve stream-owned HDMI packets across flips",
+    "files": {
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c": "drm/amd/display: preserve stream-owned HDMI packets across flips",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "drm/amd/display: preserve stream-owned HDMI packets across flips",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_freesync.c": "drm/amd/display: preserve stream-owned HDMI packets across flips",
+      "drivers/gpu/drm/amd/display/dc/dc_stream.h": "drm/amd/display: preserve stream-owned HDMI packets across flips"
+    }
+  },
+  "projects/Generic/patches/linux/linux-9982-amd-frl-opt-in.patch": {
+    "owner": "drm/amd/display: keep HDMI FRL opt-in for CB1",
+    "files": {
+      "drivers/gpu/drm/amd/amdgpu/amdgpu_drv.c": "drm/amd/display: keep HDMI FRL opt-in for CB1"
     }
   }
 }

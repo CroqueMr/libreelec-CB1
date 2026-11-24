@@ -13,10 +13,10 @@
     "version": "22.0 RC2",
     "revision": "d686683a55d50e576dd282f53fb2bf9914931b38",
     "modified": true,
-    "source_revision": "3638e8d4b70a0970b9f74d7f54ea877e768932ab"
+    "source_revision": "f3ee1b39412859faa95030aaa7e9aa9685458668"
   },
   "Linux": {
-    "version": "7.2.6",
+    "version": "7.4-rc4",
     "modified": true
   },
   "FFmpeg": {

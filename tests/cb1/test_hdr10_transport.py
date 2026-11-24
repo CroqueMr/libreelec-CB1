@@ -1,6 +1,6 @@
 """Compile the real replayed kernel selectors, not a parallel policy model.
 
-CB1_KERNEL_SOURCE must name Linux 7.2.6 with the shipped kernel patches applied.
+CB1_KERNEL_SOURCE must name the pinned Generic Linux source with the shipped kernel patches applied.
 No kernel build or GPU access is needed. The native DC global validation and
 physical wire precision still require hardware qualification.
 """
@@ -37,262 +37,205 @@ class HDR10Transport(unittest.TestCase):
             result = subprocess.run([str(binary)], capture_output=True, text=True)
             self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_amd_deep_420_retry_after_real_422_bandwidth_rejection(self):
-        path=Path(os.environ['CB1_KERNEL_SOURCE'])/'drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c'
-        source=path.read_text().replace('struct dc_stream_state *\ncreate_validate_stream_for_sink',
-                                        'struct dc_stream_state *create_validate_stream_for_sink')
-        native=function(source,'create_validate_stream_for_sink')
-        code=r'''
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stddef.h>
-enum dc_status {DC_OK,DC_ERROR_UNEXPECTED,DC_FAIL_ENC_VALIDATE,DC_EXCEED_DONGLE_CAP,
- DC_NO_DP_LINK_BANDWIDTH,DC_FAIL_BANDWIDTH_VALIDATE,DC_FAIL_ATTACH_SURFACES};
-enum {DRM_MODE_CONNECTOR_WRITEBACK, SIGNAL_TYPE_HDMI_TYPE_A, SIGNAL_TYPE_HDMI_FRL,
- DISPLAY_DONGLE_DP_HDMI_CONVERTER,PIXEL_ENCODING_RGB,PIXEL_ENCODING_YCBCR422,PIXEL_ENCODING_YCBCR420};
-struct drm_display_info {bool mode420;};
-struct drm_connector {void *dev;int connector_type;struct drm_display_info display_info;};
-struct drm_connector_state {int max_requested_bpc;void *hdr10plus_metadata;};
-struct dm_connector_state {struct drm_connector_state base;bool hdr10_deep_color,invalid;};
-struct drm_display_mode {int hdisplay,vdisplay,clock;};
-struct dc_stream_state {int signal;struct {int pixel_encoding,display_color_depth;}timing;};
-struct amdgpu_dm_connector {struct drm_connector base;struct {int connector_signal;
- struct {int dongle_type;}dpcd_caps;}*dc_link;bool force_yuv422_output,force_yuv420_output;};
-struct amdgpu_device {struct {void *dc;}dm;};
-static struct amdgpu_device device;
-static struct amdgpu_device *drm_to_adev(void *unused){(void)unused;return &device;}
-#define to_amdgpu_dm_connector(p) ((struct amdgpu_dm_connector *)(p))
-#define drm_dbg_kms(...) ((void)0)
-#define drm_err(...) ((void)0)
-static __attribute__((unused)) bool drm_mode_is_420(const struct drm_display_info *i,const struct drm_display_mode *m)
-{(void)m;return i->mode420;}
-static __attribute__((unused)) int amdgpu_dm_hdr10_validate(const struct dm_connector_state *s){return s->invalid;}
-static unsigned calls;static bool shallow420,fail420;
-static struct dc_stream_state streams[32];
-static struct dc_stream_state *create_stream_for_sink(struct drm_connector *con,
- const struct drm_display_mode *mode,const struct dm_connector_state *state,
- const struct dc_stream_state *old,int requested){
- (void)mode;(void)old;assert(calls<32);struct dc_stream_state *s=&streams[calls++];
- struct amdgpu_dm_connector *a=to_amdgpu_dm_connector(con);
- s->signal=SIGNAL_TYPE_HDMI_TYPE_A;
- s->timing.pixel_encoding=a->force_yuv420_output?PIXEL_ENCODING_YCBCR420:
-   (state->hdr10_deep_color || state->base.hdr10plus_metadata) && requested>=10?PIXEL_ENCODING_YCBCR422:PIXEL_ENCODING_RGB;
- s->timing.display_color_depth=s->timing.pixel_encoding==PIXEL_ENCODING_YCBCR420 && !shallow420?10:
-   s->timing.pixel_encoding==PIXEL_ENCODING_YCBCR422?10:8;
- return s;
-}
-static int dc_validate_stream(void *dc,struct dc_stream_state *s){(void)dc;(void)s;return DC_OK;}
-static int dm_dp_mst_is_port_support_mode(void *a,void *s){(void)a;(void)s;return DC_OK;}
-#define SIGNAL_TYPE_DISPLAY_PORT_MST 100
-static int dm_validate_stream_and_context(void *dc,struct dc_stream_state *s){
- (void)dc;return s->timing.pixel_encoding==PIXEL_ENCODING_YCBCR422 ||
-   (fail420 && s->timing.pixel_encoding==PIXEL_ENCODING_YCBCR420)?DC_FAIL_BANDWIDTH_VALIDATE:DC_OK;
-}
-static void dc_stream_release(void *s){(void)s;}
-@@NATIVE@@
-int main(){
- struct amdgpu_dm_connector a={.base={.connector_type=1,.display_info={true}}};
- __typeof__(*a.dc_link) link={.connector_signal=SIGNAL_TYPE_HDMI_TYPE_A};a.dc_link=&link;
- struct dm_connector_state state={.base={16},.hdr10_deep_color=true};
- struct drm_display_mode mode={3840,2160,594000};
- for(int scenario=0;scenario<6;++scenario){
-  calls=0;shallow420=scenario==3;fail420=scenario==4;
-  a.base.display_info.mode420=scenario!=2;state.hdr10_deep_color=scenario!=1;
-  state.invalid=scenario==5;
-  struct dc_stream_state *s=create_validate_stream_for_sink(&a.base,&mode,&state,NULL);
-  assert(!a.force_yuv420_output && !a.force_yuv422_output);
-  if(scenario==0){assert(s && s->timing.pixel_encoding==PIXEL_ENCODING_YCBCR420);
-   assert(s->timing.display_color_depth==10 && calls==2);}
-  if(scenario==1 || scenario==2 || scenario==5)
-   assert(s && s->timing.pixel_encoding==PIXEL_ENCODING_RGB);
-  if(scenario==3)assert(s && s->timing.display_color_depth==8);
-  if(scenario==4)assert(!s); // Failed validation remains a rejection.
- }
-}
-'''
-        self.compile_run(code.replace('@@NATIVE@@',native))
-
-    def test_amd_rgb_first_then_deep_transport_without_changing_timing(self):
+    def test_amd_hdmi_preserves_deep_color_through_format_selection_and_atomic_check(self):
         root = Path(os.environ['CB1_KERNEL_SOURCE'])/'drivers/gpu/drm/amd/display/amdgpu_dm'
-        dm = (root/'amdgpu_dm.c').read_text()
+        source = (root/'amdgpu_dm_connector.c').read_text()
+        source = source.replace('struct dc_stream_state *\namdgpu_dm_create_validate_stream_for_sink',
+                                'struct dc_stream_state *amdgpu_dm_create_validate_stream_for_sink')
         dv = (root/'amdgpu_dm_dv.c').read_text()
-        fill = function(dm, 'fill_stream_properties_from_drm_display_mode')
-        # Execute the actual format/depth pipeline, stopping before color signalling.
-        pipeline = fill.split('stream->out_transfer_func.tf = TRANSFER_FUNCTION_SRGB;', 1)[1]
-        pipeline = pipeline.split('stream->output_color_space =', 1)[0]
-        helper = (function(dm, 'amdgpu_dm_hdr10_select_format')
-                  if 'static void amdgpu_dm_hdr10_select_format(' in dm else '')
-        code = r'''
+        format_stream = function(source, 'fill_stream_properties_from_drm_display_mode')
+        admission = format_stream.split('const bool deep_tmds =', 1)[1].split(';', 1)[0]
+        depth = format_stream.split('stream->out_transfer_func.tf = TRANSFER_FUNCTION_SRGB;', 1)[1]
+        depth = depth.split('stream->output_color_space =', 1)[0]
+        helpers = [function(dv,name) for name in ('amdgpu_dm_hdr10_validate',
+                   'amdgpu_dm_hdr10_depth','amdgpu_dm_hdr10_atomic_check')]
+        helpers.extend(function(source,name) for name in ('amdgpu_dm_hdr10_tmds',
+                       'amdgpu_dm_hdr10_encoding_depth','adjust_colour_depth_from_display_info',
+                       'amdgpu_dm_convert_color_depth_from_display_info','dm_validate_stream_color_format'))
+        selector = function(source, 'amdgpu_dm_create_validate_stream_for_sink')
+        self.compile_run(r'''
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 #define EINVAL 22
 #define BIT(n) (1U << (n))
+#define ARRAY_SIZE(a) (sizeof(a)/sizeof(*(a)))
 #define min_t(t,a,b) ((t)((a)<(b)?(a):(b)))
+#define STATIC_IFN_KUNIT static
+#define drm_dbg_kms(...) ((void)0)
+#define drm_err(...) ((void)0)
 typedef uint8_t u8;
-enum { DRM_MODE_CONNECTOR_HDMIA=1, DRM_MODE_CONNECTOR_DisplayPort=2 };
-enum { DRM_MODE_COLORIMETRY_BT2020_RGB=1, DRM_MODE_COLORIMETRY_BT2020_YCC=2 };
-enum { HDMI_EOTF_SMPTE_ST2084=2, DRM_OUTPUT_COLOR_FORMAT_YCBCR422=3 };
-enum { DRM_EDID_YCBCR420_DC_30=1, DRM_EDID_YCBCR420_DC_36=2, DRM_EDID_YCBCR420_DC_48=4 };
-enum signal_type { SIGNAL_TYPE_HDMI_TYPE_A, SIGNAL_TYPE_DISPLAY_PORT, SIGNAL_TYPE_HDMI_FRL };
-static __attribute__((unused)) bool dc_is_hdmi_signal(enum signal_type signal)
-{ return signal==SIGNAL_TYPE_HDMI_TYPE_A || signal==SIGNAL_TYPE_HDMI_FRL; }
-enum dc_color_depth { COLOR_DEPTH_UNDEFINED, COLOR_DEPTH_666, COLOR_DEPTH_888,
- COLOR_DEPTH_101010, COLOR_DEPTH_121212, COLOR_DEPTH_141414, COLOR_DEPTH_161616,
- COLOR_DEPTH_999, COLOR_DEPTH_111111 };
-enum { PIXEL_ENCODING_RGB, PIXEL_ENCODING_YCBCR422, PIXEL_ENCODING_YCBCR444, PIXEL_ENCODING_YCBCR420 };
+typedef uint32_t u32;
+enum dc_pixel_encoding { PIXEL_ENCODING_RGB, PIXEL_ENCODING_YCBCR444, PIXEL_ENCODING_YCBCR422,
+ PIXEL_ENCODING_YCBCR420, PIXEL_ENCODING_UNDEFINED };
+enum dc_color_depth { COLOR_DEPTH_UNDEFINED, COLOR_DEPTH_666, COLOR_DEPTH_888, COLOR_DEPTH_101010,
+ COLOR_DEPTH_121212, COLOR_DEPTH_141414, COLOR_DEPTH_161616, COLOR_DEPTH_999, COLOR_DEPTH_111111 };
+enum signal_type { SIGNAL_TYPE_NONE, SIGNAL_TYPE_HDMI_TYPE_A, SIGNAL_TYPE_HDMI_FRL,
+ SIGNAL_TYPE_DISPLAY_PORT, SIGNAL_TYPE_DISPLAY_PORT_MST };
+enum dc_status { DC_OK, DC_ERROR_UNEXPECTED, DC_UNSUPPORTED_VALUE, DC_FAIL_BANDWIDTH_VALIDATE };
+enum { DRM_MODE_CONNECTOR_HDMIA=1, DRM_MODE_CONNECTOR_WRITEBACK, DRM_MODE_CONNECTOR_DisplayPort,
+ DRM_OUTPUT_COLOR_FORMAT_YCBCR444=1, DRM_OUTPUT_COLOR_FORMAT_YCBCR422,
+ DRM_CONNECTOR_COLOR_FORMAT_AUTO=0, DRM_CONNECTOR_COLOR_FORMAT_RGB444,
+ DRM_CONNECTOR_COLOR_FORMAT_YCBCR444, DRM_CONNECTOR_COLOR_FORMAT_YCBCR422,
+ DRM_CONNECTOR_COLOR_FORMAT_YCBCR420, DISPLAY_DONGLE_DP_HDMI_CONVERTER,
+ DRM_EDID_HDMI_DC_30=1, DRM_EDID_HDMI_DC_36=2, DRM_EDID_HDMI_DC_48=4,
+ DRM_EDID_YCBCR420_DC_30=1, DRM_EDID_YCBCR420_DC_36=2, DRM_EDID_YCBCR420_DC_48=4,
+ DRM_MODE_COLORIMETRY_BT2020_RGB=1, DRM_MODE_COLORIMETRY_BT2020_YCC, HDMI_EOTF_SMPTE_ST2084=2 };
+struct drm_display_info { unsigned color_formats; int bpc,max_tmds_clock;
+ unsigned edid_hdmi_rgb444_dc_modes,edid_hdmi_ycbcr444_dc_modes; struct {unsigned y420_dc_modes;} hdmi; };
+struct drm_connector { void *dev; int connector_type; struct drm_display_info display_info; };
 struct hdr_output_metadata { int metadata_type; struct {int metadata_type,eotf;} hdmi_metadata_type1; };
 struct drm_property_blob { size_t length; void *data; };
-struct drm_display_info { unsigned color_formats; int max_tmds_clock,bpc; struct {unsigned y420_dc_modes;} hdmi;
- bool mode420,only420; };
-struct drm_connector { int connector_type; struct drm_display_info display_info; };
-struct amdgpu_dm_connector { struct drm_connector base; void *hdr10_deep_color_property; };
-struct drm_connector_state { struct drm_connector *connector; void *crtc; unsigned max_requested_bpc;
- int colorspace; struct drm_property_blob *hdr_output_metadata;void *hdr10plus_metadata; };
+struct drm_connector_state { struct drm_connector *connector; void *crtc; int max_requested_bpc;
+ int colorspace,color_format; struct drm_property_blob *hdr_output_metadata; void *hdr10plus_metadata; };
 struct dm_connector_state { struct drm_connector_state base; bool hdr10_deep_color,dv_standard; unsigned lldv_format; };
-static bool amdgpu_dm_dv_transport(const struct dm_connector_state *s)
-{ return s->dv_standard || s->lldv_format; }
-struct dc_link { enum signal_type connector_signal; };
-struct dc_crtc_timing { int pixel_encoding; enum dc_color_depth display_color_depth; unsigned pix_clk_100hz; };
-struct dc_stream_state { enum signal_type signal; struct dc_link *link; struct dc_crtc_timing timing; bool dv_standard; };
-struct drm_display_mode { int unused; };
-struct drm_crtc_state {bool active;struct dc_stream_state *stream;};
-struct drm_atomic_commit {struct drm_connector_state *con;struct drm_crtc_state *cs;};
+struct dc_link { enum signal_type connector_signal; struct {int dongle_type;} dpcd_caps; };
+struct amdgpu_dm_connector { struct drm_connector base; struct dc_link *dc_link;
+ enum dc_pixel_encoding force_yuv_pixel_format; void *hdr10_deep_color_property; };
+struct drm_display_mode { unsigned clock; bool only420,also420; };
+struct dc_crtc_timing { enum dc_pixel_encoding pixel_encoding; enum dc_color_depth display_color_depth;
+ unsigned pix_clk_100hz; };
+struct dc_stream_state { enum signal_type signal; struct dc_link *link; struct dc_crtc_timing timing;
+ bool dv_standard,dv_native_lldv; };
+struct amdgpu_device { struct {void *dc;} dm; };
+struct drm_crtc_state { bool active; struct dc_stream_state *stream; };
+struct drm_atomic_commit { struct drm_connector_state *con; struct drm_crtc_state *cs; };
 #define to_dm_crtc_state(p) (p)
+#define to_amdgpu_dm_connector(p) ((struct amdgpu_dm_connector *)(p))
+#define to_dm_connector_state(p) ((const struct dm_connector_state *)(p))
 #define for_each_new_connector_in_state(s,c,con,i) \
  for((i)=0;(i)<1 && (((con)=(s)->con),((c)=(con)->connector),true);++(i))
 static struct drm_crtc_state *drm_atomic_get_new_crtc_state(struct drm_atomic_commit *s,void *crtc)
-{(void)crtc;return s->cs;}
-#define to_amdgpu_dm_connector(p) ((struct amdgpu_dm_connector *)(p))
-#define to_dm_connector_state(p) ((struct dm_connector_state *)(p))
-static bool drm_mode_is_420_also(const struct drm_display_info *i,const struct drm_display_mode *m)
-{(void)m;return i->mode420;}
+{ (void)crtc; return s->cs; }
+static bool amdgpu_dm_dv_transport(const struct dm_connector_state *s)
+{ return s->dv_standard || s->lldv_format; }
 static bool drm_mode_is_420_only(const struct drm_display_info *i,const struct drm_display_mode *m)
-{(void)m;return i->only420;}
-static bool drm_mode_is_420(const struct drm_display_info *i,const struct drm_display_mode *m)
-{return drm_mode_is_420_also(i,m)||drm_mode_is_420_only(i,m);}
-@@FUNCTIONS@@
-static void native_format(struct dc_stream_state *stream,const struct drm_connector_state *connector_state,
- const struct drm_display_mode *mode_in,int requested_bpc) {
+{ (void)i; return m->only420; }
+static bool drm_mode_is_420_also(const struct drm_display_info *i,const struct drm_display_mode *m)
+{ (void)i; return m->also420; }
+static bool dc_is_hdmi_signal(enum signal_type s)
+{ return s==SIGNAL_TYPE_HDMI_TYPE_A || s==SIGNAL_TYPE_HDMI_FRL; }
+static bool dc_is_dp_signal(enum signal_type s)
+{ return s==SIGNAL_TYPE_DISPLAY_PORT || s==SIGNAL_TYPE_DISPLAY_PORT_MST; }
+static struct amdgpu_device device;
+static struct amdgpu_device *drm_to_adev(void *p){ (void)p; return &device; }
+@@HELPERS@@
+static bool reject_422,reject_420;
+static unsigned tested_formats,live;
+static struct dc_stream_state stream_value;
+static struct dc_stream_state *create_stream_for_sink(struct drm_connector *connector,
+ const struct drm_display_mode *mode,const struct dm_connector_state *state,
+ const struct dc_stream_state *old,int requested_bpc,enum dc_pixel_encoding requested_encoding,bool is_hdmi_ep)
+{
+ (void)old;
+ assert(live++==0);
+ struct dc_stream_state *stream=&stream_value;
  struct dc_crtc_timing *timing_out=&stream->timing;
- const struct drm_display_info *info=&connector_state->connector->display_info;
- (void)requested_bpc;
- @@PIPELINE@@
-}
-int main(void) {
- struct amdgpu_dm_connector connector = {
-  .base={.connector_type=DRM_MODE_CONNECTOR_HDMIA,
-   .display_info={.color_formats=BIT(DRM_OUTPUT_COLOR_FORMAT_YCBCR422),.max_tmds_clock=600000,.bpc=10,
-                  .hdmi={DRM_EDID_YCBCR420_DC_30},.mode420=true}},
-  .hdr10_deep_color_property=&connector};
- struct hdr_output_metadata hdr={.metadata_type=0,.hdmi_metadata_type1={0,HDMI_EOTF_SMPTE_ST2084}};
- struct drm_property_blob blob={sizeof(hdr),&hdr};
- struct dm_connector_state state={.hdr10_deep_color=true,
-  .base={.connector=&connector.base,.crtc=&state,.max_requested_bpc=10,
-         .colorspace=DRM_MODE_COLORIMETRY_BT2020_RGB,.hdr_output_metadata=&blob}};
- struct dc_link link={SIGNAL_TYPE_HDMI_TYPE_A}; struct drm_display_mode mode={0};
- for (int scenario=0;scenario<35;++scenario) {
-  struct amdgpu_dm_connector saved_connector=connector;
-  struct dm_connector_state saved_state=state;
-  struct dc_stream_state stream={.signal=SIGNAL_TYPE_HDMI_TYPE_A,.link=&link,
-    .timing={PIXEL_ENCODING_RGB,COLOR_DEPTH_101010,5940000}};
-  int requested=10,want_format=PIXEL_ENCODING_YCBCR422;
-  enum dc_color_depth want_depth=COLOR_DEPTH_101010;
-  if(scenario==1) {stream.timing.pix_clk_100hz=2970000;want_format=PIXEL_ENCODING_RGB;}
-  if(scenario==2) {state.hdr10_deep_color=false;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==3) {state.dv_standard=true;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==4) {connector.base.display_info.color_formats=0;want_format=PIXEL_ENCODING_YCBCR420;}
-  if(scenario==5) {connector.base.display_info.max_tmds_clock=340000;want_format=PIXEL_ENCODING_YCBCR420;want_depth=COLOR_DEPTH_888;}
-  if(scenario==6) {connector.base.connector_type=DRM_MODE_CONNECTOR_DisplayPort;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==7) {link.connector_signal=SIGNAL_TYPE_DISPLAY_PORT;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==8) {state.base.hdr_output_metadata=NULL;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==9) {state.base.max_requested_bpc=8;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==10) {requested=8;stream.timing.display_color_depth=COLOR_DEPTH_888;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==11) {connector.base.display_info.color_formats=0;connector.base.display_info.hdmi.y420_dc_modes=0;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==12) {connector.base.display_info.color_formats=0;connector.base.display_info.mode420=false;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==13) {stream.signal=SIGNAL_TYPE_DISPLAY_PORT;want_format=PIXEL_ENCODING_RGB;}
-  if(scenario==14) {connector.base.display_info.max_tmds_clock=0;connector.base.display_info.mode420=false;want_format=PIXEL_ENCODING_RGB;}
-  if(scenario==15) {stream.timing.pixel_encoding=PIXEL_ENCODING_YCBCR444;want_format=PIXEL_ENCODING_YCBCR444;want_depth=COLOR_DEPTH_888;}
-  if(scenario==16) {connector.hdr10_deep_color_property=NULL;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==17) {hdr.hdmi_metadata_type1.eotf=1;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==18) {connector.base.display_info.mode420=false;connector.base.display_info.only420=true;want_format=PIXEL_ENCODING_YCBCR420;}
-  if(scenario==19) {connector.base.display_info.mode420=false;connector.base.display_info.only420=true;stream.timing.pix_clk_100hz=2970000;want_format=PIXEL_ENCODING_YCBCR420;}
-  if(scenario==20) {connector.base.display_info.mode420=false;connector.base.display_info.only420=true;connector.base.display_info.hdmi.y420_dc_modes=0;stream.timing.pix_clk_100hz=2970000;want_format=PIXEL_ENCODING_YCBCR420;want_depth=COLOR_DEPTH_888;}
-  if(scenario==21) {connector.base.display_info.mode420=false;connector.base.display_info.only420=true;connector.base.display_info.max_tmds_clock=100000;stream.timing.pix_clk_100hz=2970000;want_format=PIXEL_ENCODING_YCBCR420;want_depth=COLOR_DEPTH_888;}
-  if(scenario==22) {connector.base.display_info.mode420=false;connector.base.display_info.only420=true;connector.base.display_info.max_tmds_clock=0;stream.timing.pix_clk_100hz=2970000;want_format=PIXEL_ENCODING_YCBCR420;want_depth=COLOR_DEPTH_888;}
-  if(scenario==23) {connector.base.display_info.max_tmds_clock=400000;connector.base.display_info.hdmi.y420_dc_modes=0;want_format=PIXEL_ENCODING_YCBCR420;want_depth=COLOR_DEPTH_888;}
-  if(scenario==24) {state.hdr10_deep_color=false;connector.base.display_info.max_tmds_clock=400000;connector.base.display_info.hdmi.y420_dc_modes=0;want_format=PIXEL_ENCODING_YCBCR420;}
-  if(scenario==25) {state.dv_standard=true;connector.base.display_info.max_tmds_clock=400000;connector.base.display_info.hdmi.y420_dc_modes=0;want_format=PIXEL_ENCODING_YCBCR420;}
-  if(scenario==26) {stream.timing.pixel_encoding=PIXEL_ENCODING_YCBCR420;stream.timing.display_color_depth=COLOR_DEPTH_888;connector.base.display_info.max_tmds_clock=400000;want_format=PIXEL_ENCODING_YCBCR420;}
-  if(scenario==27) {stream.timing.pixel_encoding=PIXEL_ENCODING_YCBCR420;connector.base.display_info.mode420=false;connector.base.display_info.max_tmds_clock=400000;want_format=PIXEL_ENCODING_YCBCR420;want_depth=COLOR_DEPTH_888;}
-  if(scenario==28) {connector.base.display_info.max_tmds_clock=0;want_format=PIXEL_ENCODING_YCBCR420;want_depth=COLOR_DEPTH_888;}
-  if(scenario>=29) {state.hdr10_deep_color=false;state.base.hdr10plus_metadata=&state;}
-  if(scenario==30) {connector.base.display_info.color_formats=0;want_format=PIXEL_ENCODING_YCBCR420;}
-  if(scenario==31) {state.base.max_requested_bpc=8;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==32) {hdr.hdmi_metadata_type1.eotf=1;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==33) {state.dv_standard=true;want_format=PIXEL_ENCODING_RGB;want_depth=COLOR_DEPTH_888;}
-  if(scenario==34) {connector.base.display_info.only420=true;connector.base.display_info.mode420=false;want_format=PIXEL_ENCODING_YCBCR420;}
-  unsigned clock=stream.timing.pix_clk_100hz;
-  native_format(&stream,&state.base,&mode,requested);
-  if(stream.timing.pixel_encoding!=want_format || stream.timing.display_color_depth!=want_depth)
-   return 10+scenario;
-  assert(stream.timing.pix_clk_100hz==clock);
-  if((scenario>=20 && scenario<=23) || scenario==27 || scenario==28) {
-   struct drm_crtc_state cs={true,&stream};
-   struct drm_atomic_commit commit={&state.base,&cs};
-   assert(amdgpu_dm_hdr10_atomic_check(&commit)==-EINVAL);
-  }
-  connector=saved_connector;state=saved_state;link.connector_signal=SIGNAL_TYPE_HDMI_TYPE_A;
-  hdr.hdmi_metadata_type1.eotf=HDMI_EOTF_SMPTE_ST2084;
+ const struct drm_display_info *info=&connector->display_info;
+ const struct drm_connector_state *connector_state=&state->base;
+ stream->link=to_amdgpu_dm_connector(connector)->dc_link;
+ stream->signal=stream->link->connector_signal;
+ stream->dv_native_lldv=false;
+ stream->dv_standard=state->dv_standard;
+ *timing_out=(struct dc_crtc_timing){requested_encoding,
+  amdgpu_dm_convert_color_depth_from_display_info(connector,requested_encoding==PIXEL_ENCODING_YCBCR420,requested_bpc),
+  mode->clock*10};
+ const bool deep_tmds = @@ADMISSION@@;
+ @@DEPTH@@
+ if (state->lldv_format==3 || state->lldv_format==4) {
+  assert(requested_encoding==PIXEL_ENCODING_RGB);
+  stream->dv_native_lldv=true;
+  timing_out->pixel_encoding=state->lldv_format==3?PIXEL_ENCODING_YCBCR422:PIXEL_ENCODING_YCBCR444;
+  timing_out->display_color_depth=COLOR_DEPTH_101010;
  }
- /* The final atomic gate must inspect the post-DC actual depth, not max_bpc
-  * or framebuffer format, including the out-of-order DC 9-bit enum. */
- struct dc_stream_state final={.signal=SIGNAL_TYPE_HDMI_TYPE_A,.link=&link,
-   .timing={PIXEL_ENCODING_YCBCR422,COLOR_DEPTH_101010,5940000}};
- struct drm_crtc_state cs={true,&final};
+ return stream;
+}
+static enum dc_status dc_validate_stream(void *dc,struct dc_stream_state *s)
+{ (void)dc; tested_formats|=BIT(s->timing.pixel_encoding); return DC_OK; }
+static enum dc_status dm_dp_mst_is_port_support_mode(void *a,void *s)
+{ (void)a; (void)s; return DC_OK; }
+static enum dc_status dm_validate_stream_and_context(void *dc,struct dc_stream_state *s)
+{
+ (void)dc;
+ return (reject_422 && s->timing.pixel_encoding==PIXEL_ENCODING_YCBCR422) ||
+        (reject_420 && s->timing.pixel_encoding==PIXEL_ENCODING_YCBCR420) ? DC_FAIL_BANDWIDTH_VALIDATE : DC_OK;
+}
+static void dc_stream_release(void *s){ (void)s; assert(live--==1); }
+@@SELECTOR@@
+int main(void)
+{
+ struct dc_link link={.connector_signal=SIGNAL_TYPE_HDMI_TYPE_A};
+ struct amdgpu_dm_connector c={.base={.connector_type=DRM_MODE_CONNECTOR_HDMIA,
+  .display_info={.color_formats=BIT(DRM_OUTPUT_COLOR_FORMAT_YCBCR422),.bpc=10,.max_tmds_clock=600000,
+    .edid_hdmi_rgb444_dc_modes=DRM_EDID_HDMI_DC_30,.hdmi={DRM_EDID_YCBCR420_DC_30}}},
+  .dc_link=&link,.force_yuv_pixel_format=PIXEL_ENCODING_UNDEFINED,.hdr10_deep_color_property=&c};
+ struct hdr_output_metadata hdr={.hdmi_metadata_type1={0,HDMI_EOTF_SMPTE_ST2084}};
+ struct drm_property_blob blob={sizeof(hdr),&hdr};
+ struct dm_connector_state state={.base={.connector=&c.base,.crtc=&state,.max_requested_bpc=10,
+  .colorspace=DRM_MODE_COLORIMETRY_BT2020_RGB,.hdr_output_metadata=&blob},.hdr10_deep_color=true};
+ const struct drm_display_info defaults=c.base.display_info;
+ const struct dm_connector_state preferences=state;
+ for(int i=0;i<16;++i) {
+  struct drm_display_mode mode={.clock=594000,.also420=true};
+  enum dc_pixel_encoding expected=PIXEL_ENCODING_YCBCR422;
+  enum dc_color_depth depth=COLOR_DEPTH_101010;
+  bool valid=true;
+  c.base.display_info=defaults; state=preferences; tested_formats=0; reject_422=false; reject_420=false;
+  if(i==1){ mode.clock=297000; expected=PIXEL_ENCODING_RGB; }
+  if(i==2){ reject_422=true; expected=PIXEL_ENCODING_YCBCR420; }
+  if(i==3){ reject_422=true; reject_420=true; valid=false; }
+  if(i==4){ mode.only420=true; mode.also420=false; expected=PIXEL_ENCODING_YCBCR420; }
+  if(i==5){ mode.only420=true; state.base.color_format=DRM_CONNECTOR_COLOR_FORMAT_RGB444; valid=false; }
+  if(i==6){ c.base.display_info.hdmi.y420_dc_modes=0; reject_422=true; valid=false; }
+  if(i==7){ mode.clock=297000; c.base.display_info.edid_hdmi_rgb444_dc_modes=0; }
+  if(i==8){ c.base.display_info.bpc=8; }
+  if(i==9){ state.hdr10_deep_color=false; state.base.hdr10plus_metadata=&state; }
+  if(i==10){ state.hdr10_deep_color=false; state.base.max_requested_bpc=8;
+   expected=PIXEL_ENCODING_RGB; depth=COLOR_DEPTH_888; }
+  if(i==11 || i==12){ state.hdr10_deep_color=false; state.lldv_format=i==11?3:4;
+   state.base.color_format=DRM_CONNECTOR_COLOR_FORMAT_RGB444;
+   expected=i==11?PIXEL_ENCODING_YCBCR422:PIXEL_ENCODING_YCBCR444; }
+  if(i==13){ state.hdr10_deep_color=false; state.dv_standard=true; state.base.max_requested_bpc=8;
+   expected=PIXEL_ENCODING_RGB; depth=COLOR_DEPTH_888; }
+  if(i==14){ mode.clock=297000; state.base.color_format=DRM_CONNECTOR_COLOR_FORMAT_YCBCR444;
+   c.base.display_info.bpc=8; c.base.display_info.color_formats|=BIT(DRM_OUTPUT_COLOR_FORMAT_YCBCR444);
+   c.base.display_info.edid_hdmi_ycbcr444_dc_modes=DRM_EDID_HDMI_DC_30; expected=PIXEL_ENCODING_YCBCR444; }
+  if(i==15){ reject_422=true; c.base.display_info.bpc=8; expected=PIXEL_ENCODING_YCBCR420; }
+  struct dc_stream_state *s=amdgpu_dm_create_validate_stream_for_sink(&c.base,&mode,&state,NULL);
+  assert(c.force_yuv_pixel_format==PIXEL_ENCODING_UNDEFINED);
+  assert((s!=NULL)==valid);
+  if(i==2)assert(tested_formats==(BIT(PIXEL_ENCODING_YCBCR422)|BIT(PIXEL_ENCODING_YCBCR420)));
+  if(valid){
+   assert(s->timing.pixel_encoding==expected && s->timing.display_color_depth==depth);
+   assert(s->timing.pix_clk_100hz==mode.clock*10);
+   dc_stream_release(s);
+  }
+  assert(live==0);
+ }
+ state=preferences;
+ struct dc_stream_state wire={.signal=SIGNAL_TYPE_HDMI_TYPE_A,.link=&link,
+  .timing={PIXEL_ENCODING_YCBCR422,COLOR_DEPTH_101010,5940000}};
+ struct drm_crtc_state cs={true,&wire};
  struct drm_atomic_commit commit={&state.base,&cs};
  assert(amdgpu_dm_hdr10_atomic_check(&commit)==0);
- final.signal=SIGNAL_TYPE_HDMI_FRL;
- final.timing.pixel_encoding=PIXEL_ENCODING_RGB;
- final.timing.display_color_depth=COLOR_DEPTH_121212;
+ wire.signal=SIGNAL_TYPE_HDMI_FRL;
+ wire.timing.pixel_encoding=PIXEL_ENCODING_RGB;
+ wire.timing.display_color_depth=COLOR_DEPTH_121212;
  assert(amdgpu_dm_hdr10_atomic_check(&commit)==0);
- final.timing.display_color_depth=COLOR_DEPTH_101010;
- assert(amdgpu_dm_hdr10_atomic_check(&commit)==0);
- link.connector_signal=SIGNAL_TYPE_DISPLAY_PORT;
+ wire.timing.display_color_depth=COLOR_DEPTH_999;
  assert(amdgpu_dm_hdr10_atomic_check(&commit)==-EINVAL);
- link.connector_signal=SIGNAL_TYPE_HDMI_TYPE_A;
- final.timing.display_color_depth=COLOR_DEPTH_888;
+ wire.timing.display_color_depth=COLOR_DEPTH_101010;
+ wire.dv_standard=true;
  assert(amdgpu_dm_hdr10_atomic_check(&commit)==-EINVAL);
- final.timing.display_color_depth=COLOR_DEPTH_999;
+ wire.dv_standard=false; cs.active=false;
  assert(amdgpu_dm_hdr10_atomic_check(&commit)==-EINVAL);
- final.timing.display_color_depth=COLOR_DEPTH_101010;
- final.dv_standard=true;
+ cs.active=true; wire.link=NULL;
  assert(amdgpu_dm_hdr10_atomic_check(&commit)==-EINVAL);
- final.dv_standard=false;cs.active=false;
- assert(amdgpu_dm_hdr10_atomic_check(&commit)==-EINVAL);
- cs.active=true;final.link=NULL;
- assert(amdgpu_dm_hdr10_atomic_check(&commit)==-EINVAL);
- final.link=&link;state.hdr10_deep_color=false;
- final.timing.display_color_depth=COLOR_DEPTH_888;
- assert(amdgpu_dm_hdr10_atomic_check(&commit)==0);
 }
-'''
-        functions = [function(dm, 'convert_color_depth_from_display_info'),
-                     function(dm, 'adjust_colour_depth_from_display_info'),
-                     function(dv, 'amdgpu_dm_hdr10_validate'),
-                     function(dv, 'hdr10_depth'), function(dv, 'amdgpu_dm_hdr10_atomic_check')]
-        code = code.replace('(void)requested_bpc;', '(void)requested_bpc; (void)drm_mode_is_420;')
-        if helper:
-            functions.append(helper)
-        else:
-            # The baseline pipeline has no retry; keep native conversion compiled
-            # and used so a red result diagnoses RGB8 behavior, not missing symbols.
-            code = code.replace('(void)requested_bpc;',
-                                '(void)requested_bpc; (void)convert_color_depth_from_display_info;')
-        self.compile_run(code.replace('@@FUNCTIONS@@', '\n'.join(functions))
-                         .replace('@@PIPELINE@@', pipeline))
+'''.replace('@@HELPERS@@','\n'.join(helpers)).replace('@@SELECTOR@@',selector)
+        .replace('@@ADMISSION@@',admission).replace('@@DEPTH@@',depth))
+
 
     def test_intel_native_rgb_then_420_obeys_edid_depth_and_link_limits(self):
         root = Path(os.environ['CB1_KERNEL_SOURCE'])/'drivers/gpu/drm/i915/display'
@@ -340,6 +283,7 @@ struct drm_connector_state {struct drm_connector *connector;unsigned max_request
  struct drm_property_blob *hdr_output_metadata;void *hdr10plus_metadata;};
 struct intel_digital_connector_state {struct drm_connector_state base;bool dv_hdr10_deep_color,dv_lab_standard;unsigned lldv_format;};
 struct drm_display_mode {int crtc_clock,flags;};
+#define drm_err(...) ((void)0)
 struct intel_display {int version;void *drm;struct{bool skylake,kabylake;}platform;};
 struct intel_encoder {int limit;struct intel_connector *connector;};
 struct intel_crtc_state {struct {struct drm_display_mode adjusted_mode;} hw;

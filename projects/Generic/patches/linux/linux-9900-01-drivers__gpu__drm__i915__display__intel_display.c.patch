@@ -1,14 +1,16 @@
+diff --git a/drivers/gpu/drm/i915/display/intel_display.c b/drivers/gpu/drm/i915/display/intel_display.c
+index b897678..457ec8f 100644
 --- a/drivers/gpu/drm/i915/display/intel_display.c
 +++ b/drivers/gpu/drm/i915/display/intel_display.c
 @@ -61,6 +61,7 @@
  #include "intel_cdclk.h"
- #include "intel_clock_gating.h"
+ #include "intel_cmtg.h"
  #include "intel_color.h"
 +#include "intel_color_regs.h"
  #include "intel_crt.h"
  #include "intel_crtc.h"
  #include "intel_crtc_state_dump.h"
-@@ -4274,6 +4275,80 @@
+@@ -4404,6 +4405,80 @@ static int hsw_compute_linetime_wm(struct intel_atomic_state *state,
  	return 0;
  }
  
@@ -89,21 +91,22 @@
  static int intel_crtc_atomic_check(struct intel_atomic_state *state,
  				   struct intel_crtc *crtc)
  {
-@@ -4335,8 +4410,11 @@
+@@ -4463,10 +4538,13 @@ static int intel_crtc_atomic_check(struct intel_atomic_state *state,
+ 	}
+ 
  	ret = intel_psr2_sel_fetch_update(state, crtc);
- 	if (ret)
- 		return ret;
--
--	return 0;
-+	ret = intel_hdmi_hdr10plus_check(state, crtc);
 +	if (ret)
 +		return ret;
-+
++	ret = intel_hdmi_hdr10plus_check(state, crtc);
+ 	if (ret)
+ 		return ret;
+ 
+-	return 0;
 +	return intel_dv_lab_scanout_check(state, crtc);
  }
  
  static int bpc_to_bpp(int bpc)
-@@ -5815,6 +5893,18 @@
+@@ -5962,6 +6040,18 @@ static void intel_crtc_check_fastset(const struct intel_crtc_state *old_crtc_sta
  	struct intel_display *display = to_intel_display(new_crtc_state);
  	struct intel_crtc *crtc = to_intel_crtc(new_crtc_state->uapi.crtc);
  
@@ -122,7 +125,7 @@
  	/* only allow LRR when the timings stay within the VRR range */
  	if (old_crtc_state->vrr.in_range != new_crtc_state->vrr.in_range)
  		new_crtc_state->update_lrr = false;
-@@ -6411,6 +6501,8 @@
+@@ -6558,6 +6648,8 @@ int intel_atomic_check(struct drm_device *dev,
  	if (!intel_display_driver_check_access(display))
  		return -ENODEV;
  
@@ -131,7 +134,7 @@
  	for_each_oldnew_intel_crtc_in_state(state, crtc, old_crtc_state, new_crtc_state) {
  		/*
  		 * crtc's state no longer considered to be inherited
-@@ -6842,6 +6934,7 @@
+@@ -6999,6 +7091,7 @@ static void intel_update_crtc(struct intel_atomic_state *state,
  		commit_pipe_pre_planes(state, crtc);
  
  		intel_crtc_planes_update_arm(NULL, state, crtc);
@@ -139,7 +142,7 @@
  
  		commit_pipe_post_planes(state, crtc);
  
-@@ -7261,6 +7354,14 @@
+@@ -7438,6 +7531,14 @@ static void intel_atomic_dsb_prepare(struct intel_atomic_state *state,
  
  	if (state->base.legacy_cursor_update)
  		return;

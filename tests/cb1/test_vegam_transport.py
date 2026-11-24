@@ -78,9 +78,11 @@ struct dc_context {int dce_version;};
 struct input_pixel_processor { const struct ipp_funcs *funcs; struct dc_context *ctx; };
 struct dce_ipp { bool dv_csc_saved; uint32_t dv_csc_mode; };
 struct dc_stream_state { bool dv_standard,dv_native_lldv; };
-struct pipe_ctx { struct { struct input_pixel_processor *ipp; } plane_res;
- struct dc_stream_state *stream; };
-struct dc { int unused; };
+struct set_input_transfer_func_params {
+ struct input_pixel_processor *ipp;
+ struct dc_stream_state *stream;
+ struct dc_plane_state *plane_state;
+};
 static struct dce_ipp fake;
 static int prescale_bypass,lut_bypass,lut_writes,degamma,prescale_scale;
 static void update(const char *field,int value) {
@@ -104,27 +106,27 @@ int main(void) {
  struct dc_context context={0};
  struct input_pixel_processor ipp={&funcs,&context};
  struct dc_stream_state stream={0};
- struct pipe_ctx pipe={.plane_res={&ipp},.stream=&stream};
  struct dc_plane_state plane={.format=SURFACE_PIXEL_FORMAT_GRPH_ARGB8888,
   .gamma_correction={true},.in_transfer_func={TF_TYPE_BYPASS,TRANSFER_FUNCTION_LINEAR}};
- assert(dce110_set_input_transfer_func(0,&pipe,&plane));
+ struct set_input_transfer_func_params params={&ipp,&stream,&plane};
+ assert(dce110_set_input_transfer_func(&params));
  assert(prescale_bypass==0 && lut_bypass==1 && lut_writes==0);
  stream.dv_standard=true;
  lut_bypass=0; prescale_bypass=0;
- assert(dce110_set_input_transfer_func(0,&pipe,&plane));
+ assert(dce110_set_input_transfer_func(&params));
  assert(prescale_bypass==1 && lut_bypass==1 && lut_writes==0);
  assert(degamma==IPP_DEGAMMA_MODE_BYPASS);
  stream.dv_native_lldv=true;
  plane.format=SURFACE_PIXEL_FORMAT_GRPH_ARGB2101010;
- assert(dce110_set_input_transfer_func(0,&pipe,&plane));
+ assert(dce110_set_input_transfer_func(&params));
  assert(prescale_bypass==0 && prescale_scale==0x2008 && lut_bypass==1);
  assert(degamma==IPP_DEGAMMA_MODE_BYPASS);
  stream.dv_native_lldv=false;
  plane.format=SURFACE_PIXEL_FORMAT_GRPH_ARGB8888;
- assert(dce110_set_input_transfer_func(0,&pipe,&plane));
+ assert(dce110_set_input_transfer_func(&params));
  assert(prescale_bypass==1 && lut_bypass==1);
  stream.dv_standard=false;
- assert(dce110_set_input_transfer_func(0,&pipe,&plane));
+ assert(dce110_set_input_transfer_func(&params));
  assert(prescale_bypass==0 && lut_bypass==1);
  return 0;
 }
