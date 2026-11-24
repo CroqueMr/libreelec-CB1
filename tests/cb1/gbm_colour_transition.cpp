@@ -19,12 +19,19 @@ struct CDRMObject {
   auto p=enums.find(name);if(p==enums.end())return {};auto it=p->second.find(label);
   if(it==p->second.end())return {};return it->second;}
 };
-struct CDRMConnector:CDRMObject {};
+struct CDRMConnector:CDRMObject {
+ std::string type="HDMI-A";
+ std::string GetType() const{return type;}
+ bool SupportsProperty(const char* name) const{return cache.contains(name);}
+};
+inline constexpr int QUIRK_AMD_HDR10_HDMI_AUTO_FORMAT = 4;
 struct CDRMUtils {virtual ~CDRMUtils()=default;};
 struct CDRMAtomic : CDRMUtils {
  CDRMConnector connector;std::map<std::string,uint64_t> pending;bool addSuccess=true;
  CDRMConnector* GetConnector(){return &connector;}
  int GetFileDescriptor(){return 1;}
+ bool amd=false;
+ bool HasQuirk(int quirk) const{return amd && quirk==QUIRK_AMD_HDR10_HDMI_AUTO_FORMAT;}
  bool pendingPage=false;bool HasPendingCB1Page() const{return pendingPage;}
  bool AddProperty(CDRMObject*,const char* name,uint64_t value){
   if(!addSuccess)return false;pending[name]=value;return true;}
@@ -43,7 +50,7 @@ struct CWinSystemGbmGLESContext {
  bool requestedLimited=false,ordinaryLimited=false;int deferred=0,colorSpaceRefreshes=0;
  std::shared_ptr<void> m_nativeDVProperties;
  std::optional<bool> m_cb1LimitedRange,m_cb1OrdinaryLimitedRange;
- std::optional<uint64_t> m_sdrBroadcastRange;
+ std::optional<uint64_t> m_cb1LimitedBroadcastRange,m_hdr10AutoColorFormat;
  bool HasPendingDVBridgeRestore() const {return pendingRestore;}
  bool HasPendingDVOutputSurface() const {return pendingSurface;}
  bool RequestedLimitedColor() const{return requestedLimited;}
@@ -62,7 +69,7 @@ struct CWinSystemGbmGLESContext {
 int main(){
  CDRMAtomic drm;drm.connector.cache={{"Broadcast RGB",2},{"color format",3},{"max bpc",8}};
  drm.connector.enums={{"Broadcast RGB",{{"Full",1},{"Limited 16:235",2}}},
-                      {"color format",{{"RGB",1},{"YUV 4:2:2",3}}}};
+                      {"color format",{{"AUTO",0},{"RGB",1},{"YUV 4:2:2",3}}}};
  CDVBridgeState state;assert(state.CaptureColorPreferences(drm,12));
  assert(state.Before("Broadcast RGB")==2 && state.Before("color format")==3);
  assert(state.Stage(drm,false));
@@ -105,13 +112,50 @@ int main(){
  assert(output->pending.at("max bpc")==8);assert(w.StageTransportPreferences());
  assert(output->pending.at("max bpc")==8); // native DV owner wins over baseline 12bpc
  w.m_hdrConversion=true;assert(w.StageTransportPreferences());assert(output->pending.at("max bpc")==12);
+ assert(output->pending.at("color format")==1); // Other DRM drivers retain RGB.
  assert(w.StageCB1ConnectorPreferences(true));
  assert(w.TransportLimitedColor()==false && w.RestoredConnectorProperty("color format")==3);
  assert(w.StageTransportPreferences() && w.colorSpaceRefreshes==1);
  output->Commit(false);assert(w.m_cb1ConnectorState.Captured());
  assert(w.StageCB1ConnectorPreferences(true));output->Commit(true);w.CompleteCB1ConnectorRestore();
  assert(!w.m_cb1ConnectorState.Captured() && !w.m_cb1LimitedRange && !w.m_cb1OrdinaryLimitedRange);
- assert(!w.m_sdrBroadcastRange);
+ assert(!w.m_cb1LimitedBroadcastRange && !w.m_hdr10AutoColorFormat);
+ for (bool limited : {false,true}) {
+  for (int device : {0,1,2,3,4,5}) {
+   CWinSystemGbmGLESContext hdr;
+   auto native=std::dynamic_pointer_cast<CDRMAtomic>(hdr.m_DRM);
+   native->amd=device!=1;
+   native->connector=drm.connector;
+   native->connector.type=device==2 ? "DP" : "HDMI-A";
+   if (device!=3) native->connector.cache["DVBRIDGE_HDR10_DEEP_COLOR"]=0;
+   if (device==4) native->connector.enums["color format"].erase("AUTO");
+   if (device==5) native->connector.cache.erase("Broadcast RGB");
+   hdr.requestedLimited=limited;
+   assert(hdr.CaptureCB1ConnectorPreferences());
+   assert(hdr.m_dvState.CaptureColorPreferences(*native,8));
+   assert(hdr.m_dvState.Stage(*native,false) && hdr.StageTransportPreferences());
+   assert(native->pending.at("color format")==1);
+   native->Commit(true);
+   hdr.m_hdrConversion=true;
+   assert(hdr.StageTransportPreferences());
+   const bool automatic=device==0;
+   assert(hdr.TransportLimitedColor()==(limited && !automatic));
+   assert(native->pending.at("color format")==uint64_t(automatic ? 0 : 1));
+   assert(native->pending.at("max bpc")==12);
+   if (device!=5)
+     assert(native->pending.at("Broadcast RGB")==uint64_t(automatic && limited ? 2 : 1));
+   native->Commit(false);
+   assert(native->connector.cache.at("color format")==1 && hdr.m_dvState.Captured());
+   assert(hdr.StageTransportPreferences());
+   native->Commit(true);
+   assert(native->connector.cache.at("color format")==uint64_t(automatic ? 0 : 1));
+   hdr.m_sdrConversion=true; // SDR also uses the HDR conversion compositor.
+   assert(hdr.StageTransportPreferences() && native->pending.at("color format")==1);
+   hdr.m_sdrConversion=false;
+   assert(hdr.StageCB1ConnectorPreferences(true));
+   assert(native->pending.at("color format")==3);
+  }
+ }
  for (bool hasRange : {false,true}) {
   CWinSystemGbmGLESContext sdr;
   auto native=std::dynamic_pointer_cast<CDRMAtomic>(sdr.m_DRM);
