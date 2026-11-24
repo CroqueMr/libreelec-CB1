@@ -1,0 +1,110 @@
+From 173c21209fcd8abb583779d87918e915b2de232b Mon Sep 17 00:00:00 2001
+From: CB1 <cb1@users.noreply.github.com>
+Date: Tue, 24 Nov 2026 18:14:45 +0100
+Subject: [PATCH] io_uring: handle the resource update flags in Linux 7.4
+
+Kernel commit a5819c456b71 reuses the reserved word as flags.
+The flagged buffer update may use extended descriptors. Print the
+address until the tracer has a decoder for that layout.
+---
+ configure.ac              |  2 ++
+ src/io_uring.c            | 16 ++++++++++++++++
+ tests/io_uring_register.c | 17 +++++++++++++++++
+ 3 files changed, 35 insertions(+)
+
+diff --git a/configure.ac b/configure.ac
+index 9bec14b..b1cc81c 100644
+--- a/configure.ac
++++ b/configure.ac
+@@ -418,6 +418,8 @@ AC_CHECK_TYPES(m4_normalize([
+ AC_CHECK_TYPES([s390_compat_regs],,, [#include <asm/ptrace.h>])
+ 
+ AC_CHECK_MEMBERS([struct utsname.domainname],,, [#include <sys/utsname.h>])
++AC_CHECK_MEMBERS([struct io_uring_rsrc_update2.flags],,,
++		 [#include <linux/io_uring.h>])
+ 
+ AC_CHECK_MEMBERS(m4_normalize([
+ 	siginfo_t.si_syscall,
+diff --git a/src/io_uring.c b/src/io_uring.c
+index b670bc7..c54e29a 100644
+--- a/src/io_uring.c
++++ b/src/io_uring.c
+@@ -508,7 +508,11 @@ print_io_uring_update_rsrc(struct tcb *tcp, const kernel_ulong_t addr,
+ {
+ 	struct io_uring_rsrc_update2 arg;
+ 	CHECK_TYPE_SIZE(arg, 32);
++#ifdef HAVE_STRUCT_IO_URING_RSRC_UPDATE2_FLAGS
++	CHECK_TYPE_SIZE(arg.flags, sizeof(uint32_t));
++#else
+ 	CHECK_TYPE_SIZE(arg.resv, sizeof(uint32_t));
++#endif
+ 	CHECK_TYPE_SIZE(arg.resv2, sizeof(uint32_t));
+ 
+ 	if (size < 32) {
+@@ -522,12 +526,24 @@ print_io_uring_update_rsrc(struct tcb *tcp, const kernel_ulong_t addr,
+ 	tprint_struct_begin();
+ 	PRINT_FIELD_U(arg, offset);
+ 
++#ifdef HAVE_STRUCT_IO_URING_RSRC_UPDATE2_FLAGS
++	if (arg.flags) {
++		tprint_struct_next();
++		PRINT_FIELD_X(arg, flags);
++
++		/* Flags may select a layout other than an array of iovecs. */
++		tprint_struct_next();
++		PRINT_FIELD_ADDR64(arg, data);
++	} else
++		print_io_uring_rsrc_data(tcp, arg.data, arg.nr, opcode);
++#else
+ 	if (arg.resv) {
+ 		tprint_struct_next();
+ 		PRINT_FIELD_X(arg, resv);
+ 	}
+ 
+ 	print_io_uring_rsrc_data(tcp, arg.data, arg.nr, opcode);
++#endif
+ 
+ 	print_io_uring_rsrc_tags(tcp, arg.tags, arg.nr);
+ 
+diff --git a/tests/io_uring_register.c b/tests/io_uring_register.c
+index a1cd45d..b6983a2 100644
+--- a/tests/io_uring_register.c
++++ b/tests/io_uring_register.c
+@@ -767,7 +767,11 @@ test_IORING_REGISTER_FILES_UPDATE2_BUFFERS_UPDATE(int fd_null,
+ 			rsrc_upd->nr += !!(j & 16);
+ 			rsrc_upd->nr &= ~-!(j & 32);
+ 
++#ifdef HAVE_STRUCT_IO_URING_RSRC_UPDATE2_FLAGS
++			rsrc_upd->flags = j & 64 ? 0xbadc0ded : 0;
++#else
+ 			rsrc_upd->resv = j & 64 ? 0xbadc0ded : 0;
++#endif
+ 			rsrc_upd->resv2 = j & 128 ? 0xfacecafe : 0;
+ 
+ 			rsrc_upd->offset = j % 3 ? 0 : 0xdeadface;
+@@ -787,9 +791,22 @@ test_IORING_REGISTER_FILES_UPDATE2_BUFFERS_UPDATE(int fd_null,
+ 				       XLAT_SEL(rsrc_upd_ops[i].val,
+ 						rsrc_upd_ops[i].str),
+ 				       j % 3 ? "0" : "3735943886",
++#ifdef HAVE_STRUCT_IO_URING_RSRC_UPDATE2_FLAGS
++				       j & 64 ? ", flags=0xbadc0ded" : "");
++				if (j & 64) {
++					if (rsrc_upd->data)
++						printf(", data=%#" PRIx64,
++						       (uint64_t) rsrc_upd->data);
++					else
++						printf(", data=NULL");
++				} else
++					print_rsrc_data(arg_iov, iov, arg_fds, fds,
++							i, j, endptr, true);
++#else
+ 				       j & 64 ? ", resv=0xbadc0ded" : "");
+ 				print_rsrc_data(arg_iov, iov, arg_fds, fds,
+ 						i, j, endptr, true);
++#endif
+ 				print_rsrc_tags(arg_tags, tags, i, j,
+ 						arg_tags + ARRAY_SIZE(tags));
+ 				printf(", nr=%zu%s",
+-- 
+2.43.0
+
