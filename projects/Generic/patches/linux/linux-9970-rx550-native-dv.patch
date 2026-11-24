@@ -193,6 +193,6 @@ extends CB1's existing Vega M path and keeps the other DCE routes unchanged.
  	if (dc->ctx->dce_version == DCE_VERSION_11_22 ||
 +			(dc->ctx->dce_version == DCE_VERSION_11_2 &&
 +			 dc->ctx->asic_id.chip_id == 0x699f) ||
- 			pipe_ctx->plane_state->update_flags.bits.full_update ||
- 			pipe_ctx->plane_state->update_flags.bits.in_transfer_func_change ||
- 			pipe_ctx->plane_state->update_flags.bits.gamma_change)
+ 			pipe_ctx->plane_state->update_bits.full_update ||
+ 			pipe_ctx->plane_state->update_bits.in_transfer_func_change ||
+ 			pipe_ctx->plane_state->update_bits.gamma_change)

@@ -34,6 +34,7 @@ class GbmColourTransition(unittest.TestCase):
             program = program.replace(signature, 'virtual ' + signature)
         program = program.replace('int color_transfer=1;', 'int color_transfer=16;')
         program = program.replace(' bool rangeTransition=false;', r'''
+ bool HasQuirk(int)const{return false;}
  std::vector<std::map<std::string,uint64_t>> attempts;bool accept=false;
  bool HasPendingCB1Page()const{return false;}
  void AllowModeset(){}
@@ -49,12 +50,14 @@ class GbmColourTransition(unittest.TestCase):
                              'RestoredConnectorProperty'))
         program += r'''
 #include <iostream>
+inline constexpr int QUIRK_AMD_HDR10_HDMI_AUTO_FORMAT = 4;
 struct State{
  bool captured=false;std::map<std::string,uint64_t> before;
  bool Captured()const{return captured;}
  std::optional<uint64_t> Before(const char*name)const{
   auto it=before.find(name);return it==before.end()?std::optional<uint64_t>{}:it->second;}
- bool Stage(CDRMAtomic&d,bool restore,std::optional<uint64_t> range={}){assert(restore && !range);
+ bool Stage(CDRMAtomic&d,bool restore,std::optional<uint64_t> range={},
+            std::optional<uint64_t> colorFormat={}){assert(restore && !range && !colorFormat);
   for(const auto&[name,value]:before)if(!d.AddProperty(d.GetConnector(),name.c_str(),value))return false;
   return true;}
  enum class Backend{KERNEL,NVIDIA};Backend CapturedBackend(){return Backend::KERNEL;}
@@ -67,11 +70,11 @@ struct Surface{Surface&GetDevice(){return *this;}Surface&GetSurface(){return *th
 struct CWinSystemGbmGLESContext:CWinSystemGbm{
  State m_cb1ConnectorState,m_dvState;
  bool m_cb1RestoringPreferences=false,m_dvOrdinaryFrame=false,m_dvStopPending=false;
- bool m_dvOutputSurface=false,m_dvEndPending=false,m_sdrConversion=false;
+ bool m_dvOutputSurface=false,m_dvEndPending=false,m_sdrConversion=false,m_hdrConversion=false;
  std::shared_ptr<void>m_nativeDVProperties;
  std::optional<uint64_t>m_hdrDeepColorPrevious,m_queuedHdrMetadata;
  std::optional<bool>m_cb1LimitedRange,m_cb1OrdinaryLimitedRange;
- std::optional<uint64_t>m_sdrBroadcastRange;
+ std::optional<uint64_t>m_cb1LimitedBroadcastRange,m_hdr10AutoColorFormat;
  unsigned hdrPreparations=0;bool guiLimited=false;
  std::shared_ptr<Surface>m_GBM=std::make_shared<Surface>();
  struct EGL{bool TrySwapBuffers(){return true;}}m_eglContext;

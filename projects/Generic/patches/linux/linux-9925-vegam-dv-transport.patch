@@ -1,27 +1,8 @@
-Subject: [PATCH] drm/amd/display: extend native HDMI DV transport
-
-Base: Linux 7.2.6 with the Beta5 native DV patches applied.
-Admit Vega M DCE11.22 and pinned DCN4 color-block implementations.
-Reuse native DCE packet, gamma, CSC and depth programming.
-HDR conversion retains native 30-bit buffering and final deep-output validation.
-No CB1 pixel processing changes. Physical HDMI qualification pending.
-
-diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h
---- a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h
-+++ b/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h
-@@ -45,7 +45,8 @@
- 	IPP_PRESCALE_MODE_FIXED_SIGNED,
- 	IPP_PRESCALE_MODE_FLOAT_SIGNED,
- 	IPP_PRESCALE_MODE_FIXED_UNSIGNED,
--	IPP_PRESCALE_MODE_FLOAT_UNSIGNED
-+	IPP_PRESCALE_MODE_FLOAT_UNSIGNED,
-+	IPP_PRESCALE_MODE_BYPASS_LUT
- };
- 
- struct ipp_prescale_params {
+diff --git a/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.c b/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.c
+index 72c0950..e726573 100644
 --- a/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.c
 +++ b/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.c
-@@ -136,10 +136,29 @@
+@@ -136,11 +136,30 @@ static void dce_ipp_cursor_set_attributes(
  }
  
  
@@ -34,7 +15,7 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
  				     struct ipp_prescale_params *params)
  {
  	struct dce_ipp *ipp_dce = TO_DCE_IPP(ipp);
-+
+ 
 +	if (ipp->ctx->dce_version == DCE_VERSION_11_22 && REG(INPUT_CSC_CONTROL)) {
 +		if (params->mode == IPP_PRESCALE_MODE_BYPASS_LUT) {
 +			if (!ipp_dce->dv_csc_saved) {
@@ -48,10 +29,11 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
 +			ipp_dce->dv_csc_saved = false;
 +		}
 +	}
- 
++
  	/* set to bypass mode first before change */
  	REG_UPDATE(PRESCALE_GRPH_CONTROL,
-@@ -157,11 +176,14 @@
+ 		   GRPH_PRESCALE_BYPASS, 1);
+@@ -157,11 +176,14 @@ static void dce_ipp_program_prescale(struct input_pixel_processor *ipp,
  		  GRPH_PRESCALE_SCALE_B, params->scale,
  		  GRPH_PRESCALE_BIAS_B, params->bias);
  
@@ -60,16 +42,15 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
 +	    params->mode != IPP_PRESCALE_MODE_BYPASS_LUT) {
  		REG_UPDATE(PRESCALE_GRPH_CONTROL,
  			   GRPH_PRESCALE_BYPASS, 0);
--
--		/* If prescale is in use, then legacy lut should be bypassed */
 +	}
-+
+ 
+-		/* If prescale is in use, then legacy lut should be bypassed */
 +	/* A transport bypass must also clear a LUT left by ordinary playback. */
 +	if (params->mode != IPP_PRESCALE_MODE_BYPASS) {
  		REG_UPDATE(INPUT_GAMMA_CONTROL,
  			   GRPH_INPUT_GAMMA_MODE, 1);
  	}
-@@ -284,6 +306,7 @@
+@@ -284,6 +306,7 @@ void dce_ipp_construct(
  	ipp_dce->regs = regs;
  	ipp_dce->ipp_shift = ipp_shift;
  	ipp_dce->ipp_mask = ipp_mask;
@@ -77,6 +58,8 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
  }
  
  #if defined(CONFIG_DRM_AMD_DC_SI)
+diff --git a/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.h b/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.h
+index 0028d4b..ed03a47 100644
 --- a/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.h
 +++ b/drivers/gpu/drm/amd/display/dc/dce/dce_ipp.h
 @@ -229,10 +229,12 @@
@@ -92,7 +75,7 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
  };
  
  struct dce_ipp_registers {
-@@ -257,6 +259,7 @@
+@@ -257,6 +259,7 @@ struct dce_ipp_registers {
  	uint32_t DC_LUT_RW_INDEX;
  	uint32_t DC_LUT_SEQ_COLOR;
  	uint32_t DEGAMMA_CONTROL;
@@ -100,19 +83,21 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
  };
  
  struct dce_ipp {
-@@ -264,7 +267,11 @@
+@@ -264,8 +267,12 @@ struct dce_ipp {
  	const struct dce_ipp_registers *regs;
  	const struct dce_ipp_shift *ipp_shift;
  	const struct dce_ipp_mask *ipp_mask;
--};
 +	uint32_t dv_csc_mode;
 +	bool dv_csc_saved;
-+};
-+
-+void dce_ipp_reset_dv(struct input_pixel_processor *ipp);
+ };
  
++void dce_ipp_reset_dv(struct input_pixel_processor *ipp);
++
  void dce_ipp_construct(struct dce_ipp *ipp_dce,
  	struct dc_context *ctx,
+ 	int inst,
+diff --git a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c b/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
+index 7b3aa02..b44950b 100644
 --- a/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
 +++ b/drivers/gpu/drm/amd/display/dc/hwss/dce110/dce110_hwseq.c
 @@ -43,6 +43,7 @@
@@ -123,16 +108,16 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
  #include "transform.h"
  #include "stream_encoder.h"
  #include "link_encoder.h"
-@@ -298,6 +299,8 @@
+@@ -297,6 +298,8 @@ dce110_set_input_transfer_func(struct set_input_transfer_func_params *params)
  	tf = &plane_state->in_transfer_func;
  
  	dce110_prescale_params(&prescale_params, plane_state);
-+	if (pipe_ctx->stream->dv_standard)
++	if (params->stream->dv_standard)
 +		prescale_params.mode = IPP_PRESCALE_MODE_BYPASS_LUT;
  	ipp->funcs->ipp_program_prescale(ipp, &prescale_params);
  
  	if (!plane_state->gamma_correction.is_identity &&
-@@ -3029,6 +3032,8 @@
+@@ -3036,6 +3039,8 @@ static void dce110_init_hw(struct dc *dc)
  
  	bp = dc->ctx->dc_bios;
  	for (i = 0; i < dc->res_pool->pipe_count; i++) {
@@ -141,19 +126,35 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
  		xfm = dc->res_pool->transforms[i];
  		xfm->funcs->transform_reset(xfm);
  
-@@ -3188,7 +3193,8 @@
+@@ -3194,7 +3199,8 @@ static void dce110_program_front_end_for_pipe(
  				plane_state->rotation);
  
  	/* Moved programming gamma from dc to hwss */
--	if (pipe_ctx->plane_state->update_flags.bits.full_update ||
+-	if (pipe_ctx->plane_state->update_bits.full_update ||
 +	if (dc->ctx->dce_version == DCE_VERSION_11_22 ||
-+			pipe_ctx->plane_state->update_flags.bits.full_update ||
- 			pipe_ctx->plane_state->update_flags.bits.in_transfer_func_change ||
- 			pipe_ctx->plane_state->update_flags.bits.gamma_change)
- 		hws->funcs.set_input_transfer_func(dc, pipe_ctx, pipe_ctx->plane_state);
++			pipe_ctx->plane_state->update_bits.full_update ||
+ 			pipe_ctx->plane_state->update_bits.in_transfer_func_change ||
+ 			pipe_ctx->plane_state->update_bits.gamma_change)
+ 		hwss_set_input_transfer_func(dc, pipe_ctx);
+diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h
+index b2fa4c4..b2e74a4 100644
+--- a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h
++++ b/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h
+@@ -45,7 +45,8 @@ enum ipp_prescale_mode {
+ 	IPP_PRESCALE_MODE_FIXED_SIGNED,
+ 	IPP_PRESCALE_MODE_FLOAT_SIGNED,
+ 	IPP_PRESCALE_MODE_FIXED_UNSIGNED,
+-	IPP_PRESCALE_MODE_FLOAT_UNSIGNED
++	IPP_PRESCALE_MODE_FLOAT_UNSIGNED,
++	IPP_PRESCALE_MODE_BYPASS_LUT
+ };
+ 
+ struct ipp_prescale_params {
+diff --git a/drivers/gpu/drm/amd/display/dc/resource/dce112/dce112_resource.c b/drivers/gpu/drm/amd/display/dc/resource/dce112/dce112_resource.c
+index 2da5d44..2cc1cd6 100644
 --- a/drivers/gpu/drm/amd/display/dc/resource/dce112/dce112_resource.c
 +++ b/drivers/gpu/drm/amd/display/dc/resource/dce112/dce112_resource.c
-@@ -184,7 +184,8 @@
+@@ -184,7 +184,8 @@ static const struct dce110_aux_registers_mask aux_mask = {
  
  #define ipp_regs(id)\
  [id] = {\
@@ -163,7 +164,7 @@ diff --git a/drivers/gpu/drm/amd/display/dc/inc/hw/ipp.h b/drivers/gpu/drm/amd/d
  }
  
  static const struct dce_ipp_registers ipp_regs[] = {
-@@ -197,11 +198,13 @@
+@@ -197,11 +198,13 @@ static const struct dce_ipp_registers ipp_regs[] = {
  };
  
  static const struct dce_ipp_shift ipp_shift = {

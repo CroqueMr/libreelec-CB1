@@ -3,6 +3,7 @@
 Run on Linux with CB1_KERNEL_SOURCE pointing at the matched, clean kernel tree.
 Only temporary output directories are written; no CEC hardware is probed.
 """
+import json
 import os
 from pathlib import Path
 import shutil
@@ -59,7 +60,8 @@ class CecRecipes(unittest.TestCase):
 class CecNativeKconfig(unittest.TestCase):
     def test_both_generic_configs_retain_cec_after_dependency_resolution(self):
         kernel = Path(os.environ['CB1_KERNEL_SOURCE']).resolve()
-        for config in ('linux.x86_64.conf', '7.2.6/linux.x86_64.conf'):
+        version = json.loads((ROOT/'config/cb1-versions.json').read_text())['Linux']['version']
+        for config in ('linux.x86_64.conf', f'{version}/linux.x86_64.conf'):
             with self.subTest(config=config), tempfile.TemporaryDirectory(prefix='cb1-cec-') as temp:
                 output = Path(temp)
                 shutil.copyfile(ROOT/'projects/Generic/linux'/config, output/'.config')

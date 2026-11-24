@@ -29,6 +29,7 @@ class NvidiaBufferRestore(unittest.TestCase):
 #include <cstdint>
 #include <memory>
 #include <queue>
+#include <string_view>
 #include <optional>
 #include <vector>
 struct gbm_bo {unsigned format=1;};
@@ -42,8 +43,11 @@ unsigned gbm_bo_get_width(gbm_bo*){return 3840;}
 unsigned gbm_bo_get_height(gbm_bo*){return 2160;}
 struct CResolutionUtils {static bool IsCB1RefreshRate(double){return true;}};
 struct DRM {virtual ~DRM()=default;};
+inline constexpr int QUIRK_AMD_HDR10_HDMI_AUTO_FORMAT = 4;
 struct CDRMAtomic:DRM {
- struct Connector {bool SupportsProperty(const char*){return false;}
+ bool HasQuirk(int)const{return false;}
+ struct Connector {std::string_view GetType()const{return "HDMI-A";}
+  bool SupportsProperty(const char*){return false;}
   std::optional<int> GetPropertyEnumValue(const char*,const char*)const{return {};}}connector;
  struct Mode {unsigned hdisplay=3840,vdisplay=2160,flags=0,htotal=4400,vtotal=2250,clock=594000;}mode;
  bool stageOK=true,commitOK=true,active=false;unsigned accepted=0,missing=0;
@@ -98,10 +102,11 @@ struct Window {
  CDVBridgeState m_dvState;bool m_dvStopPending=false,m_sdrConversion=false;
  struct {
    bool Captured(){return false;}
-   bool Stage(CDRMAtomic&,bool,std::optional<uint64_t>){return true;}
+   bool Stage(CDRMAtomic&,bool,std::optional<uint64_t>,std::optional<uint64_t> colorFormat){
+     return !colorFormat;}
  } m_cb1ConnectorState;
  bool m_cb1RestoringPreferences=false,m_hdrConversion=false;
- std::optional<uint64_t> m_sdrBroadcastRange;
+ std::optional<uint64_t> m_cb1LimitedBroadcastRange,m_hdr10AutoColorFormat;
  void ApplyColorspace(){}
  std::optional<int> m_queuedColorspace;
  int GetOutputBitDepth(){return 8;}

@@ -119,8 +119,8 @@ diff --git a/drivers/net/wireless/mediatek/mt76/mt7925/main.c b/drivers/net/wire
 +	    (ev == MT76_STA_EVENT_AUTHORIZE || ev == MT76_STA_EVENT_DISASSOC))
 +		mt7925_abort_join_roc(mvif);
  
- 	if (ev != MT76_STA_EVENT_ASSOC)
- 		return 0;
+ 	switch (ev) {
+ 	case MT76_STA_EVENT_ASSOC:
 @@ -1376,7 +1408,6 @@
  
  	if (vif->type == NL80211_IFTYPE_STATION) {

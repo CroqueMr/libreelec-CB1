@@ -66,7 +66,7 @@ struct intel_hotplug{u32 event_bits=0,retry_bits=0;bool ignore_long_hpd=false;de
  bool detection_work_enabled=true;u32 hdmi_wait_encoders[I915_MAX_PIPES]{};u32 hdmi_ready_encoders=0,hdmi_running_encoders=0,hdmi_cancelled_encoders=0;};
 struct intel_display{drm_device*drm;int resets=0,result=0;struct{int lock=4;}irq;intel_hotplug hotplug;struct{int unordered=0;}wq;bool present=true;};
 struct drm_crtc_commit;struct drm_crtc_state{drm_crtc_commit*commit=nullptr;void*event=nullptr;virtual ~drm_crtc_state()=default;};
-struct intel_crtc_state:drm_crtc_state{struct{bool active=true;}hw;bool hdmi_high_tmds_clock_ratio=true,hdmi_scrambling=true;drm_crtc_state&uapi=*this;};
+struct intel_crtc_state:drm_crtc_state{struct{bool active=true;}hw;struct{bool enable=false;}frl;bool hdmi_high_tmds_clock_ratio=true,hdmi_scrambling=true;drm_crtc_state&uapi=*this;};
 struct drm_crtc{int mutex=2;drm_crtc_state*state;};
 struct intel_crtc{drm_crtc base;enum pipe pipe=PIPE_A;};
 struct drm_crtc_commit{std::atomic<bool>hw_done{true},flip_done{true};int refs=1;};using commit=drm_crtc_commit;
@@ -234,6 +234,14 @@ void complete_all(std::atomic<bool>*done){done->store(true);if(published){auto h
  void pending(){commit.hw_done=false;}
 };
 int main(){int failures=0,checks=0;auto check=[&](bool good,const char*text){++checks;if(!good){++failures;std::cout<<"FAIL "<<text<<'\n';}};
+ {
+  Fixture f;f.state.frl.enable=true;f.pending();f.irq();
+  check(!f.configs()&&!f.waiting(),"FRL HPD never reads SCDC TMDS or arms its waiter");
+  f.publish();f.drain();
+  check(!f.configs(),"FRL completion cannot replay a TMDS read");
+  f.state.frl.enable=false;f.commit.hw_done=true;f.irq();
+  check(f.configs()==1,"TMDS checks resume after returning from FRL");
+ }
  {
   Fixture f;f.pending();f.irq();check(f.waiting()&&!queued&&notifications==1,"pending arms completion not a timer and notifies CHANGED");
   f.advance_to(1000);check(!f.configs()&&worker_runs==1,"first second does not poll pending commit");

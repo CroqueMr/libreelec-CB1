@@ -32,7 +32,7 @@ struct ieee80211_prep_tx_info { int subtype, duration; bool success; };
 enum mt76_sta_event { MT76_STA_EVENT_ASSOC, MT76_STA_EVENT_AUTHORIZE, MT76_STA_EVENT_DISASSOC };
 enum mt7925_roc_req { MT7925_ROC_REQ_JOIN, MT7925_ROC_REQ_ROC };
 enum ieee80211_roc_type { OFFCHANNEL };
-enum { IEEE80211_STYPE_ASSOC_REQ, IEEE80211_STYPE_REASSOC_REQ, NL80211_IFTYPE_STATION };
+enum { IEEE80211_STYPE_ASSOC_REQ, IEEE80211_STYPE_REASSOC_REQ, NL80211_IFTYPE_STATION, NL80211_IFTYPE_NAN_DATA };
 
 static struct mt792x_dev device;
 static struct mt76_phy radio;
@@ -59,6 +59,13 @@ static int aborted, expired;
 #define cancel_work(work) ((void)0)
 #define cancel_work_sync(work) do { assert(!locked); worker_running = false; } while (0)
 #define mt792x_mutex_acquire(d) do { assert(!locked); locked = true; } while (0)
+static int mt792x_nan_map_sta_rec(struct mt76_dev *dev, struct ieee80211_vif *vif,
+                                 struct ieee80211_sta *sta)
+{
+    (void)dev; (void)vif; (void)sta;
+    assert(false); /* These fixtures are station and MLO cases, never NAN. */
+    return 0;
+}
 #define mt792x_mutex_release(d) do { assert(locked); locked = false; } while (0)
 #define wait_event_timeout(q,cond,t) (cond)
 #define test_and_clear_bit(bit,p) __atomic_exchange_n(p, 0, __ATOMIC_SEQ_CST)

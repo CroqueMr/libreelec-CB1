@@ -39,12 +39,13 @@ case "${LINUX}" in
   *)
     PKG_VERSION="7.3.4"
     PKG_SHA256="b11b6df8295e8e991ff040b71aaa4994a8b55caa23b6b092907f195b5840fd1f"
-    # Keep the qualified DRM patch stack on Generic until its 7.3 port.
-    if [ "${PROJECT}" = "Generic" ]; then
-      PKG_VERSION="7.2.6"
-      PKG_SHA256="039aef84f2b0994aeda3f4fcfc3d02ec9d7a9bbb9020ea264c43f446c860f606"
-    fi
     PKG_URL="https://www.kernel.org/pub/linux/kernel/v${PKG_VERSION/.*/}.x/${PKG_NAME}-${PKG_VERSION}.tar.xz"
+    if [ "${PROJECT}" = "Generic" ]; then
+      PKG_VERSION="7.4-rc4"
+      PKG_SHA256="9f13091e6dd2d3576ad86e0c42ffa76b9993805a3f3a00f06981b242ea48aef9"
+      PKG_URL="https://github.com/torvalds/linux/archive/refs/tags/v${PKG_VERSION}.tar.gz"
+      PKG_SOURCE_NAME="${PKG_NAME}-${PKG_VERSION}.tar.gz"
+    fi
     PKG_PATCH_DIRS="default"
     case ${DEVICE} in
       RK3288|RK3328|RK3399)

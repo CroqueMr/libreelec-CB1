@@ -99,8 +99,8 @@
 +}
 +
  int
- intel_dp_compute_config(struct intel_encoder *encoder,
- 			struct intel_crtc_state *pipe_config,
+ intel_dp_compute_config(struct intel_atomic_state *state,
+ 			struct intel_encoder *encoder,
 @@ -3681,10 +3701,16 @@
  	 * that fails assume the user might know something we don't.
  	 */

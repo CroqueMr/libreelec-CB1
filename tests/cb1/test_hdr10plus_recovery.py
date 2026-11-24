@@ -19,7 +19,9 @@ class IntelRecoveryTests(unittest.TestCase):
             connector = (kernel / 'drivers/gpu/drm/drm_connector.c').read_text()
             display = (kernel / 'drivers/gpu/drm/i915/display/intel_display.c').read_text()
             (root / 'frame_mask.inc').write_text(function(connector, 'drm_atomic_hdr10plus_frame_mask'))
-            (root / 'recovery.inc').write_text(function(display, 'intel_modeset_commit_pipes'))
+            (root / 'recovery.inc').write_text(
+                function(display, 'intel_modeset_commit_pipes_for_atomic_state') + '\n' +
+                function(display, 'intel_modeset_commit_pipes'))
             binary = root / 'recovery'
             compiled = subprocess.run(['cc', '-Wall', '-Wextra', '-Werror',
                 '-Wno-unused-function', '-fsanitize=address,undefined', '-fno-pie', '-no-pie',

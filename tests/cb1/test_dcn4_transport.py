@@ -9,61 +9,6 @@ from test_hdr10_transport import function
 
 @unittest.skipUnless(os.environ.get('CB1_KERNEL_SOURCE'), 'matched kernel required')
 class DCN4Transport(unittest.TestCase):
-    def test_native_rmcm_gate_is_independent_of_legacy_lut_state(self):
-        source=(Path(os.environ['CB1_KERNEL_SOURCE'])/
-            'drivers/gpu/drm/amd/display/dc/hwss/dcn42/dcn42_hwseq.c').read_text()
-        owner=function(source,'dcn42_populate_mcm_luts')
-        block=owner[owner.index('\tif (mcm_luts.lut3d_data.rmcm_3dlut_enable &&'):
-                    owner.index('\n\t/* 1D LUT */')]
-        code=r'''
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
-enum dc_cm2_gpu_mem_size {DC_CM2_GPU_MEM_SIZE_171717,DC_CM2_GPU_MEM_SIZE_333333,DC_CM2_GPU_MEM_SIZE_TRANSFORMED};
-struct dc {struct {struct {struct {struct {bool dma_3d_lut;
- struct {unsigned dim_17,dim_33;}lut_dim_caps;}rmcm_3d_lut_caps;}mpc;}color;}caps;};
-struct dc_cm2_func_luts {struct {bool rmcm_3dlut_enable;
- struct {enum dc_cm2_gpu_mem_size size;uint64_t addr;}gpu_mem_params;}lut3d_data;};
-struct pipe_ctx {int unused;};struct hubp {int unused;};struct mpc {int unused;};
-static unsigned programmed;static uint64_t address;
-// Hardware-programming API boundary; never clears or normalizes the candidate.
-static bool dcn42_program_rmcm_luts(struct hubp *hubp,struct pipe_ctx *pipe,int src,
- struct dc_cm2_func_luts *luts,struct mpc *mpc,bool bank,int id)
-{(void)hubp;(void)pipe;(void)src;(void)mpc;(void)bank;(void)id;
- ++programmed;address=luts->lut3d_data.gpu_mem_params.addr;return true;}
-''' + function(source,'is_rmcm_3dlut_fl_supported') + r'''
-static void native_rmcm_admission(struct dc *dc,struct dc_cm2_func_luts mcm_luts)
-{struct hubp *hubp=0;struct pipe_ctx *pipe_ctx=0;struct mpc *mpc=0;
- int lut3d_src=1,mpcc_id=0;bool lut_bank_a=false;
-''' + block + r'''
-}
-int main(void)
-{
- struct dc dc={0};struct dc_cm2_func_luts luts={0};
- luts.lut3d_data.rmcm_3dlut_enable=true;
- luts.lut3d_data.gpu_mem_params.addr=0x12340000;
- native_rmcm_admission(&dc,luts);assert(!programmed);
- dc.caps.color.mpc.rmcm_3d_lut_caps.dma_3d_lut=true;
- dc.caps.color.mpc.rmcm_3d_lut_caps.lut_dim_caps.dim_17=1;
- native_rmcm_admission(&dc,luts);assert(programmed==1 && address==0x12340000);
- luts.lut3d_data.rmcm_3dlut_enable=false;
- native_rmcm_admission(&dc,luts);assert(programmed==1);
- luts.lut3d_data.rmcm_3dlut_enable=true;
- luts.lut3d_data.gpu_mem_params.size=DC_CM2_GPU_MEM_SIZE_333333;
- native_rmcm_admission(&dc,luts);assert(programmed==1);
- dc.caps.color.mpc.rmcm_3d_lut_caps.lut_dim_caps.dim_33=1;
- native_rmcm_admission(&dc,luts);assert(programmed==2);
-}
-'''
-        with tempfile.TemporaryDirectory() as directory:
-            source,binary=Path(directory)/'test.c',Path(directory)/'test'
-            source.write_text(code)
-            result=subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Werror',
-                '-fsanitize=address,undefined',str(source),'-o',str(binary)],capture_output=True,text=True)
-            self.assertEqual(result.returncode,0,result.stderr)
-            result=subprocess.run([str(binary)],capture_output=True,text=True)
-            self.assertEqual(result.returncode,0,result.stderr)
-
     def test_native_1to1_scaler_override_is_not_a_neutral_debug_setting(self):
         dc=Path(os.environ['CB1_KERNEL_SOURCE'])/'drivers/gpu/drm/amd/display/dc'
         functions=[]
@@ -116,14 +61,16 @@ int main(void)
         source=(kernel/'drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c').read_text()
         names=('dv_rx550','dv_rx550_mode','dv_stream_edid','dv_sink_supported','lldv_sink_supported','dv_identity_tf',
                'dv_plane_neutral','dv_lldv_native_formats','dv_lldv_native_link','dv_lldv_native_mode','amdgpu_dm_dv_atomic_check')
+        surface=(kernel/'drivers/gpu/drm/amd/display/dc/core/dc_surface.c').read_text()
         code=Path(__file__).with_name('amd_dv_atomic.c').read_text().replace(
-            '@@FUNCTIONS@@','\n'.join(function(source,name) for name in names))
+            '@@FUNCTIONS@@','\n'.join([function(surface,'dc_plane_construct'),
+                                      *(function(source,name) for name in names)]))
         with tempfile.TemporaryDirectory() as directory:
             src,binary=Path(directory)/'test.c',Path(directory)/'test'
             src.write_text(code)
             built=subprocess.run(['cc','-std=gnu11','-Wall','-Wextra','-Werror',
                 '-Wno-unused-parameter','-Wno-sign-compare','-Wno-unused-but-set-variable',
-                '-fsanitize=address,undefined',
+                '-fsanitize=address,undefined','-fno-pie','-no-pie',
                 '-I'+str(kernel/'include/drm'),str(src),'-o',str(binary)],capture_output=True,text=True)
             self.assertEqual(built.returncode,0,built.stderr)
             ran=subprocess.run([str(binary)],capture_output=True,text=True)
@@ -141,13 +88,23 @@ int main(void)
                  ('401', 'dcn401_set_mcm_luts'), ('42', 'dcn42_set_mcm_luts'),
                  ('32', 'dcn32_set_input_transfer_func'),
                  ('401', 'dcn401_set_output_transfer_func')]
-        code = Path(__file__).with_name('dcn4_transport.c').read_text().replace(
-            '@@FUNCTIONS@@', '\n'.join(function(sources[key], name) for key, name in names))
+        rmcm = function(sources['42'], 'dcn42_set_rmcm_luts')
+        start = rmcm.index('struct rmcm *rmcm =')
+        guard = rmcm.index('/* No RMCM on this plane', start)
+        end = rmcm.index('rmcm_inst =', guard)
+        rmcm_cleanup = ('dcn42_detach_rmcm', 'dcn42_release_rmcm_from_mpcc',
+                        'dcn42_disable_rmcm_luts', 'dcn42_disable_mcm_luts')
+        code = Path(__file__).with_name('dcn4_transport.c').read_text()
+        code = code.replace('@@FUNCTIONS@@', '\n'.join(function(sources[key], name) for key, name in names))
+        code = code.replace('@@RMCM_CLEANUP@@', '\n'.join(
+            function(sources['42'], name) for name in rmcm_cleanup))
+        code = code.replace('@@RMCM_ADMISSION@@',
+                            (rmcm[start:guard].splitlines()[0] + '\n' + rmcm[guard:end]).rstrip())
         with tempfile.TemporaryDirectory() as directory:
             source, binary = Path(directory)/'test.c', Path(directory)/'test'
             source.write_text(code)
             built = subprocess.run(['cc', '-std=gnu11', '-Wall', '-Wextra', '-Werror',
-                '-Wno-unused-parameter', '-fsanitize=undefined,address',
+                '-Wno-unused-parameter', '-fsanitize=undefined,address','-fno-pie','-no-pie',
                 str(source), '-o', str(binary)], capture_output=True, text=True)
             self.assertEqual(built.returncode, 0, built.stderr)
             ran = subprocess.run([str(binary)], capture_output=True, text=True)

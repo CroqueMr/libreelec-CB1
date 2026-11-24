@@ -80,9 +80,10 @@ struct drm_encoder {int encoder_type;};
 struct nv_drm_encoder {struct drm_encoder base;unsigned hDisplay;};
 struct nv_drm_device {void*pDevice;};
 struct nv_drm_connector {struct drm_connector base;@@FIELD@@
- struct nv_drm_encoder*nv_detected_encoder;int type;void*modeset_permission_filep;};
+ struct nv_drm_encoder*nv_detected_encoder;int type;void*modeset_permission_filep;
+ struct drm_property_blob*hdcp_topology_blob;};
 struct NvKmsKapiDynamicDisplayParams {unsigned handle;bool forceConnected,forceDisconnected,overrideEdid,
- connected,vrrSupported;unsigned maxWidthInPixels,maxHeightInPixels;
+ connected,vrrSupported,allmCapable;unsigned maxWidthInPixels,maxHeightInPixels;
  struct {uint8_t buffer[2048];unsigned bufferSize;}edid;};
 struct NvKmsKapiDisplayMode {int unused;};struct drm_display_mode {int type;};
 static struct nv_drm_device device;
@@ -93,6 +94,8 @@ static struct nv_drm_encoder test_encoder={.hDisplay=9};
 #define nv_drm_connector_for_each_possible_encoder(c,e) for(int once=1;once&&(e=&test_encoder.base);once=0)
 #define nv_drm_connector_for_each_possible_encoder_end
 static bool mutex_is_locked(int*x){return *x==1;}
+static void drm_property_blob_put(struct drm_property_blob*b){assert(!b);}
+static void nv_drm_connector_set_allm_capable(struct nv_drm_connector*c,NvBool v){(void)c;(void)v;}
 static void drm_connector_unregister(struct drm_connector*c){(void)c;}
 static void drm_connector_cleanup(struct drm_connector*c){(void)c;}
 static void drm_object_property_set_value(int*b,int p,int v){(void)b;(void)p;(void)v;}

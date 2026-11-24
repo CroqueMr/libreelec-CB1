@@ -10,7 +10,7 @@ from test_hdr10_transport import function
 class NvidiaVersions(unittest.TestCase):
     def test_legacy_avi_matches_selected_timing_on_both_stacks(self):
         locations=[os.environ.get("CB1_PASCAL_SOURCE"),os.environ.get("CB1_NVIDIA_SOURCE")]
-        if not all(locations): self.skipTest("matched patched R580 and R615 sources required")
+        if not all(locations): self.skipTest("matched patched R580 and R620 sources required")
         headers=[]
         for location in locations:
             root=Path(location)

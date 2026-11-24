@@ -16,7 +16,7 @@ ROOT=Path(__file__).resolve().parents[2]
 class NvidiaPatchReplay(unittest.TestCase):
     def test_both_native_stacks_replay_exactly(self):
         for package,version,source_env in (
-            ('nvidia-open-kernel-modules','615.78.08','CB1_NVIDIA_SOURCE'),
+            ('nvidia-open-kernel-modules','620.73.04','CB1_NVIDIA_SOURCE'),
             ('nvidia-pascal-modeset','580.196.07','CB1_PASCAL_SOURCE'),
         ):
             folder=ROOT/'packages/graphics'/package

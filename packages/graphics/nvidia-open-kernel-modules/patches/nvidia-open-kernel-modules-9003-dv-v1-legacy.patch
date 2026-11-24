@@ -1,8 +1,8 @@
 Subject: [PATCH] modeset: pair legacy Dolby Vision VSIF with selected AVI timing
 
-V1 legacy signaling only; leave modern DV and ordinary packets unchanged.
-Use the validated mode, not a userspace timing snapshot. No pixel changes.
-
+diff --git a/src/common/inc/nvkms-dv-vsif.h b/src/common/inc/nvkms-dv-vsif.h
+new file mode 100644
+index 0000000..6c35ab7
 --- /dev/null
 +++ b/src/common/inc/nvkms-dv-vsif.h
 @@ -0,0 +1,37 @@
@@ -43,6 +43,8 @@ Use the validated mode, not a userspace timing snapshot. No pixel changes.
 +    }
 +}
 +#endif
+diff --git a/src/nvidia-modeset/src/nvkms-hdmi.c b/src/nvidia-modeset/src/nvkms-hdmi.c
+index 51f3a28..da2e872 100644
 --- a/src/nvidia-modeset/src/nvkms-hdmi.c
 +++ b/src/nvidia-modeset/src/nvkms-hdmi.c
 @@ -29,6 +29,7 @@
@@ -53,7 +55,7 @@ Use the validated mode, not a userspace timing snapshot. No pixel changes.
  #include "nvkms-evo.h"
  #include "nvkms-modepool.h"
  #include "nvkms-rmapi.h"
-@@ -521,6 +522,13 @@ static void SendVideoInfoFrame(const NVDispEvoRec *pDispEvo,
+@@ -520,6 +521,13 @@ static void SendVideoInfoFrame(const NVDispEvoRec *pDispEvo,
  
      CalculateVideoInfoFrameColorFormat(pDpyColor, hdTimings, pEdidInfo, &videoCtrl);
  
@@ -67,15 +69,31 @@ Use the validated mode, not a userspace timing snapshot. No pixel changes.
      status = NvTiming_ConstructVideoInfoframe(pEdidInfo,
                                                &videoCtrl,
                                                NULL, &VideoInfoFrame);
-@@ -572,6 +580,11 @@ SendVendorSpecificInfoFrame(const NVDispEvoRec *pDispEvo,
-                      pHeadState->hdmiVsifMetadata.payload,
-                      pHeadState->hdmiVsifMetadata.payloadSize);
+@@ -641,6 +649,7 @@ UpdateVendorSpecificInfoFrame(
+ static void
+ SendUserDefinedVSIF(const NVDispEvoRec *pDispEvo,
+                     const NvU32 head,
++                    const NVDispHeadInfoFrameStateEvoRec *pInfoFrameState,
+                     NvEvoInfoFrameTransmitControl *currentTransmitCtrl,
+                     NvEvoInfoFrameTransmitControl *newTransmitCtrl)
+ {
+@@ -658,6 +667,11 @@ SendUserDefinedVSIF(const NVDispEvoRec *pDispEvo,
+                  pHeadState->hdmiVsifMetadata.payload,
+                  pHeadState->hdmiVsifMetadata.payloadSize);
  
-+        nvDoviTiming((NvU8 *)&vendorInfoFrame.Data,
-+                     pHeadState->hdmiVsifMetadata.payloadSize,
-+                     pInfoFrameState->ctrl.video_format_id,
-+                     pInfoFrameState->vendorSpecificCtrl.HDMI_VIC);
++    nvDoviTiming((NvU8 *)&vendorInfoFrame.Data,
++                 pHeadState->hdmiVsifMetadata.payloadSize,
++                 pInfoFrameState->ctrl.video_format_id,
++                 pInfoFrameState->vendorSpecificCtrl.HDMI_VIC);
 +
-         UpdateInfoFrameFlipStatePre(currentTransmitCtrl, newTransmitCtrl, NV_EVO_INFOFRAME_TRANSMIT_FREQUENCY_EVERY_FRAME, NV_TRUE);
- 
-         pDevEvo->hal->SendHdmiInfoFrame(
+     UpdateVendorSpecificInfoFrame(
+         pDispEvo,
+         head,
+@@ -691,6 +705,7 @@ SendVendorSpecificInfoFrame(const NVDispEvoRec *pDispEvo,
+     if (pHeadState->hdmiVsifMetadata.payloadSize != 0) {
+         SendUserDefinedVSIF(pDispEvo,
+                             head,
++                            pInfoFrameState,
+                             currentTransmitCtrl,
+                             newTransmitCtrl);
+         return;

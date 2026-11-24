@@ -15,3 +15,8 @@ PKG_BUILD_FLAGS="-cfg-libs"
 if [ "${TARGET_ARCH}" = x86_64 -o "${TARGET_ARCH}" = "aarch64" ]; then
   PKG_CONFIGURE_OPTS_TARGET="--enable-mpers=no"
 fi
+
+if [ "${PROJECT}" = "Generic" ]; then
+  # Keep the trace decoder and its BPF layout checks on the same UAPI snapshot.
+  PKG_CONFIGURE_OPTS_TARGET+=" --enable-bundled=yes"
+fi

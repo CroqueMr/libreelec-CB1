@@ -1,0 +1,159 @@
+Subject: [PATCH] nvidia-pascal: adapt DRM object setup to Linux 7.4
+
+Keep the R580 private state owners while using the create-state hooks
+on newer kernels. Support the relocated fbdev helper header.
+
+--- a/kernel-open/nvidia-drm/nvidia-drm-crtc.c
++++ b/kernel-open/nvidia-drm/nvidia-drm-crtc.c
+@@ -19,6 +19,8 @@
+  * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+  * DEALINGS IN THE SOFTWARE.
+  */
++
++#include <linux/version.h>
+ 
+ #include "nvidia-drm-conftest.h" /* NV_DRM_AVAILABLE */
+ 
+@@ -1918,6 +1920,18 @@
+  *
+  * Allocate an empty DRM plane state.
+  */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
++static struct drm_plane_state *nv_drm_plane_atomic_create_state(struct drm_plane *plane)
++{
++    struct nv_drm_plane_state *state = nv_drm_calloc(1, sizeof(*state));
++
++    if (!state)
++        return ERR_PTR(-ENOMEM);
++
++    __drm_atomic_helper_plane_state_init(&state->base, plane);
++    return &state->base;
++}
++#else
+ static void nv_drm_plane_atomic_reset(struct drm_plane *plane)
+ {
+     struct nv_drm_plane_state *nv_plane_state =
+@@ -1942,6 +1956,7 @@
+         kfree(nv_plane_state);
+     }
+ }
++#endif
+ 
+ 
+ static struct drm_plane_state *
+@@ -2056,7 +2071,11 @@
+     .update_plane           = drm_atomic_helper_update_plane,
+     .disable_plane          = drm_atomic_helper_disable_plane,
+     .destroy                = nv_drm_plane_destroy,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
++    .atomic_create_state    = nv_drm_plane_atomic_create_state,
++#else
+     .reset                  = nv_drm_plane_atomic_reset,
++#endif
+     .atomic_get_property    = nv_drm_plane_atomic_get_property,
+     .atomic_set_property    = nv_drm_plane_atomic_set_property,
+     .atomic_duplicate_state = nv_drm_plane_atomic_duplicate_state,
+@@ -2149,6 +2168,18 @@
+  *
+  * Allocate an empty DRM crtc state.
+  */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
++static struct drm_crtc_state *nv_drm_crtc_atomic_create_state(struct drm_crtc *crtc)
++{
++    struct nv_drm_crtc_state *state = nv_drm_crtc_state_alloc();
++
++    if (!state)
++        return ERR_PTR(-ENOMEM);
++
++    __drm_atomic_helper_crtc_state_init(&state->base, crtc);
++    return &state->base;
++}
++#else
+ static void nv_drm_atomic_crtc_reset(struct drm_crtc *crtc)
+ {
+     struct nv_drm_crtc_state *nv_state = nv_drm_crtc_state_alloc();
+@@ -2172,6 +2203,7 @@
+         kfree(nv_state);
+     }
+ }
++#endif
+ 
+ /**
+  * nv_drm_atomic_crtc_duplicate_state - crtc state duplicate hook
+@@ -2265,7 +2297,11 @@
+ static struct drm_crtc_funcs nv_crtc_funcs = {
+     .set_config             = drm_atomic_helper_set_config,
+     .page_flip              = drm_atomic_helper_page_flip,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
++    .atomic_create_state    = nv_drm_crtc_atomic_create_state,
++#else
+     .reset                  = nv_drm_atomic_crtc_reset,
++#endif
+     .destroy                = nv_drm_crtc_destroy,
+     .atomic_get_property    = nv_drm_atomic_crtc_get_property,
+     .atomic_set_property    = nv_drm_atomic_crtc_set_property,
+--- a/kernel-open/nvidia-drm/nvidia-drm-connector.c
++++ b/kernel-open/nvidia-drm/nvidia-drm-connector.c
+@@ -20,6 +20,8 @@
+  * DEALINGS IN THE SOFTWARE.
+  */
+ 
++#include <linux/version.h>
++
+ #include "nvidia-drm-conftest.h" /* NV_DRM_AVAILABLE */
+ 
+ #if defined(NV_DRM_AVAILABLE)
+@@ -261,6 +263,19 @@
+     nv_drm_free(nv_cb1_state(s));
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
++static struct drm_connector_state *nv_cb1_create_state(struct drm_connector *connector)
++{
++    struct nv_cb1_connector_state *state = nv_drm_calloc(1, sizeof(*state));
++
++    if (!state)
++        return ERR_PTR(-ENOMEM);
++
++    __drm_atomic_helper_connector_state_init(&state->base, connector);
++    state->base.max_requested_bpc = state->base.max_bpc = 12;
++    return &state->base;
++}
++#else
+ static void nv_cb1_reset(struct drm_connector *c)
+ {
+     struct nv_cb1_connector_state *s;
+@@ -271,6 +286,7 @@
+     __drm_atomic_helper_connector_reset(c, &s->base);
+     s->base.max_requested_bpc = s->base.max_bpc = 12;
+ }
++#endif
+ 
+ static struct drm_connector_state *nv_cb1_duplicate_state(struct drm_connector *c)
+ {
+@@ -400,7 +416,11 @@
+ 
+ static struct drm_connector_funcs nv_connector_funcs = {
+     .destroy                = nv_drm_connector_destroy,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(7, 4, 0)
++    .atomic_create_state    = nv_cb1_create_state,
++#else
+     .reset                  = nv_cb1_reset,
++#endif
+     .force                  = __nv_drm_connector_force,
+     .detect                 = nv_drm_connector_detect,
+     .fill_modes             = drm_helper_probe_single_connector_modes,
+--- a/kernel-open/nvidia-drm/nvidia-drm-drv.c
++++ b/kernel-open/nvidia-drm/nvidia-drm-drv.c
+@@ -64,7 +64,11 @@
+ #endif
+ 
+ #if defined(NV_DRM_FBDEV_AVAILABLE)
++#if __has_include(<drm/clients/drm_fbdev_helper.h>)
++#include <drm/clients/drm_fbdev_helper.h>
++#else
+ #include <drm/drm_fb_helper.h>
++#endif
+ #endif
+ 
+ #if defined(NV_DRM_DRM_CLIENT_SETUP_H_PRESENT)

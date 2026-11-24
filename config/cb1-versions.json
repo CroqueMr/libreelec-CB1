@@ -13,10 +13,10 @@
     "version": "22.0 RC2",
     "revision": "d686683a55d50e576dd282f53fb2bf9914931b38",
     "modified": true,
-    "source_revision": "3638e8d4b70a0970b9f74d7f54ea877e768932ab"
+    "source_revision": "e4645eb360e8dd86891fdd1baa655550c3350519"
   },
   "Linux": {
-    "version": "7.2.6",
+    "version": "7.4-rc4",
     "modified": true
   },
   "FFmpeg": {
@@ -53,7 +53,7 @@
     "modified": false
   },
   "NVIDIA": {
-    "version": "615.78.08",
+    "version": "620.73.04",
     "modified": true
   },
   "NVIDIA R580": {
@@ -66,8 +66,8 @@
     "modified": true
   },
   "NVIDIA Open Kernel Modules": {
-    "version": "615.78.08",
-    "revision": "1a82fbfda8f321b056eb3568850f9316c5e465c5",
+    "version": "620.73.04",
+    "revision": "a4b95f6a2db0bba10ccaccef79190a3c18dcf14a",
     "modified": true
   },
   "NVIDIA VAAPI Driver": {
