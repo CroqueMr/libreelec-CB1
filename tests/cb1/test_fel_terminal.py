@@ -172,10 +172,12 @@ int64_t doviSourcePts=1,doviPairPts=AV_NOPTS_VALUE;Metadata doviMetadata;unsigne
  std::shared_ptr<AVFrame>doviEnhancement;int doviEnhancementBinding=0;
  void Reset(){}void CopyRef(const VideoPicture&v){*this=v;}};
 struct Context{Buffer* hw_frames_ctx=nullptr;};
-struct Fel{bool failed=false,exhausted=false;int result=0;bool missingEnhancement=false;};
+struct Fel{bool failed=false,exhausted=false;int result=0;bool missingEnhancement=false;
+ bool recovering=false,pairOnDrain=false;};
 bool dvbridge_fel_failed(Fel*f){return f->failed;}
 bool dvbridge_fel_exhausted(Fel*f){return f->exhausted;}
 bool dvbridge_fel_has_enhancement(Fel*f){return !f->missingEnhancement;}
+bool dvbridge_fel_recovering(Fel*f){return f->recovering;}
 std::deque<int64_t> acceptedPairPts;
 int dvbridge_fel_take(Fel*f,int64_t pts,AVFrame**out){
  if(f->result==1){*out=new AVFrame;acceptedPairPts.push_back(pts);}
@@ -185,6 +187,7 @@ int dvbridge_fel_take_mel(Fel*,int64_t,AVFrame**,const void*,size_t){return 3;}
 bool dvbridge_fel_device(Fel*,void*){return true;}
 bool dvbridge_fel_drain(Fel*f,const char** reason=nullptr){
  if(reason)*reason=f->missingEnhancement?"no enhancement video received before drain":nullptr;
+ if(f->pairOnDrain)f->result=1;
  return !f->missingEnhancement;
 }
 enum{LOGWARNING,LOGERROR};
@@ -233,6 +236,16 @@ int main(){
  assert((acceptedPairPts==std::deque<int64_t>{-2,-1}));
  CDVDVideoCodecFFmpeg cleanEnd;cleanEnd.baseResult=CDVDVideoCodec::VC_EOF;
  assert(cleanEnd.GetPicture(&out)==CDVDVideoCodec::VC_EOF);
+ CDVDVideoCodecFFmpeg unresolved;unresolved.m_dvFel->recovering=true;
+ unresolved.m_codecControlFlags=DVD_CODEC_CTRL_DRAIN;
+ assert(unresolved.GetPicture(&out)==CDVDVideoCodec::VC_BUFFER);
+ auto lastExact=std::make_shared<VideoPicture>();lastExact->doviSourcePts=700;
+ unresolved.m_dvPending.push_back(lastExact);
+ unresolved.m_dvFel->pairOnDrain=true;unresolved.baseResult=CDVDVideoCodec::VC_EOF;
+ assert(unresolved.GetPicture(&out)==CDVDVideoCodec::VC_PICTURE);
+ assert(out.doviEnhancement && out.doviEnhancement->pts==700);
+ assert(unresolved.m_dvPending.empty());
+ assert(unresolved.GetPicture(&out)==CDVDVideoCodec::VC_FATAL);
  CDVDVideoCodecFFmpeg missing;missing.m_dvFel->missingEnhancement=true;missing.baseResult=CDVDVideoCodec::VC_EOF;
  assert(missing.GetPicture(&out)==CDVDVideoCodec::VC_FATAL && missingEnhancementLogs==1);
  CDVDVideoCodecFFmpeg lastMel;
@@ -248,6 +261,9 @@ int main(){
  CDVDVideoCodecFFmpeg optional;optional.m_hints.preferHybridHDR10Plus=true;
  optional.m_dvFel->missingEnhancement=true;optional.baseResult=CDVDVideoCodec::VC_EOF;
  assert(optional.GetPicture(&out)==CDVDVideoCodec::VC_EOF && missingEnhancementLogs==1);
+ CDVDVideoCodecFFmpeg optionalRecovery;optionalRecovery.m_hints.preferHybridHDR10Plus=true;
+ optionalRecovery.m_dvFel->recovering=true;optionalRecovery.baseResult=CDVDVideoCodec::VC_EOF;
+ assert(optionalRecovery.GetPicture(&out)==CDVDVideoCodec::VC_EOF && !optionalRecovery.m_dvFel);
  CDVDVideoCodecFFmpeg leading;leading.m_dvFel->result=2;
  leading.baseResult=CDVDVideoCodec::VC_PICTURE;
  for (int i=0;i<74;++i) {

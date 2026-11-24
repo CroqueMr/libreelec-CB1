@@ -145,7 +145,7 @@ static bool replay(struct track *base, struct track *enhancement, struct dvbridg
             assert(status == AVERROR_EOF && final_packet);
             if (draining) {
                 assert(count == 0);
-                ok = true;
+                ok = !dvbridge_fel_recovering(fel);
                 goto done;
             }
             if (!dvbridge_fel_drain(fel, NULL))
