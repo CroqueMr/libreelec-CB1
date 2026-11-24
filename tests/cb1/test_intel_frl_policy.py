@@ -119,3 +119,15 @@ int main(void)
                         reset.index('drm_scdc_readb'))
         for phy in ('intel_lt_phy.c', 'intel_cx0_phy.c'):
             self.assertIn('crtc_state->frl.enable ?', (self.display/phy).read_text())
+
+    def test_hdmi_retry_uses_the_reference_counted_connector_worker(self):
+        hdmi = (self.display/'intel_hdmi.c').read_text()
+        init = transport.function(hdmi, 'intel_hdmi_init_connector')
+        self.assertNotIn('modeset_retry_work', init)
+
+        connector = (self.display/'intel_connector.c').read_text()
+        worker = transport.function(connector, 'intel_connector_modeset_retry_work_fn')
+        queue = transport.function(connector, 'intel_connector_queue_modeset_retry_work')
+        self.assertIn('drm_connector_get(', queue)
+        self.assertIn('drm_connector_put(', queue)
+        self.assertIn('drm_connector_put(', worker)

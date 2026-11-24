@@ -507,8 +507,8 @@
     "projects/Generic/patches/linux/linux-9982-amd-frl-opt-in.patch": "fb459b673e0303a8a404242198646f3a40c74c2aa7511c776a4288b669012c3a",
     "projects/Generic/linux/7.4-rc4/linux.x86_64.conf": "13a9c3fe27cd070eca5b890b41d4b03406c6bce11bdcf84106e95b56bb1b9cac",
     "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e",
-    "projects/Generic/patches/linux/linux-9983-intel-native-hdmi-frl-lab.patch": "1feb5c6147aa18ff1cc828261c4a63c03780a90176fe08cf4619a368b8932278",
-    "tests/cb1/test_intel_frl_policy.py": "d9d84f4f4b195c95e38eead678151dabff2c7757e328adaf6c069779ca83d7a5"
+    "projects/Generic/patches/linux/linux-9983-intel-native-hdmi-frl-lab.patch": "4a81e774b09ff5e1979fc9b6b44a414530f0e7c5139423e6571cf48a25748973",
+    "tests/cb1/test_intel_frl_policy.py": "7184ea193cc21748a50a718984a9f7236a9e776d9b6d728105d486f2cebdd80b"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {
