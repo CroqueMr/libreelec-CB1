@@ -81,6 +81,10 @@ def main():
     mux("timed-base", base)
     mux("timed-enhancement", enhancement)
 
+    # Lose EL44 with no following random-access picture before EOF.
+    tail = encode(125, 0)
+    mux("unresolved-tail", packed(encode(125, 3), tail[:44] + tail[45:] + [[]]))
+
 
 if __name__ == "__main__":
     main()
