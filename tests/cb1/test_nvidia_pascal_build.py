@@ -7,7 +7,7 @@ import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[2]
-DRM = ['nvidia-drm-'+name for name in ('connector.c', 'connector.h', 'drv.c',
+DRM = ['nvidia-drm-'+name for name in ('connector.c', 'connector.h', 'crtc.c', 'drv.c',
        'priv.h', 'modeset.c', 'encoder.c', 'encoder.h')]
 
 

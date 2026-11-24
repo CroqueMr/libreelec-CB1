@@ -23,7 +23,7 @@
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzz-pascal-hdr10-scanout.patch": "62593eeb9d7593b49584e3e92e1b4fbb5a190016897dba2a7394d61347085d26",
     "tests/cb1/test_hdr10_link_depth.py": "f283854d9c976d0aa57adc9083d4a40716cb8b5575256644725d911ef3b07444",
     "tests/cb1/test_pascal_packages.py": "4bfb59c233d5c089be73fe8e659b39d920005af4dd1ba360e97225c285adfad6",
-    "tests/cb1/test_nvidia_pascal_build.py": "4fb9bacc63a9e1af8dd5613732a1ada60ddb6067586a4310b2cd029f184b8b3a",
+    "tests/cb1/test_nvidia_pascal_build.py": "494edf9bfcaf1fd76c827ee152b9713c5f2de610d4e9b6172e89354c78a4e075",
     "tests/cb1/test_rendering_labels.py": "919e3b2e95dc0627645eef713a81ec0d097e10fb6ef6b517c9e4cb3139ef2133",
     "docs/cb1/PLAYBACK.md": "e70bf30b633ade3f3b99c8bc4652900a0e16b7cf027631072418b380108c0df4",
     "packages/multimedia/bdj-runtime/package.mk": "1c0e1163651be3f08d75c1524bea594f6ab8bd8b11849cfa141e8018a18d8638",
