@@ -29,7 +29,7 @@ make_target() {
     # replacing anything. Keep the closed-flavour nvidia-drm-linux.c and RM.
     [ "$(get_pkg_version nvidia-pascal-modeset)" = "${PKG_VERSION}" ] && [ -f "${archive}" ] ||
       die "nvidia: R580 source version/archive mismatch"
-    for name in common/inc/nvkms-kapi.h nvidia-drm/nvidia-drm-{connector.c,connector.h,drv.c,priv.h,modeset.c,encoder.c,encoder.h}; do
+    for name in common/inc/nvkms-kapi.h nvidia-drm/nvidia-drm-{connector.c,connector.h,crtc.c,drv.c,priv.h,modeset.c,encoder.c,encoder.h}; do
       # A retried build may already contain this exact patched source.
       patched="${public}/kernel-open/${name}"
       [ "${name}" != common/inc/nvkms-kapi.h ] || patched="${public}/src/nvidia-modeset/kapi/interface/nvkms-kapi.h"
@@ -45,7 +45,7 @@ make_target() {
        "${public}/src/common/inc/nvkms-cb1-vsif.h" \
        "${public}/src/common/inc/nvkms-dv-vsif.h" \
        "${public}/src/common/inc/nvkms-cb1-hdr10plus.h" "${PKG_BUILD}/kernel/common/inc/"
-    for name in nvidia-drm-connector.c nvidia-drm-connector.h nvidia-drm-drv.c nvidia-drm-priv.h nvidia-drm-modeset.c nvidia-drm-encoder.c nvidia-drm-encoder.h; do
+    for name in nvidia-drm-connector.c nvidia-drm-connector.h nvidia-drm-crtc.c nvidia-drm-drv.c nvidia-drm-priv.h nvidia-drm-modeset.c nvidia-drm-encoder.c nvidia-drm-encoder.h; do
       cp "${public}/kernel-open/nvidia-drm/${name}" "${PKG_BUILD}/kernel/nvidia-drm/${name}"
     done
     make -C "${PKG_BUILD}/kernel" modules \
