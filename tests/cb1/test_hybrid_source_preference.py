@@ -225,6 +225,7 @@ bool dvbridge_fel_device(Fel* f, void*) { return f->deviceOK; }
 bool dvbridge_fel_failed(Fel* f) { return f->failed; }
 bool dvbridge_fel_has_enhancement(Fel*) { return true; }
 bool dvbridge_fel_drain(Fel*,const char**) { return true; }
+bool dvbridge_fel_recovering(const Fel*) { return false; }
 struct VideoPicture {
   StreamHdrType hdrType=StreamHdrType::HDR_TYPE_DOLBYVISION;
   int pts=0;
