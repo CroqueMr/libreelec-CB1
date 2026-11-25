@@ -1,0 +1,240 @@
+Subject: [PATCH] drm/i915/dp: wait for PS185 PCON 10-bit settle before HDR10 modeset
+
+On Intel CM11EBV58W (Tiger Lake) boards with onboard Parade PS185
+DP-to-HDMI protocol converters, transitioning from 8-bit SDR into 10-bit
+and enabling HDR10 (HDMI_PACKET_TYPE_GAMUT_METADATA) within ~1.5s causes
+the converter to drop the DRM InfoFrame so the sink displays SDR.
+
+Track when the PS185 converter enters 10-bit mode (pipe_bpp >= 30) and:
+1. If a follow-up modeset transitions 10-bit SDR -> 10-bit HDR10 within the
+   2000ms settle window, wait for the remaining settle time before disabling
+   the pipe so only a single settled HDR10 modeset occurs.
+2. If a single commit enters 10-bit HDR10 directly from <30 bpp or inactive,
+   schedule a post-settle link retrain after 2050ms so PS185 latches HDR10.
+
+--- a/drivers/gpu/drm/i915/display/intel_display_types.h
++++ b/drivers/gpu/drm/i915/display/intel_display_types.h
+@@ -2041,6 +2041,10 @@
+ 	struct {
+ 		unsigned long mask;
+ 	} quirks;
++
++	/* Onboard PS185 DP-to-HDMI PCON 10-bit settle tracking */
++	unsigned long pcon_10bit_settle_until;
++	bool pcon_hdr_retrain;
+ };
+ 
+ enum lspcon_vendor {
+--- a/drivers/gpu/drm/i915/display/intel_dp.h
++++ b/drivers/gpu/drm/i915/display/intel_dp.h
+@@ -239,6 +239,8 @@
+ 		for_each_if(intel_dp_joiner_candidate_valid(__connector, (__mode)->hdisplay, __num_joined_pipes))
+ 
+ u8 intel_dp_as_sdp_transmission_time(void);
++void intel_dp_pcon_hdr_pre_modeset(struct intel_atomic_state *state);
++void intel_dp_pcon_hdr_post_modeset(struct intel_atomic_state *state);
+ 
+ int intel_dp_link_init(struct intel_dp *intel_dp);
+ void intel_dp_link_cleanup(struct intel_dp *intel_dp);
+--- a/drivers/gpu/drm/i915/display/intel_dp.c
++++ b/drivers/gpu/drm/i915/display/intel_dp.c
+@@ -3593,6 +3593,159 @@
+ 		intel_dp_has_hdmi_sink(intel_dp);
+ }
+ 
++static bool intel_dp_is_cm11_pcon(struct intel_dp *intel_dp)
++{
++	struct intel_encoder *encoder = &dp_to_dig_port(intel_dp)->base;
++	const struct intel_bios_encoder_data *devdata = encoder->devdata;
++
++	return !intel_dp->is_mst &&
++		!intel_dp_is_edp(intel_dp) &&
++		!intel_bios_encoder_is_lspcon(devdata) &&
++		intel_bios_encoder_supports_hdmi(devdata) &&
++		dmi_check_system(intel_dp_pcon_dv_dmi) &&
++		intel_dp_pcon_dv_route(intel_dp);
++}
++
++static void intel_dp_pcon_hdr_state(const struct intel_crtc_state *crtc_state,
++				    bool *is_10bit, bool *is_hdr10)
++{
++	*is_10bit = crtc_state && crtc_state->hw.active &&
++		intel_crtc_has_type(crtc_state, INTEL_OUTPUT_DP) &&
++		!intel_crtc_has_type(crtc_state, INTEL_OUTPUT_DP_MST) &&
++		!intel_crtc_has_type(crtc_state, INTEL_OUTPUT_EDP) &&
++		crtc_state->pipe_bpp >= 30;
++	*is_hdr10 = *is_10bit &&
++		(crtc_state->infoframes.enable &
++		 intel_hdmi_infoframe_enable(HDMI_PACKET_TYPE_GAMUT_METADATA));
++}
++
++void intel_dp_pcon_hdr_pre_modeset(struct intel_atomic_state *state)
++{
++	struct intel_display *display = to_intel_display(state);
++	struct drm_connector *conn;
++	struct drm_connector_state *old_conn_state, *new_conn_state;
++	int i;
++
++	if (!state->modeset)
++		return;
++
++	for_each_oldnew_connector_in_state(&state->base, conn,
++					   old_conn_state, new_conn_state, i) {
++		struct intel_connector *intel_conn;
++		struct intel_dp *intel_dp;
++		const struct intel_crtc_state *old_crtc_state;
++		const struct intel_crtc_state *new_crtc_state;
++		bool old_10bit, old_hdr10, new_10bit, new_hdr10;
++		unsigned long now;
++
++		if (conn->connector_type != DRM_MODE_CONNECTOR_DisplayPort ||
++		    !new_conn_state->crtc || !old_conn_state->crtc ||
++		    new_conn_state->crtc != old_conn_state->crtc)
++			continue;
++
++		intel_conn = to_intel_connector(conn);
++		intel_dp = intel_attached_dp(intel_conn);
++		if (!intel_dp_is_cm11_pcon(intel_dp))
++			continue;
++
++		old_crtc_state = intel_atomic_get_old_crtc_state(state,
++			to_intel_crtc(old_conn_state->crtc));
++		new_crtc_state = intel_atomic_get_new_crtc_state(state,
++			to_intel_crtc(new_conn_state->crtc));
++		if (!new_crtc_state || !intel_crtc_needs_modeset(new_crtc_state))
++			continue;
++
++		intel_dp_pcon_hdr_state(old_crtc_state, &old_10bit, &old_hdr10);
++		intel_dp_pcon_hdr_state(new_crtc_state, &new_10bit, &new_hdr10);
++
++		now = jiffies;
++		if (old_10bit && !old_hdr10 && new_hdr10 &&
++		    intel_dp->pcon_10bit_settle_until &&
++		    time_before(now, intel_dp->pcon_10bit_settle_until)) {
++			unsigned int wait_ms = min_t(unsigned int,
++				jiffies_to_msecs(intel_dp->pcon_10bit_settle_until - now) + 50,
++				2100);
++
++			drm_info(display->drm,
++				 "[CONNECTOR:%d:%s] PS185 PCON: waiting %u ms for 10-bit settle before HDR10 modeset\n",
++				 conn->base.id, conn->name, wait_ms);
++			msleep(wait_ms);
++		}
++	}
++}
++
++void intel_dp_pcon_hdr_post_modeset(struct intel_atomic_state *state)
++{
++	struct intel_display *display = to_intel_display(state);
++	struct drm_connector *conn;
++	struct drm_connector_state *old_conn_state, *new_conn_state;
++	int i;
++
++	if (!state->modeset)
++		return;
++
++	for_each_oldnew_connector_in_state(&state->base, conn,
++					   old_conn_state, new_conn_state, i) {
++		struct intel_connector *intel_conn;
++		struct intel_dp *intel_dp;
++		struct intel_encoder *encoder;
++		const struct intel_crtc_state *old_crtc_state = NULL;
++		const struct intel_crtc_state *new_crtc_state = NULL;
++		bool old_10bit = false, old_hdr10 = false;
++		bool new_10bit = false, new_hdr10 = false;
++
++		if (conn->connector_type != DRM_MODE_CONNECTOR_DisplayPort)
++			continue;
++
++		intel_conn = to_intel_connector(conn);
++		intel_dp = intel_attached_dp(intel_conn);
++		encoder = &dp_to_dig_port(intel_dp)->base;
++
++		if (old_conn_state->crtc)
++			old_crtc_state = intel_atomic_get_old_crtc_state(state,
++				to_intel_crtc(old_conn_state->crtc));
++		if (new_conn_state->crtc)
++			new_crtc_state = intel_atomic_get_new_crtc_state(state,
++				to_intel_crtc(new_conn_state->crtc));
++
++		intel_dp_pcon_hdr_state(old_crtc_state, &old_10bit, &old_hdr10);
++		intel_dp_pcon_hdr_state(new_crtc_state, &new_10bit, &new_hdr10);
++
++		if (!new_10bit || !intel_dp_is_cm11_pcon(intel_dp)) {
++			intel_dp->pcon_10bit_settle_until = 0;
++			intel_dp->pcon_hdr_retrain = false;
++			continue;
++		}
++
++		if (!intel_crtc_needs_modeset(new_crtc_state))
++			continue;
++
++		if (!old_10bit) {
++			intel_dp->pcon_10bit_settle_until =
++				jiffies + msecs_to_jiffies(2000);
++			if (new_hdr10 && !state->internal) {
++				drm_info(display->drm,
++					 "[CONNECTOR:%d:%s] PS185 PCON: entered 10-bit HDR10 directly, scheduling 2050 ms retrain\n",
++					 conn->base.id, conn->name);
++				intel_dp->pcon_hdr_retrain = true;
++				intel_encoder_link_check_queue_work(encoder, 2050);
++			} else {
++				drm_info(display->drm,
++					 "[CONNECTOR:%d:%s] PS185 PCON: entered 10-bit SDR, settle window 2000 ms started\n",
++					 conn->base.id, conn->name);
++				intel_dp->pcon_hdr_retrain = false;
++			}
++		} else if (!new_hdr10) {
++			intel_dp->pcon_hdr_retrain = false;
++		} else if (state->internal && intel_dp->pcon_hdr_retrain) {
++			drm_info(display->drm,
++				 "[CONNECTOR:%d:%s] PS185 PCON: post-settle HDR10 retrain complete\n",
++				 conn->base.id, conn->name);
++			intel_dp->pcon_hdr_retrain = false;
++		}
++	}
++}
++
+ static int intel_dp_pcon_dv_compute_config(struct intel_dp *intel_dp,
+ 					   struct intel_crtc_state *crtc_state,
+ 					   const struct drm_connector_state *conn_state)
+--- a/drivers/gpu/drm/i915/display/intel_dp_link_training.c
++++ b/drivers/gpu/drm/i915/display/intel_dp_link_training.c
+@@ -2500,6 +2500,10 @@
+ 	if (intel_dp_link_training_get_force_retrain(link_training))
+ 		return true;
+ 
++	if (intel_dp->pcon_hdr_retrain &&
++	    time_after_eq(jiffies, intel_dp->pcon_10bit_settle_until))
++		return true;
++
+ 	if (intel_dp_read_link_status(intel_dp, link_status) < 0)
+ 		return false;
+ 
+@@ -2598,6 +2602,7 @@
+ 		goto out;
+ 
+ 	intel_dp_link_training_set_force_retrain(link_training, false);
++	intel_dp->pcon_hdr_retrain = false;
+ 
+ 	if (ret) {
+ 		drm_dbg_kms(display->drm,
+--- a/drivers/gpu/drm/i915/display/intel_display.c
++++ b/drivers/gpu/drm/i915/display/intel_display.c
+@@ -7749,6 +7749,8 @@
+ 	drm_dp_mst_atomic_wait_for_dependencies(&state->base);
+ 	intel_atomic_global_state_wait_for_dependencies(state);
+ 
++	intel_dp_pcon_hdr_pre_modeset(state);
++
+ 	/*
+ 	 * During full modesets we write a lot of registers, wait
+ 	 * for PLLs, etc. Doing that while DC states are enabled
+@@ -7936,6 +7938,7 @@
+ 		drm_atomic_helper_commit_hw_done(&state->base);
+ 		intel_hpd_hdmi_commit_done(display, hpd_pipes);
+ 	}
++	intel_dp_pcon_hdr_post_modeset(state);
+ 	intel_atomic_global_state_commit_done(state);
+ 
+ 	if (state->modeset) {

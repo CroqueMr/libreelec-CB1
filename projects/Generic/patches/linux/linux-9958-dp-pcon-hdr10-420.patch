@@ -1,0 +1,83 @@
+From: Snuffpig <181518943+Snuffpig@users.noreply.github.com>
+Subject: [PATCH] drm/i915/dp: Prefer 10-bit YCbCr 4:2:0 for HDR10 when 4K60 RGB drops to 8 bpc
+
+When HDR10 metadata and max_bpc >= 10 are requested on a mode supporting
+YCbCr 4:2:0 (drm_mode_is_420_also, e.g. 4K50/4K60) and RGB falls back
+below 10 bpc (pipe_bpp < 30), restore baseline pipe_bpp and try
+INTEL_OUTPUT_FORMAT_YCBCR420 so capable DP/PCON sinks deliver 10-bit
+4:2:0 HDR10 instead of 8-bit RGB HDR10.
+
+Also enable ycbcr420_passthrough and VSC SDP colorimetry_support on
+allowlisted CM11EBV58W PS185 PCONs whose DP 1.2 DPCD (0x0083 / 0x2210)
+omits those capability bits despite supporting 4:2:0 VSC SDP
+passthrough and BT.2020 VSC colorimetry in hardware.
+--- a/drivers/gpu/drm/i915/display/intel_dp.c
++++ b/drivers/gpu/drm/i915/display/intel_dp.c
+@@ -3369,6 +3369,8 @@
+ 					    respect_downstream_limits);
+ }
+ 
++static bool intel_dp_is_cm11_pcon(struct intel_dp *intel_dp);
++
+ static int
+ intel_dp_compute_formats(struct intel_encoder *encoder,
+ 			 struct intel_crtc_state *crtc_state,
+@@ -3396,14 +3398,38 @@
+ 							     INTEL_OUTPUT_FORMAT_RGB);
+ 		}
+ 	} else {
++		int orig_pipe_bpp = crtc_state->pipe_bpp;
++
+ 		ret = intel_dp_compute_output_format(encoder, crtc_state, conn_state,
+ 						     respect_downstream_limits,
+ 						     INTEL_OUTPUT_FORMAT_RGB);
+ 
+-		if (ret && drm_mode_is_420_also(info, adjusted_mode))
++		if (!ret && crtc_state->pipe_bpp < 30 &&
++		    intel_dp_is_cm11_pcon(intel_dp) &&
++		    conn_state->hdr_output_metadata &&
++		    conn_state->max_requested_bpc >= 10 &&
++		    drm_mode_is_420_also(info, adjusted_mode)) {
++			int ret_420;
++
++			crtc_state->pipe_bpp = orig_pipe_bpp;
++			ret_420 = intel_dp_compute_output_format(encoder, crtc_state, conn_state,
++							       respect_downstream_limits,
++							       INTEL_OUTPUT_FORMAT_YCBCR420);
++
++			if (ret_420 || crtc_state->pipe_bpp < 30) {
++				crtc_state->pipe_bpp = orig_pipe_bpp;
++				ret = intel_dp_compute_output_format(encoder, crtc_state, conn_state,
++								     respect_downstream_limits,
++								     INTEL_OUTPUT_FORMAT_RGB);
++			}
++		}
++
++		if (ret && drm_mode_is_420_also(info, adjusted_mode)) {
++			crtc_state->pipe_bpp = orig_pipe_bpp;
+ 			ret = intel_dp_compute_output_format(encoder, crtc_state, conn_state,
+ 							     respect_downstream_limits,
+ 							     INTEL_OUTPUT_FORMAT_YCBCR420);
++		}
+ 	}
+ 
+ 	return ret;
+@@ -6590,6 +6616,18 @@
+ 	intel_dp->dfp.ycbcr420_passthrough =
+ 		drm_dp_downstream_420_passthrough(intel_dp->dpcd,
+ 						  intel_dp->downstream_ports);
++	if (!intel_dp->dfp.ycbcr420_passthrough && intel_dp_is_cm11_pcon(intel_dp)) {
++		intel_dp->dfp.ycbcr420_passthrough = true;
++		drm_dbg_kms(display->drm,
++			    "[CONNECTOR:%d:%s] Enabling YCbCr 4:2:0 passthrough for CM11EBV58W PS185 PCON\n",
++			    connector->base.base.id, connector->base.name);
++	}
++	if (!intel_dp->colorimetry_support && intel_dp_is_cm11_pcon(intel_dp)) {
++		intel_dp->colorimetry_support = true;
++		drm_dbg_kms(display->drm,
++			    "[CONNECTOR:%d:%s] Enabling VSC SDP colorimetry for CM11EBV58W PS185 PCON\n",
++			    connector->base.base.id, connector->base.name);
++	}
+ 	/* on-board LSPCON always assumed to support 4:4:4->4:2:0 conversion */
+ 	intel_dp->dfp.ycbcr_444_to_420 =
+ 		intel_lspcon_active(dp_to_dig_port(intel_dp)) ||
