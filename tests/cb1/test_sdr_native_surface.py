@@ -14,6 +14,8 @@ class SDRNativeSurface(unittest.TestCase):
         source=(TREE/'xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp').read_text()
         initialize=body(source,'bool CDVBridgeGLES::Initialize(')
         rebind=body(source,'bool CDVBridgeGLES::RebindOutputSurface(')
+        drain=(body(source,'void ClearInheritedGLErrors()')
+               if 'void ClearInheritedGLErrors()' in source else '{}')
         vertex=(ROOT/'CB1/src/pack_gles300.vert').read_text()
         fragment=(ROOT/'CB1/src/pack_gles300.frag').read_text()
         program=r'''
@@ -34,6 +36,7 @@ constexpr int LOGINFO=1;
 namespace DVBRIDGE {bool DiagnosticsEnabled(){return false;}template<class... T>void DiagnosticLog(T...) {}}
 constexpr char DVBRIDGE_VERTEX[]=R"SHADER(VERTEX)SHADER";
 constexpr char DVBRIDGE_FRAGMENT[]=R"SHADER(FRAGMENT)SHADER";
+void ClearInheritedGLErrors() DRAIN
 struct CDVBridgeGLES {
  // Real OpenGL and libplacebo resources; no successful-initialization stand-in.
  struct Context {
@@ -45,6 +48,7 @@ struct CDVBridgeGLES {
   }
   pl_opengl GL(){return gl;}pl_log Log(){return nullptr;}
   pl_renderer Attach(){renderer=pl_renderer_create(nullptr,gl->gpu);return renderer;}
+  const char* AttachRefusal(){return "renderer-create";}
   ~Context(){if(renderer)pl_renderer_destroy(&renderer);if(gl)pl_opengl_destroy(&gl);}
  };
  std::shared_ptr<Context> m_context;pl_opengl m_gl{};pl_log m_log{};pl_renderer m_renderer{};
@@ -125,7 +129,7 @@ int main(){
  assert(eglMakeCurrent(display,EGL_NO_SURFACE,EGL_NO_SURFACE,EGL_NO_CONTEXT));
  eglDestroyContext(display,context);eglDestroySurface(display,surface);eglTerminate(display);
 }
-'''.replace('INITIALIZE',initialize).replace('REBIND',rebind).replace('R"SHADER(VERTEX)SHADER"','R"SHADER('+vertex+')SHADER"').replace('R"SHADER(FRAGMENT)SHADER"','R"SHADER('+fragment+')SHADER"')
+'''.replace('DRAIN',drain).replace('INITIALIZE',initialize).replace('REBIND',rebind).replace('R"SHADER(VERTEX)SHADER"','R"SHADER('+vertex+')SHADER"').replace('R"SHADER(FRAGMENT)SHADER"','R"SHADER('+fragment+')SHADER"')
         env=dict(os.environ)
         prefix=env.get('FFMPEG_TEST_PREFIX')
         if prefix:
