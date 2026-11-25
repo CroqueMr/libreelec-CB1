@@ -10,6 +10,11 @@
   "libreelec_revision": "3a98afddff5b38120e34487da8851558425b06cf",
   "integration_files": {
     "packages/multimedia/cb1-engine/patches/44b2b94c418c49b2682f30d954350601dcc1bed6/0001-match-selected-source-receipts.patch": "7d2678b396e06e7ceddfb1136a0700bd2a15ebbadc9222264491780a673d99d4",
+    "packages/multimedia/cb1-engine/patches/225628237343a3e1dc31baf2619dfa04c52a7aeb/0001-build-the-dv-bridge-against-desktop-opengl.patch": "40c4e6cb20679abec5accdc8e3587000ba3f7f5cab799ae8908c5f5d7908e569",
+    "packages/multimedia/cb1-engine/patches/225628237343a3e1dc31baf2619dfa04c52a7aeb/0002-find-desktop-gl-through-glvnd-opengl-pc.patch": "df447bb921fa9f797f6afee79c113d2b60631009719d64c0915d8f3ec1809cbc",
+    "packages/multimedia/cb1-engine/patches/225628237343a3e1dc31baf2619dfa04c52a7aeb/0003-read-framebuffer-bit-depths-the-core-profile-way.patch": "6523b3a45a9995542e00e265c0053b2eb34d3568980632c4b37ec6c5b1cff6aa",
+    "packages/multimedia/cb1-engine/patches/225628237343a3e1dc31baf2619dfa04c52a7aeb/0004-treat-mesa-srgb-default-framebuffer-as-linear.patch": "4e4946b3d6b0ed72e8f84a664feac2864712c57963d8aa6f64c06929dcb4ed9a",
+    "packages/multimedia/cb1-engine/patches/225628237343a3e1dc31baf2619dfa04c52a7aeb/0005-run-the-hdr10-ai-circuits-on-desktop-opengl.patch": "d16fe803df0d08f735096070be089ba76c4f8b25259ad5375b99cdb982d34c26",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-player-led-gui-composition.patch": "853b8fb11746f7949c1e93b91fc096140c3114655594c5a734d169c8605d2be2",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-gui-presentation-cadence.patch": "41071577c5512c7e04e2b9707c45831574b98522ac1125527821fec3ebc8cb3f",
     "tests/cb1/test_enhanced_gui_epoch.py": "fea99b62ed10004c2391ceebe77ab81adce8d877888a670d9227c7a0dbbd3b76",
