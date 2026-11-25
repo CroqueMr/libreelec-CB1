@@ -21,6 +21,7 @@ HARNESS = r'''
 #define HAVE_DVBRIDGE 1
 #define CB1_HAS_HDR10_AI 1
 #include <cassert>
+#define CWinSystemGbmDVContext CWinSystemGbmGLESContext  // Kodi's GL/GLES context alias
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
