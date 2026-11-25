@@ -1,4 +1,5 @@
-"""Check the GLES copy used by the Pascal HDR10 scanout."""
+"""Check the Pascal HDR10 scanout format negotiation and GLES copy."""
+import os
 import re
 import subprocess
 import tempfile
@@ -9,6 +10,32 @@ from shipped_kodi import shipped_code
 
 
 class PascalHDR10Scanout(unittest.TestCase):
+    def test_scanout_uses_the_plane_format_through_gbm_egl_and_drm(self):
+        tree = os.environ.get("KODI_NATIVE_SOURCE_TREE")
+        if not tree:
+            self.skipTest("Requires the selected Kodi source and header")
+        directory = Path(tree) / "xbmc/windowing/gbm"
+        source = (directory / "PascalHDR10Scanout.cpp").read_text()
+        methods = []
+        for signature in (
+            "CPascalHDR10Scanout::Create",
+            "CPascalHDR10Scanout::~CPascalHDR10Scanout",
+            "CPascalHDR10Scanout::Init",
+        ):
+            method = re.search(r"^[^\n]*" + re.escape(signature) + r".*?^}", source, re.S | re.M)
+            self.assertIsNotNone(method, signature)
+            methods.append(method.group())
+
+        fixture = Path(__file__).with_name("nvidia_pascal") / "hdr10_scanout.cpp"
+        program = fixture.read_text().replace("// PASCAL_SCANOUT_METHODS", "\n\n".join(methods))
+        with tempfile.TemporaryDirectory() as tmp:
+            code = Path(tmp) / "scanout.cpp"
+            binary = Path(tmp) / "scanout"
+            code.write_text(program)
+            subprocess.run(["c++", "-std=c++17", "-I", str(directory), str(code), "-o",
+                            str(binary)], check=True)
+            subprocess.run([str(binary)], check=True)
+
     def test_gpu_flip_keeps_ten_bit_codes(self):
         source = shipped_code("xbmc/windowing/gbm/PascalHDR10Scanout.cpp")
         method = re.search(r"bool FlipHDR10Frame\(.*?^}", source, re.S | re.M)
