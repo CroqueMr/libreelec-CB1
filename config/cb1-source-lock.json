@@ -50,7 +50,7 @@
     "packages/multimedia/nvidia-vaapi-driver/package.mk": "3f95489706cb4882bf8abc4d18d6f5f06134632c251c3dfb86d67a1cd9716d86",
     "packages/graphics/nvidia/common.mk": "24a2a4bb17b92f6ee5bf39f4eb3136d72e22a6fba52886c7cdcb78bd82578a73",
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-07-mov-dovi-hevc-entry.patch": "aa05e86280c350901336088fb7f894bfac488a597942bc45e6b0681a0ce6ee2d",
-    "packages/addons/addon-depends/multimedia-tools-depends/libplacebo/package.mk": "490ccd86fb4a9e512d2863d5c939508eab29f1cc165ca8d6342a2538cf102029",
+    "packages/addons/addon-depends/multimedia-tools-depends/libplacebo/package.mk": "b73cf3055678fa1de95d7d3fed0d5b13866b80d95c1df1391498cbf910d35ac2",
     "packages/graphics/nvidia-pascal/package.mk": "423889a438e221206ec8a55278b19c9fbbdd4b2aae0ed6502cf678efde13367f",
     "projects/Generic/patches/linux/linux-9900-09-include__linux__hdmi.h.patch": "fc52a46f7745449a0bfd6fe499050c8147dfe32b59d8a3a6f3c08e8b87f7cd91",
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9001-dv-v1-legacy.patch": "09c2da66eddfc83b1ca16aaa12f8d1e8c3c3278c30b3bf2b17372674ce5db070",
