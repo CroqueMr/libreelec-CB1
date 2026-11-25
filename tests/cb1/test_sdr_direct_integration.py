@@ -60,7 +60,11 @@ class SDRDirectIntegration(unittest.TestCase):
             'void CDVBridgeGLES::Context::Retain(std::shared_ptr<void> base, std::shared_ptr<void> enhancement)',
             'void CDVBridgeGLES::Context::SourceReadComplete()',
             'bool CDVBridgeGLES::Context::FenceLastUse()')
-        program = program.replace('@CONTEXT@','\n'.join(sig+body(renderer,sig) for sig in context_signatures))
+        context = '\n'.join(sig+body(renderer,sig) for sig in context_signatures)
+        drain = 'void ClearInheritedGLErrors()'
+        if drain in renderer:
+            context = drain + body(renderer,drain) + '\n' + context
+        program = program.replace('@CONTEXT@',context)
         start=renderer.index('// Copy the live query context')
         program=program.replace('@SDR_AUDIT@',renderer[start:renderer.index('/* Native spatial interpolation',start)])
         env = dict(os.environ)
