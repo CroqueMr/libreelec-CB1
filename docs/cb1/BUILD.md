@@ -1,4 +1,24 @@
-# R1.0.0 build
+# CB1 builds
+
+## R1.1.1 Generic release asset
+
+Build the optional `externalhelper` add-on from the same source revision as
+the Generic x86_64 image. It includes the private wlroots library that
+restores the HDMI `max bpc` setting after an external Wayland session.
+
+```sh
+PROJECT=Generic ARCH=x86_64 ADDON_OVERWRITE=yes ./scripts/create_addon externalhelper
+```
+
+For the R1.1.1 add-on ABI, use
+`target/addons/12.80.8/Generic/x86_64/tools.externalhelper/tools.externalhelper-12.80.8.14.zip`.
+Check the ZIP integrity, the version in `tools.externalhelper/addon.xml` and the
+presence of `tools.externalhelper/lib.private/libwlroots-0.20.so`.
+
+Stage the ZIP as a separate release asset next to the Generic image and
+update TAR. Regenerate `SHA256SUMS` for the staged assets and verify it before
+publishing. Users can install the matching ZIP with **Install from zip file**
+in Kodi.
 
 ## Stable image
 
