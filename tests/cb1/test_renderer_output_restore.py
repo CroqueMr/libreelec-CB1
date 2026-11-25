@@ -26,6 +26,7 @@ class RendererOutputRestore(unittest.TestCase):
         program = r'''
 #include "windowing/gbm/ModeChangeHold.h"
 #include <cassert>
+#define CWinSystemGbmDVContext CWinSystemGbmGLESContext  // Kodi's GL/GLES context alias
 #include <chrono>
 #include <memory>
 #include <mutex>

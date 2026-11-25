@@ -16,6 +16,7 @@ class BitmapSubtitles(unittest.TestCase):
         header = (TREE / 'xbmc/cores/VideoPlayer/VideoRenderers/OverlayRenderer.h').read_text()
         program = r'''
 #include <cassert>
+#define CWinSystemGbmDVContext CWinSystemGbmGLESContext  // Kodi's GL/GLES context alias
 #include <map>
 #include <memory>
 #include "cores/VideoPlayer/DVDSubtitles/BitmapSubtitles.h"
