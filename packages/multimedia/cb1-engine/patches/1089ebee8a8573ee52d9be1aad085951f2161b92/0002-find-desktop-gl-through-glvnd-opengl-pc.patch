@@ -11,7 +11,7 @@ opengl.pc and no gl.pc.
  2 files changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index db1281a..312c4b3 100644
+index 02f3244..f4042b1 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -25,7 +25,7 @@
