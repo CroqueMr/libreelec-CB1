@@ -135,7 +135,7 @@
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9005-return-thunk.patch": "1509c960f94fb8842dbf523e541f9eedf8e52bbcdeb2f65fd6ab2ca39993ba20",
     "tests/cb1/test_nvidia_dual_mode.py": "db0b5636ebb28470e11657d51732a014627fc0460956b5d1aa2f0d8e2061ed23",
     "tests/cb1/test_nvidia_patch_replay.py": "80d14d8bb54a2875dc5dbdf8b60d3638d4b9aa1270cf7cabc3983b32b5b17af0",
-    "tests/cb1/test_intel_edid_owner.py": "b5b8d1f31904882c43c6de124affb3dde45c122a9993f28d1b7ced67c044258f",
+    "tests/cb1/test_intel_edid_owner.py": "bfe9150a1d8f6c648113d2b5223e74c9c607ffabb7531775078aade5f160a1f0",
     "tests/cb1/test_intel_ycc_matrix.py": "b40e5ef234ade61ee0fd3b6b2f9a4de65b83248c678d66af8dad3e9df778a623",
     "tests/cb1/test_intel_scanout_color.py": "b838449d025a4e835e3155f5517f40322aca747f73d683a22085fe19190af95e",
     "tests/cb1/test_intel_hdr10plus_cta.py": "4b9f505b7667d221d4a3d0d17eee5eeaf3de21db36ad0123ee4977c451dbc012",
@@ -329,9 +329,9 @@
     "tests/cb1/test_sdr_applied_metadata.py": "828d531ee9d0c6418f7d600b4947691b51ce487b6265c1b3c2b7e67eacd5cf85",
     "tests/cb1/test_output_supersession.py": "929b0cae57fed446b37439c69ff50de2d7646ed30927eebf5f6c14a454f4cbce",
     "projects/Generic/patches/linux/linux-9943-intel-hdmi-scdc-diagnostics.patch": "5d6822eb4ddbada4c9751f6c0392d86eba93d55e531e60b7819e0f8a0afffc87",
-    "tests/cb1/test_hdmi_scdc_diagnostics.py": "2700d333a25b8740adc56e10b578f4ec2dd3cfedb8b493a65b9ab4d9946bdd18",
+    "tests/cb1/test_hdmi_scdc_diagnostics.py": "b82425e1906205f8e6d6685a634f3fa8b3c83def89660c13a7bb691f04612bd2",
     "projects/Generic/patches/linux/linux-9944-intel-hdmi-deferred-link-check.patch": "e73a5a3c32a8a83781dcf693bf6f096921526b910ab7373a17ddde8b62bb425b",
-    "tests/cb1/test_hdmi_deferred_hotplug.py": "dcc570054ce72bcabf94d36cf702056e668f5fece03b2b8ffb338dfa6cb119ae",
+    "tests/cb1/test_hdmi_deferred_hotplug.py": "b5d3260c51f9c364520878123f7b98e191f906ba822013fa816f0b346d283d0a",
     "packages/mediacenter/kodi-theme-Estuary/package.mk": "2f360b508a0fd05a9b6eee81469875f840882e01f7a60df3f162c365c1fe40f7",
     "tests/cb1/test_kodi_skin_package.py": "f451d055bab0e05b94dbe4bb84d333e641fb5669b9e3a87cab93e937cccb1078",
     "tests/cb1/test_ci_patch_inputs.py": "d9731468cd6fb269db2d135c89e4a7542f9c5bdb1fe90e00f28cbffd19e310a3",
@@ -362,7 +362,7 @@
     "tests/cb1/test_pascal_hdr10_scanout.py": "d065254563c1a94c03d08cd24dd9c47a6269f868c741cc1dc67788c9e0fd6ed4",
     "tests/cb1/test_output_window_teardown.py": "e5927c0750c9544b44c6be08d307ac9dc2d0f5cfb691c6048be31f6e2126e987",
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9008-optional-vsif-reference.patch": "5b1f0fea996844004f837559ce7acd714a23bbf5017a1cf12f1950c23bfceeb7",
-    "config/cb1-patch-index.json": "f9dd62d89a7335ccaf01f2b44964ec502ad5b8a128d6bbe51ba1d759f999dbaa",
+    "config/cb1-patch-index.json": "f2ba96b6d1a59be78f051cd1e75a529125f8b95cf6a4b42ab163f8e135107023",
     "projects/Generic/patches/linux/linux-9948-intel-hdmi-ready-recovery.patch": "c10f4aa258ca6d2be95a175006389362ccfad3566cff1e892f0b162faf486780",
     "projects/Generic/patches/linux/linux-9970-rx550-native-dv.patch": "1cbb750f5bf019430e7762785824169b0fafcf65f458267d2cec2412c8a0b204",
     "tests/cb1/test_bluray_overlay_order.py": "538775e911baa402d135669964fb31e021a121bf66ee06d95e1068777a9bf27c",
@@ -509,9 +509,7 @@
     "tests/cb1/test_amd_hdmi_packet_owner.py": "e9f142ab831d7b34a8bd77332f5d155a7935da3d211e4c6164e2ae343b66d36e",
     "packages/graphics/nvidia-open-kernel-modules/patches/615.78.08/0001-drm-fbdev-helper-header.patch": "e423e71b2f25aeb414083ad9be1a535ab5da8553e5703aa172500fb45e7acd2e",
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9010-linux-7.4-drm-state.patch": "51ec3fd81239a1a97a6b3a4194d83bd195149cbf934778640d3a2d3eef5744f7",
-    "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": "80b22b516b8e8f6e5aa083c24518d19314dfafd04a135397b0acbf0ad29fc3e0",
-    "projects/Generic/patches/linux/linux-9983-intel-native-hdmi-frl-lab.patch": "4a81e774b09ff5e1979fc9b6b44a414530f0e7c5139423e6571cf48a25748973",
-    "tests/cb1/test_intel_frl_policy.py": "7184ea193cc21748a50a718984a9f7236a9e776d9b6d728105d486f2cebdd80b"
+    "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": "80b22b516b8e8f6e5aa083c24518d19314dfafd04a135397b0acbf0ad29fc3e0"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {

@@ -31,16 +31,9 @@ static size_t edid_size(const struct edid *e){return ((size_t)e->extensions+1)*1
 @@RAW@@
 @@SIZE@@
 struct i2c_adapter {int unused;}; struct ref_tracker {int unused;};
-struct intel_display {
- int version;void *drm;bool enabled,access,port;
- struct {bool enable_hdmi_frl;} params;
-};
+struct intel_display {int version;void *drm;bool enabled,access,port;};
 struct intel_encoder {bool type_c;};
-struct intel_hdmi {
- struct{int type,max_tmds_clock;}dp_dual_mode;void *cec_notifier;
- bool has_sink_hdmi_21;
- struct {bool reset_rate_cap;int rate_cap;} frl;
-};
+struct intel_hdmi {struct{int type,max_tmds_clock;}dp_dual_mode;void *cec_notifier;};
 enum drm_connector_force {DRM_FORCE_UNSPECIFIED,DRM_FORCE_OFF,DRM_FORCE_ON,DRM_FORCE_ON_DIGITAL};
 struct drm_connector_state {void *crtc;};
 struct drm_connector {int status;enum drm_connector_force force;struct i2c_adapter *ddc;
@@ -61,7 +54,6 @@ static struct{struct intel_encoder base;}port;
 #define DRM_DP_DUAL_MODE_NONE 0
 #define POWER_DOMAIN_GMBUS 0
 #define drm_dbg_kms(...) ((void)0)
-#define WRITE_ONCE(x,v) ((x)=(v))
 static const struct drm_edid *next_edid;static int publication_result,ddc_reads;
 static struct ref_tracker *intel_display_power_get(struct intel_display*d,int p)
 {(void)d;(void)p;return NULL;}
@@ -85,7 +77,6 @@ static struct intel_display *current_display;
 static bool intel_digital_port_connected(struct intel_encoder*e)
 {(void)e;return current_display->port;}
 static inline bool intel_encoder_is_tc(struct intel_encoder *encoder){return encoder->type_c;}
-static void intel_hdmi_init_frl_config(struct intel_connector *connector){abort();}
 @@OWNERS@@
 static void checksum(u8*b){u8 s=0;b[127]=0;for(int i=0;i<127;i++)s+=b[i];b[127]=-s;}
 int main(void){
@@ -96,8 +87,7 @@ int main(void){
  b[5]=1;b[6]=0x46;b[7]=0xd0;b[9]=0x42;b[11]=2;
  checksum(raw);checksum(raw+128);checksum(b);
  struct drm_edid source={sizeof(raw),(const struct edid*)raw};
- struct intel_display display={.version=12,.enabled=true,.access=true,.port=true};
- current_display=&display;
+ struct intel_display display={12,NULL,true,true,true};current_display=&display;
  struct intel_connector c={.base={.status=connector_status_connected},.display=&display};
  next_edid=&source;
  assert(intel_hdmi_set_edid(&c.base));
