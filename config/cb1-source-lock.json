@@ -393,7 +393,7 @@
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzz-native-dv-renderer-handoff.patch": "7a4bf4b599ddb4a9f29e00bf730ca918adf5c74de8d8179451b41c047aba1265",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzz-bluray-flush-before-new-packets.patch": "fd7fedda6a77d04abbcd6b3f7fe69d14130996bee7fc09c305cc275f4560babc",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzz-hdr10-ai-queue-continuity.patch": "14e8a9593761dd3390ac377e80776382918745f8c6fb24a4ea91813eee08fc68",
-    "tests/cb1/test_hdr10_dv_handoff.py": "f19fc0fd90e6f5556a39b23b98e5f41fc62573005784297723ce6ce4a74adf70",
+    "tests/cb1/test_hdr10_dv_handoff.py": "ba7ab9319403fb1638039f8691dd0103f188faab552852f76618a03fd811ce06",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzz-hdr10-dv-renderer-handoff.patch": "8c1456ed17bc9d9ca3d02228da26df8bc7dc039c867fe9762af0e0e450a9cb97",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzz-master-reference-upscalers.patch": "997f5e91f6f81c03c7058a29f170f05ab1cd6d50f2a5f4c89cee765f5e104f4b",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzz-fsr1-rcas.patch": "cc6317655ca36f45aff773715ef655bb44fabdf53c553e3b9fcab90792158410",
