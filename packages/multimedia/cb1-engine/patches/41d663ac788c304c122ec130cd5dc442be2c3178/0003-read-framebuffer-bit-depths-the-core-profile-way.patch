@@ -20,7 +20,7 @@ index 312c4b3..1f0253e 100644
 +++ b/config/owned-sources.json
 @@ -1,7 +1,7 @@
  {
-   "src/dvbridge_fel.c": "6c0d3a7fee253f6eadf03c4a8c7909fd2e97a5395494206bfb1bcd9798a85f4f",
+   "src/dvbridge_fel.c": "cc38c1569fe00c07bb8db57e6ff0d42b376b9917281093d108cfa2f09031ce21",
    "src/dvbridge_gl_pack.h": "2ccd974503fbcbb33678ee2eff076a7a086bcd1796efa97010a1eebb901143f5",
 -  "src/dvbridge_gl_pack.c": "5bbed682b3b2f15de2fb0abeb8010d40e8b995cea7921f3c5e2706f37b21f52d",
 +  "src/dvbridge_gl_pack.c": "dcb6175b3cbe927ce09b3efec05d24100cebf0715c4e72186b8725625c392a60",
@@ -31,8 +31,8 @@ index 312c4b3..1f0253e 100644
    "src/dvbridge_placebo.h": "1ae453d519231b702dcf128fa6a5c8347491485f746023bf5f7c8ef478ccfef4",
    "src/dvbridge_policy.c": "372986bc8bacd0cb68ca4af440a0b255e2954b1f357cfe84a3fbb9199b8b561d",
    "src/dvbridge_policy.h": "560dbfb112f687461ef9f394d867188724dbbd74135329876325fde4cc793392",
--  "src/dvbridge_render.c": "cbf7dc11ab6c1bb3286d7954a262222f54787b65963588c7b0f970f1f6e33314",
-+  "src/dvbridge_render.c": "7b4a2bff0a34962e098996833b39e943e7fc37b2868c9e02aaae8f8295469492",
+-  "src/dvbridge_render.c": "9c46d8f3fcba71ec66468c9fb8ca4a5c74fb6584ffe4dde93ecea8743bdd8118",
++  "src/dvbridge_render.c": "38ba4135cb139ed405b05c2f65ae2518545c2d28ff15f71f475f608bd98641af",
    "src/dvbridge_fel_seek.h": "bdc2944c719f354c4189fd4411e6c5ffe94d1afc4f500d3f5708fce34d12ec58",
    "src/dvbridge_render.h": "c26b48281a291026c766e40aef651482dd18dcd6fd008b33bf85fe7c9e8e1c85",
    "src/dvbridge_gl_frame.c": "6cbcb4b4c0427ca8196dbd4821aa6a771594fe6388c7adfcacd937e45da27c66",
