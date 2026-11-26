@@ -25,7 +25,7 @@ GL_ARB_buffer_storage on desktop GL. The OpenGL ES checks are unchanged.
  9 files changed, 65 insertions(+), 8 deletions(-)
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index 58326ab..093b017 100644
+index cc53f8c..5d5fa08 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -7,19 +7,19 @@
@@ -231,10 +231,10 @@ index 649ebcc..377c3f9 100644
   * GL_BACK_LEFT, so read the sizes and the encoding from the bound colour attachment. */
  static inline void dvbridge_gl_color_bits(GLuint framebuffer, GLint bits[4], GLint *encoding)
 diff --git a/src/dvbridge_render.c b/src/dvbridge_render.c
-index be6c024..439291a 100644
+index d7ecf4c..640af87 100644
 --- a/src/dvbridge_render.c
 +++ b/src/dvbridge_render.c
-@@ -3096,10 +3096,15 @@ bool dvbridge_retirement_owner_destroy(struct dvbridge_retirement_owner **owner)
+@@ -3106,10 +3106,15 @@ bool dvbridge_retirement_owner_destroy(struct dvbridge_retirement_owner **owner)
  static bool dv_gpu_requirements(pl_gpu gpu)
  {
      pl_opengl gl=pl_opengl_get(gpu);
@@ -250,7 +250,7 @@ index be6c024..439291a 100644
      GLint precision,range[2],size,groups,invocations,bindings;GLint64 storage;
      for(unsigned i=0;i<2;i++){
          glGetShaderPrecisionFormat(i?GL_FRAGMENT_SHADER:GL_VERTEX_SHADER,GL_HIGH_FLOAT,range,&precision);
-@@ -3119,8 +3124,12 @@ static bool dv_gpu_requirements(pl_gpu gpu)
+@@ -3129,8 +3134,12 @@ static bool dv_gpu_requirements(pl_gpu gpu)
  static bool dv_transport_requirements(pl_gpu gpu)
  {
      pl_opengl gl=pl_opengl_get(gpu);
@@ -263,7 +263,7 @@ index be6c024..439291a 100644
      GLint precision,range[2];
      glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER,GL_HIGH_FLOAT,range,&precision);
      return precision>=23 && range[0]>=127 && range[1]>=127 && glGetError()==GL_NO_ERROR &&
-@@ -3148,7 +3157,11 @@ bool dvbridge_renderer_supports_mode(struct dvbridge_renderer *r,enum dvbridge_m
+@@ -3158,7 +3167,11 @@ bool dvbridge_renderer_supports_mode(struct dvbridge_renderer *r,enum dvbridge_m
  static bool hdr10_ai_gpu_requirements(pl_gpu gpu)
  {
      pl_opengl gl=pl_opengl_get(gpu);

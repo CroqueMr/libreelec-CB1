@@ -14,7 +14,7 @@ check refused such a target.
  2 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index 1f0253e..58326ab 100644
+index 3f9346f..cc53f8c 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -81,5 +81,5 @@
