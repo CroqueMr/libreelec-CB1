@@ -502,7 +502,7 @@
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-nvidia-egl-gbm-retirement.patch": "957170369482dd2e74d3665aa49d003d599347257ec6bf0502eb90823571eaa4",
     "tests/cb1/test_nvidia_surface_retirement.py": "8587cb6e34f243482a92d0f0aadc818f91a440cbfcab846da012df222c47dd86",
     "tests/cb1/test_nvidia_hdr_surface.py": "013198969815435818089ab28d8b0a2bd19698976641996d4f50ad9e94b9fe51",
-    "packages/multimedia/ffmpeg/package.mk": "b380f2b70af68ae42e2beaade02dd286b0508c413e0e57b3d6a64a130122be13",
+    "packages/multimedia/ffmpeg/package.mk": "b08a132f4730a3d0e1dab0e214ce967ccf7a9f97639e3e7440e81b666dfa843a",
     "packages/multimedia/cb1-engine/package.mk": "55e2a27001a7ff8e3351f61a191bdcdf3886cadcac919b27d12e9e908e501451",
     "packages/multimedia/cb1-udfread-source/package.mk": "ec6796161396523fbcee60e9b370d80950fbf1ddb284ada1e53efa93ec648566",
     "tests/cb1/test_decoder_replay.py": "5945e13c1edba4e42e5368ef11471681a821cfe652ad2cdc7049979e9d2f3a34",
