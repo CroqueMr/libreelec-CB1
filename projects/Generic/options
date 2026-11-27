@@ -1,5 +1,6 @@
-CUSTOM_VERSION="${CUSTOM_VERSION:-CB1-R1.1.1-RC1}"
-BUILDER_VERSION="${BUILDER_VERSION:-CB1-R1.1.1-RC1}"
+CUSTOM_VERSION="${CUSTOM_VERSION:-CB-R1.1.2}"
+BUILDER_VERSION="${BUILDER_VERSION:-CB-R1.1.2}"
+BUILDER_NAME="${BUILDER_NAME:-Community & CroqueMr}"
 CB1_HDR10_AI="${CB1_HDR10_AI:-yes}"
 
 ################################################################################
