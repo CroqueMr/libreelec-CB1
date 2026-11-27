@@ -304,6 +304,7 @@ int main(){
         program=r'''
 #define HAVE_DVBRIDGE
 #include <atomic>
+#define CWinSystemGbmDVContext CWinSystemGbmGLESContext  // Kodi's GL/GLES context alias
 #include <cassert>
 #include <chrono>
 #include <functional>

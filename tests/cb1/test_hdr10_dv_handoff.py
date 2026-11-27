@@ -79,6 +79,10 @@ struct Player
   bool m_bdjAudioHandoff = false;
   bool bluray, probeFlush, m_bAbortRequest = false;
   bool m_blurayDemuxDeferred = false;
+  static constexpr int DVD_PLAYSPEED_PAUSE = 0;
+  int m_playSpeed = 1000;
+  bool WaitingForBlurayStill() const { return false; }
+  bool SkipExpiredMenuStill() { assert(false); return false; }
   int opens = 0, packets = 0, expectedPolls = 1;
   void CloseStream(int&, bool) { m_bdjAudioHandoff = false; }
   bool flushedBeforeRead = false;

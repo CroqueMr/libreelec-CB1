@@ -272,8 +272,11 @@ int main(){
  assert(output.picture.colorBits==10 && output.picture.color_transfer==1);
 }
 '''.replace('STAGE', stage))
-            configure = method(renderer, f"CLinuxRenderer{backend}::" +
-                               ("Configure" if backend == "GL" else "ConfigureVideoOutput"))
+            # With the desktop GL port, GL configures its output in ConfigureVideoOutput() too
+            name = "ConfigureVideoOutput"
+            if backend == "GL" and "CLinuxRendererGL::ConfigureVideoOutput(" not in renderer:
+                name = "Configure"
+            configure = method(renderer, f"CLinuxRenderer{backend}::{name}")
             output = "!m_ColorManager->IsEnabled()" if backend == "GL" else "true"
             self.assertIn(f"SetColorimetry(&picture, {output})", configure)
 

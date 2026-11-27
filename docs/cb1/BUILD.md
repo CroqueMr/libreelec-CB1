@@ -82,3 +82,16 @@ Component pins are in [versions](VERSIONS.md), `config/cb1-source-lock.json` and
 `CB1/config/hdr10-ai-dependencies.json`. Runtime assets and applicable notices must
 remain in corresponding-source exports. Rebuild hashes can vary with the toolchain,
 timestamps and build paths.
+
+## OpenGL device
+
+The `OpenGL` device builds Kodi, libplacebo and the DV bridge against desktop
+OpenGL instead of OpenGL ES:
+
+```sh
+CB1_HDR10_AI=yes PROJECT=Generic DEVICE=OpenGL ARCH=x86_64 OFFICIAL=no make image
+```
+
+Kodi's GL windowing context is generated from the DV GLES context by
+`scripts/cb1-gl-winsys.py`. When the GLES context changes, run the script on a
+checkout of the pinned Kodi fork and commit the difference there.
