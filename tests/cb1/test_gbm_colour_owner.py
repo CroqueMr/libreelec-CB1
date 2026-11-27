@@ -22,7 +22,8 @@ def method(source, name):
 def native_owner_program(root):
     source = (root / "xbmc/windowing/gbm/WinSystemGbm.cpp").read_text()
     header = (root / "xbmc/windowing/gbm/WinSystemGbm.h").read_text()
-    names = ["ApplyMaxBpcSetting", "GetEffectiveMaxBpc", "ApplyColorFormatSetting",
+    names = ["ApplyMaxBpcSetting", "GetEffectiveMaxBpc", "SDRBT2020DeepColorSupported", "SDRBT2020MaxBpc",
+             "WantsNativeSDRBT2020", "ApplyColorFormatSetting",
              "IsColorFormatOffered", "GetColorFormat", "GetRequestedColorFormat",
              "IsHdmiFrlLink", "ContentNeedsSubsampling", "IsYuvRequested",
              "IsYuvFormatCommitted", "IsYuvFormat", "ApplyColorRangeSetting", "GetColorRange",
@@ -40,7 +41,11 @@ def native_owner_program(root):
     enums = header[header.index("enum class ColorRange"):header.index("class CWinSystemGbm :")]
     members = header[header.index("  static void ApplyColorRangeSetting"):header.index("  // Claim no 3D")]
     depth = re.search(r"^  uint64_t GetEffectiveMaxBpc.*;", header, re.M)[0]
-    members = depth + "\n" + members
+    wide_members = "\n".join(re.search(r"^  .*" + name + r".*;", header, re.M)[0]
+                        for name in ["SDRBT2020DeepColorSupported", "SDRBT2020MaxBpc",
+                                     "WantsNativeSDRBT2020", "NativeSDRBT2020Colorspace"]
+                        if name not in members)
+    members = depth + "\n" + wide_members + "\n" + members
     gamut = (root / "xbmc/windowing/gbm/SDROutputGamut.h").read_text().replace("#pragma once", "")
     program = (gamut + "\nusing namespace KODI::WINDOWING::GBM;\n" +
                Path(__file__).with_name("gbm_colour_owner.cpp").read_text()

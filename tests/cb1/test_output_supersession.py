@@ -228,6 +228,10 @@ struct CWinSystemGbm {
 struct CWinSystemGbmEGLContext:CWinSystemGbm {
  CEGLContextUtils m_eglContext;
  bool m_dvOutputSurface=false,m_dvSurfacePending=false,m_floatOutputBlocked=false,m_priorOutputVideo=false;
+ bool m_nativeSDRDeepSurfaceBlocked=false;
+ bool SDRBT2020DeepColorSupported()const{return false;}
+ bool WantsNativeSDRBT2020(const VideoPicture*)const{return false;}
+ std::optional<uint64_t> NativeSDRBT2020Colorspace()const{return {};}
  std::unique_ptr<VideoPicture>m_floatOutputPicture;
  Plane*m_priorOutputPlane=nullptr;unsigned m_priorOutputFormat=0;uint64_t m_priorOutputModifier=0;
  virtual int VideoOutputBitDepth(const VideoPicture*p)const{return p?p->colorBits:8;}
@@ -272,7 +276,13 @@ struct CWinSystemGbmGLESContext : CWinSystemGbmEGLContext {
  enum class SDRBT2020Support { Available, Display, Driver };
  SDRBT2020Support sdrSupport=SDRBT2020Support::Available;
  SDRBT2020Support GetSDRBT2020Support()const{return sdrSupport;}
+ bool strictSDR=false;
+ bool SDRBT2020DeepColorSupported()const{return strictSDR;}
  bool m_sdrBT2020Rejected{};
+ std::pair<uint64_t,std::string> m_sdrBT2020OutputKey,m_pendingSDRBT2020OutputKey;
+ uint64_t edidGeneration=1;
+ std::pair<uint64_t,std::string> SDRBT2020OutputKey()const{return {edidGeneration,"mode"};}
+ std::optional<int> m_sdrSignal;
  unsigned m_dvPendingStream=0,m_dvPendingPolicy=0,m_dvFailedStream=0,m_dvFailedPolicy=0;
  struct {void Cancel(){}bool Commits(uint64_t){return true;}CModeChangeHold::Kind Holding(){return CModeChangeHold::Kind::START;}} m_modeHold;
  CHeldModeAnnouncement m_modeAnnouncement;
@@ -442,6 +452,19 @@ int main(){
       "a rejected wide gamut remains BT.709 for this playback policy");
   const auto previous=w.m_dvPendingPolicy;++DVBRIDGE::current.revision;DVBRIDGE::current.sdrGamma=2.2;
   check(w.PrepareDVOutputFrame(picture)&&w.m_dvPendingPolicy!=previous&&w.m_dvSelection.policy.sdr.gamut==DVBRIDGE_GAMUT_BT2020,"same effective SDR mode with changed target revision rekeys pending owner");
+ }
+ {
+  CWinSystemGbmGLESContext w;pendingMaster(w);w.strictSDR=true;request(Mode::SDR);
+  DVBRIDGE::current.sdrBT2020=true;
+  check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==10,
+      "strict wide SDR allocates a ten-bit surface");
+  w.m_sdrBT2020Rejected=true;
+  check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==8 &&
+      w.m_dvSelection.policy.sdr.gamut==DVBRIDGE_GAMUT_BT709,
+      "wide rejection retires the deep surface and renders BT.709");
+  ++w.edidGeneration;
+  check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==10,
+      "new EDID allows a fresh ten-bit candidate");
  }
  {CWinSystemGbmGLESContext w;w.m_dvSuperseded=true;check(w.EndDVBridge()&&!w.m_dvSuperseded,"successful already-ordinary cleanup clears cancellation state");}
  {

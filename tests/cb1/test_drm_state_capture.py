@@ -279,6 +279,9 @@ int main() {
 '''
         with tempfile.TemporaryDirectory() as temporary:
             folder = Path(temporary)
+            gamut = folder / "windowing/gbm/SDROutputGamut.h"
+            gamut.parent.mkdir(parents=True)
+            gamut.write_text(source("xbmc/windowing/gbm/SDROutputGamut.h"))
             for name, content in {'DRMObject.h': DRM_BOUNDARY, 'DRMConnector.h': '#include "DRMObject.h"\n', 'DRMAtomic.h': '#include "DRMObject.h"\n',
                                   'DVBridgeState.h': header, 'DVBridgeState.cpp': cpp, 'check.cpp': program}.items():
                 (folder / name).write_text(content)

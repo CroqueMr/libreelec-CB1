@@ -95,6 +95,9 @@ struct CWinSystemGbm {
  bool allowed=true;int colorSpaceApplications=0;
  std::shared_ptr<CDRMUtils> m_DRM=std::make_shared<CDRMAtomic>();Blob m_hdrBlob;
  bool ConnectorPreferencesAllowed() const {return allowed;}
+ bool deepVisual=true;int outputDepth=10;
+ bool HasLldvRgb10Scanout() const {return deepVisual;}
+ int GetOutputBitDepth() const {return outputDepth;}
  bool BeginFrameGuiComposite(bool);
  std::unique_ptr<DisplayInfo> m_info=std::make_unique<DisplayInfo>();
  bool compositorAvailable=true,fboAvailable=true;
@@ -259,6 +262,28 @@ int main() {
  drm->connector.immutable=true;drm->pending.clear();w.ApplyConnectorProperties();assert(!drm->pending.count("Broadcast RGB") && !drm->pending.count("color format") && !drm->pending.count("max bpc"));
  drm->connector.immutable=false;drm->addSuccess=false;w.m_rangeRequest.queued=false;
  w.ApplyBroadcastRange();assert(!w.m_rangeRequest.queued);
+ // A new AMD contract can promote only wide SDR and must restore the GUI ceiling.
+ CWinSystemGbm deep;auto dd=std::dynamic_pointer_cast<CDRMAtomic>(deep.m_DRM);
+ deep.m_defaultMaxBpc=8;
+ dd->connector.cache["max bpc"]=8;
+ dd->connector.cache[SDR_BT2020_DEEP_COLOR]=0;
+ dd->connector.cache["Colorspace"]=0;
+ dd->connector.enums["Colorspace"]={{"Default",0},{"BT2020_RGB",1},{"BT2020_YCC",2},{"BT709_YCC",3}};
+ assert(deep.SDRBT2020MaxBpc()==10);
+ deep.m_maxBpc=1;assert(!deep.SDRBT2020MaxBpc());
+ deep.m_maxBpc=0;deep.deepVisual=false;assert(!deep.SDRBT2020MaxBpc());
+ deep.deepVisual=true;
+ deep.SetColorimetry(&picture,true);
+ assert(deep.BeginFrameGuiComposite(true));
+ bool deepTransition=false;
+ assert(deep.StageNativeSDRSignal(true,deepTransition)&&deepTransition);
+ assert(dd->pending.at("max bpc")==10 && dd->pending.at(SDR_BT2020_DEEP_COLOR)==1);
+ dd->Commit(true);deep.m_nativeSDRSubmitted=true;
+ deep.SetColorimetry(nullptr);
+ assert(deep.StageNativeSDRSignal(true,deepTransition));
+ assert(dd->pending.at("max bpc")==8 && dd->pending.at(SDR_BT2020_DEEP_COLOR)==0);
+ dd->Commit(true);
+ assert(dd->connector.cache.at("max bpc")==8);
  // Ordinary Full -> Limited uses target-range pixels before the same real commit.
  CWinSystemGbm transition;auto td=std::dynamic_pointer_cast<CDRMAtomic>(transition.m_DRM);
  transition.m_defaultMaxBpc=12;transition.m_colorRange=2;

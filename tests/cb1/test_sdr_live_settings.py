@@ -87,6 +87,7 @@ struct Window{
  PascalHDRMode m_pascalHDRMode=PascalHDRMode::None,m_priorPascalHDRMode=PascalHDRMode::None;
  void SelectPascalHDRMode(PascalHDRMode mode){m_pascalHDRMode=mode;}
  int GetOutputBitDepth()const{return 8;}
+ bool SDRBT2020DeepColorSupported()const{return false;}
  unsigned HDR10Framebuffer()const{return 0;}
  bool m_guiCacheValid=false,m_guiCompositing=false,m_compositeShaderLimited=false,m_dvOutputRetiring=false,m_dvRejectedSurface=true,m_dvRollbackFailed=false;
  bool m_dvPQGuiMergeAttempted=false,m_dvPQGuiComposed=false,m_dvPQSubtitleRendering=false,m_dvPQSubtitleCleared=false,m_dvNativeGui=false;

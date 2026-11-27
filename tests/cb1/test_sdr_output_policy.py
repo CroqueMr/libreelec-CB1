@@ -25,6 +25,15 @@ static_assert(WantsSDRBT2020(SDROutputGamut::Auto, true));
 static_assert(WantsSDRBT2020(SDROutputGamut::BT2020, false));
 static_assert(!WantsSDRBT2020(SDROutputGamut::BT709, true));
 static_assert(SDROutputRange(false, 10) == std::pair{1.0f, 0.0f});
+using Limits = std::pair<uint64_t,uint64_t>;
+static_assert(SelectSDRBT2020MaxBpc(8,true,true,Limits{8,16})==10);
+static_assert(!SelectSDRBT2020MaxBpc(8,false,true,Limits{8,16}));
+static_assert(!SelectSDRBT2020MaxBpc(8,true,false,Limits{8,16}));
+static_assert(!SelectSDRBT2020MaxBpc(8,true,true,Limits{8,8}));
+static_assert(!SelectSDRBT2020MaxBpc(0,true,true,Limits{8,16}));
+static_assert(!SelectSDRBT2020MaxBpc(10,false,true,Limits{12,16}));
+static_assert(SelectSDRBT2020MaxBpc(12,false,true,Limits{8,16})==12);
+static_assert(SelectSDRBT2020MaxBpc(10,false,false,{})==10);
 
 int main()
 {

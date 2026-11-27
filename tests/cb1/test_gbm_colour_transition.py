@@ -57,7 +57,7 @@ struct State{
  std::optional<uint64_t> Before(const char*name)const{
   auto it=before.find(name);return it==before.end()?std::optional<uint64_t>{}:it->second;}
  bool Stage(CDRMAtomic&d,bool restore,std::optional<uint64_t> range={},
-            std::optional<uint64_t> colorFormat={}){assert(restore && !range && !colorFormat);
+            std::optional<uint64_t> colorFormat={},std::optional<uint64_t> wide={}){assert(restore && !range && !colorFormat && !wide);
   for(const auto&[name,value]:before)if(!d.AddProperty(d.GetConnector(),name.c_str(),value))return false;
   return true;}
  enum class Backend{KERNEL,NVIDIA};Backend CapturedBackend(){return Backend::KERNEL;}
@@ -69,6 +69,8 @@ struct Surface{Surface&GetDevice(){return *this;}Surface&GetSurface(){return *th
  gbm_bo* AdoptTransactionalBuffer(gbm_bo*,std::shared_ptr<void>){assert(false);return nullptr;}};
 struct CWinSystemGbmGLESContext:CWinSystemGbm{
  State m_cb1ConnectorState,m_dvState;
+ static constexpr int DVBRIDGE_GAMUT_BT2020=3;
+ struct{struct{struct{int gamut=1;}sdr;}policy;}m_dvSelection;
  bool m_cb1RestoringPreferences=false,m_dvOrdinaryFrame=false,m_dvStopPending=false;
  bool m_dvOutputSurface=false,m_dvEndPending=false,m_sdrConversion=false,m_hdrConversion=false;
  std::shared_ptr<void>m_nativeDVProperties;

@@ -127,6 +127,9 @@ int main() {
         program=program.replace('@HDR_ADMISSION@',hdr)
         with tempfile.TemporaryDirectory() as directory:
             folder = Path(directory)
+            gamut = folder / "windowing/gbm/SDROutputGamut.h"
+            gamut.parent.mkdir(parents=True)
+            gamut.write_text(source("xbmc/windowing/gbm/SDROutputGamut.h"))
             files = {'DRMObject.h': DRM_BOUNDARY,
                      'DRMConnector.h': '#include "DRMObject.h"\n',
                      'DRMAtomic.h': '#include "DRMObject.h"\n',
