@@ -76,6 +76,13 @@ get_graphicdrivers
 
 PKG_FFMPEG_HWACCEL="--enable-hwaccels"
 
+# Vulkan headers for add-ons must not enable a new CB1 decoding backend.
+if [ "${PROJECT}" = "Generic" ] && [ "${TARGET_ARCH}" = "x86_64" ] &&
+   [ "${DISPLAYSERVER}" = "no" ] && [ "${OPENGLES_SUPPORT}" = "yes" ] &&
+   [ "${VULKAN_SUPPORT}" = "yes" ]; then
+  PKG_FFMPEG_HWACCEL+=" --disable-vulkan"
+fi
+
 if [ "${V4L2_SUPPORT}" = "yes" ]; then
   PKG_DEPENDS_TARGET+=" libdrm"
   PKG_NEED_UNPACK+=" $(get_pkg_directory libdrm)"
