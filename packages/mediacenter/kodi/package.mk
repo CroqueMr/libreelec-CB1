@@ -17,7 +17,7 @@ PKG_BUILD_FLAGS="+speed"
 
 CB1_KODI_SOURCE_REPOSITORY="https://github.com/CroqueMr/xbmc"
 CB1_KODI_SOURCE_COMMIT="9e5e14fefa67596061563a875e6d511f41438599"
-CB1_KODI_SOURCE_SHA256="757b6cda100f860579df925e99541ce66fa79d1a9adaac8d5f9159a9e0979cd0"
+CB1_KODI_SOURCE_SHA256="4eb19d92676a5697b5c11bf4204c683464f474b2612b48a5df6e542f4cbbb11c"
 
 if [ "${PROJECT}" = "Generic" ] && [ "${TARGET_ARCH}" = "x86_64" ] && [ "${DISPLAYSERVER}" = "no" ]; then
   # This fork already contains the package and Generic GBM patch series.
