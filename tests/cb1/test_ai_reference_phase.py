@@ -16,6 +16,7 @@ class AIReferencePhaseTests(unittest.TestCase):
         program = r'''
 #define HAVE_DVBRIDGE 1
 #define CB1_HAS_HDR10_AI 1
+#include <atomic>
 #include <cassert>
 #define CWinSystemGbmDVContext CWinSystemGbmGLESContext  // Kodi's GL/GLES context alias
 #include <cmath>
@@ -74,7 +75,8 @@ struct CRenderManager {
  std::deque<int> m_queued{2,3},m_discard,m_free;
  bool m_aiQueueReady=true,m_showVideo=true,m_aiFullscreenRequested=false,m_aiGuiReady=true;
  double m_aiStartPts=1000,m_displayLatency=50000,m_presentpts=0,m_fps=30;
- int m_presentsource=1,m_presentsourcePast=-1,m_presentstep=PRESENT_READY,m_lateframes=0,m_QueueSkip=0;
+ int m_presentsource=1,m_presentsourcePast=-1,m_presentstep=PRESENT_READY,m_lateframes=0;
+ std::atomic<int> m_QueueSkip{0};
  bool m_forceNext=false;Event m_presentevent;
  void UpdateDisplayLatency(){}
  void PrepareNextRender();
@@ -109,14 +111,13 @@ int main(){
  window.age=8387.119;CRenderManager paused;paused.m_dvdClock.paused=true;paused.m_dvdClock.now+=16700;
  paused.PrepareNextRender();assert(paused.m_presentstep==PRESENT_READY);
  // CB1 one-ahead pictures use the same refresh-midpoint admission as Kodi on every driver.
- const auto edge=[] {
-   CRenderManager r;r.renderer.lookahead=false;r.m_fps=60;r.m_displayLatency=0;
+ const auto edge=[](CRenderManager& r) {
+   r.renderer.lookahead=false;r.m_fps=60;r.m_displayLatency=0;
    r.m_dvdClock.now=0;r.m_clockSync.m_syncOffset=0;
    r.m_Queue[2].pts=25001;r.m_Queue[3].pts=50000;
-   return r;
  };
  for(int scenario=0;scenario<7;++scenario){
-   window.age=0;window.async=true;auto other=edge();
+   window.age=0;window.async=true;CRenderManager other;edge(other);
    if(scenario==1)window.async=false;
    if(scenario==2)window.age.reset();
    if(scenario==3)other.m_fps=30;
@@ -154,19 +155,18 @@ int main(){
  // With an anchored refresh phase, a picture one frame behind is replaced at once.
  // Without it, Kodi's hysteresis keeps the picture until lateness is sustained.
  window.async=true;window.age=8333.333333333;
- const auto behind=[](int lateframes,bool anchored) {
-   CRenderManager r;r.renderer.lookahead=false;r.m_fps=60;r.m_lateframes=lateframes;
+ const auto behind=[](CRenderManager& r,int lateframes,bool anchored) {
+   r.renderer.lookahead=false;r.m_fps=60;r.m_lateframes=lateframes;
    r.m_dvdClock.now=1000000;r.m_displayLatency=33334;r.m_clockSync.m_enabled=anchored;
    r.m_clockSync.m_syncOffset=0;r.m_queued={2,3,4};
    r.m_Queue[2].pts=1016667;r.m_Queue[3].pts=1033333;r.m_Queue[4].pts=1050000;
    r.PrepareNextRender();
-   return r;
  };
- const auto anchored=behind(0,true);
+ CRenderManager anchored;behind(anchored,0,true);
  assert(anchored.m_presentsource==3 && anchored.m_queued.front()==4);
- const auto first=behind(0,false);
+ CRenderManager first;behind(first,0,false);
  assert(first.m_presentsource==2 && first.m_lateframes==1);
- const auto sustained=behind(7,false);
+ CRenderManager sustained;behind(sustained,7,false);
  assert(sustained.m_presentsource==3 && sustained.m_queued.front()==4);
  // A current presentation anchor must not postpone ordinary, async-off selection.
  window.async=false;window.age=8333.333333333;
