@@ -10,7 +10,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[2]
 
 
-def profile(force_off=False):
+def profile(force_off=False, drivers=""):
     script = r'''
 set -e
 ROOT=$PWD
@@ -21,6 +21,7 @@ CB1_HDR10_AI=yes KODI_BLURAY_SUPPORT=yes
 . projects/Generic/devices/OpenGLES/options
 if [ "$1" = off ]; then VULKAN=no; fi
 . config/graphic
+if [ -n "$2" ]; then GRAPHIC_DRIVERS="$2"; fi
 get_graphicdrivers
 
 # These lookups are unrelated to graphics selection and only supply build paths.
@@ -37,6 +38,8 @@ emit video "$OPENGL_SUPPORT $OPENGLES_SUPPORT $DISPLAYSERVER $VAAPI_SUPPORT $GAL
   . packages/graphics/mesa/package.mk
   emit mesa_options "$PKG_MESON_OPTS_TARGET"
   emit mesa_deps "$PKG_DEPENDS_TARGET"
+  PKG_DIR="$ROOT/packages/graphics/mesa" PROJECT_DIR="$ROOT/projects"
+  emit mesa_stamp "$(calculate_stamp)"
 )
 for package in nvidia nvidia-pascal; do (
   . "packages/graphics/$package/package.mk"
@@ -59,13 +62,21 @@ for package in nvidia nvidia-pascal; do (
   emit ffmpeg_deps "$PKG_DEPENDS_TARGET"
 )
 '''
-    result = subprocess.run(["bash", "-c", script, "profile", "off" if force_off else "default"],
+    result = subprocess.run(["bash", "-c", script, "profile", "off" if force_off else "default", drivers],
                             cwd=ROOT, check=True, capture_output=True, text=True)
     return {key: value.split() for key, value in (line.split("\t", 1)
             for line in result.stdout.splitlines())}
 
 
 class VulkanAddonsTests(unittest.TestCase):
+    def test_mesa_stamp_tracks_effective_vulkan_drivers(self):
+        disabled = profile(force_off=True)["mesa_stamp"]
+        enabled = profile()["mesa_stamp"]
+        intel_only = profile(drivers="iris")["mesa_stamp"]
+        self.assertNotEqual(disabled, enabled)
+        self.assertNotEqual(enabled, intel_only)
+        self.assertEqual(enabled, profile()["mesa_stamp"])
+
     def test_generic_exposes_vulkan_without_changing_playback_backends(self):
         before, after = profile(force_off=True), profile()
         self.assertEqual(after["provider"], ["vulkan-loader"])

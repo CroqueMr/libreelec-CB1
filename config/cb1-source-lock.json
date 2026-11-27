@@ -505,7 +505,7 @@
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-nvidia-egl-gbm-retirement.patch": "957170369482dd2e74d3665aa49d003d599347257ec6bf0502eb90823571eaa4",
     "tests/cb1/test_nvidia_surface_retirement.py": "8587cb6e34f243482a92d0f0aadc818f91a440cbfcab846da012df222c47dd86",
     "projects/Generic/devices/OpenGLES/options": "b238b43d60e59c2cfd21036df3436ddd0f412c82c2514afb4c5140a0154219c5",
-    "tests/cb1/test_vulkan_addons.py": "d647153d72c4ae06d8ef792663685462a51f04c98039494228064e3738cf686c",
+    "tests/cb1/test_vulkan_addons.py": "269250dad60291d670fb2a3778eb89a65c3df0e77068666e0267bb3373c8c0d8",
     "tests/cb1/test_nvidia_hdr_surface.py": "013198969815435818089ab28d8b0a2bd19698976641996d4f50ad9e94b9fe51",
     "packages/multimedia/ffmpeg/package.mk": "ac97c01b8bee3e66bf6bfb88f5d1a74b249196fa0252109576465f97519a9880",
     "packages/multimedia/cb1-engine/package.mk": "f86305eeeb136faf2e7c06fe51ed4853239aea14df6393ed8399c03fc917fc06",
@@ -522,7 +522,8 @@
     "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": "80b22b516b8e8f6e5aa083c24518d19314dfafd04a135397b0acbf0ad29fc3e0",
     "projects/Generic/patches/linux/linux-9983-intel-native-hdmi-frl-lab.patch": "4a81e774b09ff5e1979fc9b6b44a414530f0e7c5139423e6571cf48a25748973",
     "tests/cb1/test_intel_frl_policy.py": "7184ea193cc21748a50a718984a9f7236a9e776d9b6d728105d486f2cebdd80b",
-    "tests/cb1/test_live_mode_admission.py": "0be73c8425fea3a2a60675eeb9c0d3d5ba13fa09dcfa66ff7cf561d609596106"
+    "tests/cb1/test_live_mode_admission.py": "0be73c8425fea3a2a60675eeb9c0d3d5ba13fa09dcfa66ff7cf561d609596106",
+    "packages/graphics/mesa/package.mk": "017eb4290807642e41fb854bf211b40005f5c68c19d407a723afda9a439b001a"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {
