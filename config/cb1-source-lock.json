@@ -235,8 +235,8 @@
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9006-integer-rate-twins.patch": "6f3e0313da94604ddae1cbba600339c89273d3651eab9b29a82b6b81f0cb7337",
     "packages/graphics/nvidia_egl-gbm/patches/nvidia_egl-gbm-9000-hook-safety.patch": "2181477fd5c9d0df4ba28635ed52e7013313d078ff031040d451b71a8e895408",
     "docs/cb1/RELEASE-RC4-PREVIEW.md": "cb4a86f57b21d6ba3f63c6f1acc30b6f862e90df237c8d386a50002064436a1b",
-    ".github/scripts/prepare-test-sources.sh": "0d432efb6ec854b6aaa4062183487dd5c47c3a41626c868fb7a70bb48a52bbdf",
-    ".github/workflows/cb1-source-checks.yml": "2965c3997e6233052233168cf4786291b07c51643a0d29de41ef54a197ad34a9",
+    ".github/scripts/prepare-test-sources.sh": "ef8b5f6d784332a441c19f03f407e85426f5d70cc1619e7e20014fbe380056ab",
+    ".github/workflows/cb1-source-checks.yml": "33129a16f57a16294a990cef40bcb5b3d5d05f12829dcdf5708292a8cb9510a4",
     "projects/Generic/patches/linux/linux-9947-amd-hdmi-rgb-range.patch": "c40229f528f7357f9abe0075f56d160017ecc7cb87ae6ceb72fd4c4bf8984eed",
     "projects/Generic/patches/linux/linux-9950-05-gmbus-fw-access.patch": "32f93668d018a638aa15f4b4e9b52143b4eabdc4dd2b654f451f56fc04017e82",
     "projects/Generic/patches/linux/linux-9950-06-gmbus-read-only-sampling.patch": "677a197033afe2d59252bdaac326482c4838805470c6a3c1fe81958cbff0d19d",
@@ -521,7 +521,10 @@
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9010-linux-7.4-drm-state.patch": "51ec3fd81239a1a97a6b3a4194d83bd195149cbf934778640d3a2d3eef5744f7",
     "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": "80b22b516b8e8f6e5aa083c24518d19314dfafd04a135397b0acbf0ad29fc3e0",
     "tests/cb1/test_live_mode_admission.py": "0be73c8425fea3a2a60675eeb9c0d3d5ba13fa09dcfa66ff7cf561d609596106",
-    "packages/graphics/mesa/package.mk": "017eb4290807642e41fb854bf211b40005f5c68c19d407a723afda9a439b001a"
+    "packages/graphics/mesa/package.mk": "017eb4290807642e41fb854bf211b40005f5c68c19d407a723afda9a439b001a",
+    ".github/scripts/fetch-kernel-source.sh": "0be5fe7c2860f93c21687b05ec2e0f019d95028572bbeeb1e218f730cec859a5",
+    ".github/scripts/verify-kernel-tree.py": "b0bed91993ecccf77ae4aef416f45ede58af36d7bd958f534c1bff3f52322366",
+    "tests/cb1/test_ci_kernel_source.py": "4014ae0ea4a6636423234a926deea50aaede01190ed2f9a09c05befe42de2bab"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {
