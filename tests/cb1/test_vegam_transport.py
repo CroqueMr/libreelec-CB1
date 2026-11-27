@@ -145,7 +145,7 @@ int main(void) {
         code = '#include <assert.h>\n#include <stdbool.h>\n#include <string.h>\n'
         code += 'enum dce_version {' + ','.join(symbols) + '};\n'
         code += r'''
-enum { DRM_MODE_CONNECTOR_HDMIA=1, SIGNAL_TYPE_HDMI_TYPE_A=2, DRM_MODE_PROP_ATOMIC=4 };
+enum { DRM_MODE_CONNECTOR_HDMIA=1, SIGNAL_TYPE_HDMI_TYPE_A=2, SIGNAL_TYPE_HDMI_FRL=3, DRM_MODE_PROP_ATOMIC=4 };
 enum { AMDGPU_LLDV_RGB10_LAB=3,AMDGPU_LLDV_444_10=4 };
 #define BIT(n) (1U<<(n))
 struct dc_context { enum dce_version dce_version; struct {unsigned chip_id;}asic_id; };
@@ -154,18 +154,21 @@ struct amdgpu_device { struct { struct dc *dc; } dm; };
 struct link { int connector_signal; };
 struct amdgpu_dm_connector {
  struct { void *dev; int connector_type;struct {unsigned id;}base; } base;
- struct link *dc_link; void *dv_standard_property,*hdr10_deep_color_property,*lldv_format_property,*lldv_native_formats_property;
+ struct link *dc_link; void *dv_standard_property,*hdr10_deep_color_property,*lldv_format_property,*lldv_native_formats_property,*sdr_bt2020_deep_color_property;
 };
 #define DRM_MODE_PROP_IMMUTABLE 4
 struct drm_prop_enum_list { unsigned value; const char *name; };
 #define ARRAY_SIZE(a) (sizeof(a)/sizeof((a)[0]))
 static bool dv_standard;
-static int dv_properties,hdr_properties,lldv_properties;
+static int dv_properties,hdr_properties,lldv_properties,sdr_properties;
+static bool dc_is_hdmi_signal(int signal)
+{ return signal==SIGNAL_TYPE_HDMI_TYPE_A || signal==SIGNAL_TYPE_HDMI_FRL; }
 #define drm_info(...) ((void)0)
 #define drm_to_adev(p) ((struct amdgpu_device *)(p))
 static void *drm_property_create_bool(void *dev,int flags,const char *name)
 { (void)dev;(void)flags; if (!strcmp(name,"DVBRIDGE_DV_STANDARD_LAB")) ++dv_properties;
  else if (!strcmp(name,"DVBRIDGE_HDR10_DEEP_COLOR")) ++hdr_properties;
+ else if (!strcmp(name,"CB1_SDR_BT2020_DEEP_COLOR")) ++sdr_properties;
  return &dv_properties; }
 static void *drm_property_create_range(void *dev,int flags,const char *name,unsigned min,unsigned max)
 { (void)dev;assert(!flags && !min && max==24 && !strcmp(name,"CB1_NATIVE_LLDV_FORMATS"));
@@ -183,24 +186,34 @@ static void *drm_property_create_enum(void *dev,int flags,const char *name,
 static void drm_object_attach_property(void *base,void *property,int value)
 { (void)base;(void)property;assert(value==0); }
 '''
-        code += policy + '\n' + function(source, 'amdgpu_dm_dv_attach')
+        code += policy + '\n' + function(source, 'amdgpu_dm_dv_attach') + '\n' + \
+            function(source, 'amdgpu_dm_sdr_bt2020_attach')
         code += r'''
 int main(void) {
  struct dc_context ctx={.dce_version=DCE_VERSION_11_22}; struct dc dc={&ctx};
  struct amdgpu_device dev={.dm={&dc}};
  struct link link={SIGNAL_TYPE_HDMI_TYPE_A};
  struct amdgpu_dm_connector con={.base={&dev,DRM_MODE_CONNECTOR_HDMIA,{0}},.dc_link=&link};
- dv_standard=true; amdgpu_dm_dv_attach(&con);
- assert(dv_properties==1 && hdr_properties==1 && lldv_properties==1);
- dv_properties=hdr_properties=lldv_properties=0;
- dv_standard=false; amdgpu_dm_dv_attach(&con);
- assert(dv_properties==0 && hdr_properties==1 && lldv_properties==1);
- dv_properties=hdr_properties=lldv_properties=0;
- ctx.dce_version=DCN_VERSION_1_0; dv_standard=true; amdgpu_dm_dv_attach(&con);
- assert(dv_properties==1 && hdr_properties==1 && lldv_properties==1);
- dv_properties=hdr_properties=lldv_properties=0;
- link.connector_signal=0; amdgpu_dm_dv_attach(&con);
- assert(dv_properties==0 && hdr_properties==0 && lldv_properties==0);
+ dv_standard=true; amdgpu_dm_dv_attach(&con); amdgpu_dm_sdr_bt2020_attach(&con);
+ assert(dv_properties==1 && hdr_properties==1 && lldv_properties==1 && sdr_properties==1);
+ dv_properties=hdr_properties=lldv_properties=sdr_properties=0;
+ dv_standard=false; amdgpu_dm_dv_attach(&con); amdgpu_dm_sdr_bt2020_attach(&con);
+ assert(dv_properties==0 && hdr_properties==1 && lldv_properties==1 && sdr_properties==1);
+ dv_properties=hdr_properties=lldv_properties=sdr_properties=0;
+ ctx.dce_version=DCN_VERSION_1_0; dv_standard=true; amdgpu_dm_dv_attach(&con); amdgpu_dm_sdr_bt2020_attach(&con);
+ assert(dv_properties==1 && hdr_properties==1 && lldv_properties==1 && sdr_properties==1);
+ dv_properties=hdr_properties=lldv_properties=sdr_properties=0;
+ link.connector_signal=0; amdgpu_dm_dv_attach(&con); amdgpu_dm_sdr_bt2020_attach(&con);
+ assert(dv_properties==0 && hdr_properties==0 && lldv_properties==0 && sdr_properties==0);
+ ctx.dce_version=DCE_VERSION_11_2; /* Not a DV-capable family without RX550. */
+ link.connector_signal=SIGNAL_TYPE_HDMI_TYPE_A; amdgpu_dm_dv_attach(&con); amdgpu_dm_sdr_bt2020_attach(&con);
+ assert(dv_properties==0 && hdr_properties==0 && lldv_properties==0 && sdr_properties==1);
+ sdr_properties=0;
+ link.connector_signal=SIGNAL_TYPE_HDMI_FRL; amdgpu_dm_dv_attach(&con); amdgpu_dm_sdr_bt2020_attach(&con);
+ assert(dv_properties==0 && hdr_properties==0 && lldv_properties==0 && sdr_properties==1);
+ sdr_properties=0;
+ con.base.connector_type=0; amdgpu_dm_dv_attach(&con); amdgpu_dm_sdr_bt2020_attach(&con);
+ assert(sdr_properties==0);
  return 0;
 }
 '''
