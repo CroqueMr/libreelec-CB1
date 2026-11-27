@@ -99,6 +99,14 @@ int main(){
  assert(wide.pending.at("max bpc")==10 && wide.pending.at(SDR_BT2020_DEEP_COLOR)==1);
  wide.Commit(true);assert(state.Stage(wide,true));
  assert(wide.pending.at("max bpc")==8 && wide.pending.at(SDR_BT2020_DEEP_COLOR)==0);
+ state.Restored();wide.Commit(true);
+ // A transport captured on wide SDR must remember its ownership for depth
+ // admission, while the ordinary restore must never reactivate the guard.
+ wide.connector.cache["max bpc"]=10;wide.connector.cache[SDR_BT2020_DEEP_COLOR]=1;
+ assert(state.CaptureColorPreferences(wide,8));
+ assert(state.Before(SDR_BT2020_DEEP_COLOR)==1);
+ assert(state.Stage(wide,true));
+ assert(wide.pending.at("max bpc")==8 && wide.pending.at(SDR_BT2020_DEEP_COLOR)==0);
  state.Restored();wide.Commit(true);wide.connector.cache.erase(SDR_BT2020_DEEP_COLOR);
  assert(state.CaptureColorPreferences(wide,8) && !state.Stage(wide,false,{}, {},10));
  assert(wide.pending.empty());state.Restored();

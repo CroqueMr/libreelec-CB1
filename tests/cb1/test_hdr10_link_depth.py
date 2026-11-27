@@ -94,3 +94,68 @@ int main()
             self.assertEqual(built.returncode, 0, built.stderr)
             run = subprocess.run([str(binary)], capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)
+    def test_wide_sdr_does_not_change_never_wide_hdr10_depth(self):
+        gbm = TREE / "xbmc/windowing/gbm"
+        effective = body((gbm / "WinSystemGbm.cpp").read_text(),
+                         "uint64_t CWinSystemGbm::GetEffectiveMaxBpc(")
+        methods = [body((gbm / f"WinSystemGbm{api}Context.cpp").read_text(),
+                        f"void CWinSystemGbm{api}Context::RefreshHDR10LinkDepth()")
+                   for api in ("GL", "GLES")]
+        self.assertEqual(methods[0], methods[1])
+        program = r"""
+#include <optional>
+#include <algorithm>
+#include <array>
+#include <string>
+#include <cstdint>
+#include <utility>
+#include <cassert>
+using std::uint64_t;
+constexpr std::array<uint64_t,4> MAX_BPC_VALUES{0,8,10,12};
+constexpr auto MAX_BPC="max bpc";
+constexpr auto SDR_BT2020_DEEP_COLOR="CB1_SDR_BT2020_DEEP_COLOR";
+struct Connector {
+  bool guard=false; uint64_t current=8;
+  std::string GetType() const { return "HDMI-A"; }
+  bool SupportsProperty(const char*) const { return true; }
+  std::optional<uint64_t> GetPropertyValue(std::string s) const
+  { return s==SDR_BT2020_DEEP_COLOR ? guard : current; }
+  std::optional<std::pair<uint64_t,uint64_t>> GetRangePropertyLimits(const char*) const
+  { return std::pair<uint64_t,uint64_t>{8,16}; }
+};
+struct DRM { Connector c; Connector* GetConnector() { return &c; } };
+struct Snapshot {
+  std::optional<uint64_t> before; bool wasWide=false;
+  bool Captured() const { return before.has_value(); }
+  std::optional<uint64_t> Before(std::string s) const {
+    if (!Captured()) return {};
+    if (s==SDR_BT2020_DEEP_COLOR) return wasWide;
+    return before;
+  }
+};
+struct Win {
+  DRM drm; DRM* m_DRM=&drm; Snapshot m_cb1ConnectorState,m_dvState;
+  int m_maxBpc=0; bool m_maxBpcFallback=false; uint64_t m_hdr10MaxBpc=0;
+  bool SDRBT2020DeepColorSupported() const { return true; }
+  std::optional<uint64_t> DefaultMaxBpc() const { return 8; }
+  uint64_t GetEffectiveMaxBpc(std::optional<uint64_t> restored={}) const @EFFECTIVE@
+  void RefreshHDR10LinkDepth() @REFRESH@
+};
+int main() {
+  Win w;
+  w.m_cb1ConnectorState.before=8; w.m_maxBpc=2;
+  w.RefreshHDR10LinkDepth(); assert(w.m_hdr10MaxBpc==10);
+  w.m_cb1ConnectorState.before.reset(); w.m_maxBpc=0;
+  w.drm.c.guard=true; w.drm.c.current=10;
+  w.RefreshHDR10LinkDepth(); assert(w.m_hdr10MaxBpc==8);
+  w.drm.c.guard=false; w.drm.c.current=8;
+  w.m_dvState.before=10; w.m_dvState.wasWide=true; w.m_cb1ConnectorState.before=8;
+  w.RefreshHDR10LinkDepth(); assert(w.m_hdr10MaxBpc==8);
+}
+""".replace("@EFFECTIVE@", effective).replace("@REFRESH@", methods[0])
+        with tempfile.TemporaryDirectory() as directory:
+            binary = Path(directory) / "wide-hdr-depth"
+            result = subprocess.run(["c++", "-std=c++20", "-x", "c++", "-", "-o", str(binary)],
+                                    input=program, text=True, capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            subprocess.run([str(binary)], check=True)

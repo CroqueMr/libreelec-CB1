@@ -55,8 +55,18 @@ download "$engine_fork/archive/$engine_revision.tar.gz" \
 download "$bluray_fork/archive/$bluray_revision.tar.gz" \
   "$test_root/libbluray.tar.gz" "$(pin CB1_BLURAY_SOURCE_SHA256 "$bluray_recipe")"
 
-download "$linux_url" \
-  "$test_root/linux.tar.xz" "$linux_sha"
+# The package SHA remains authoritative. This one mirror mapping was checked
+# against the package archive on Linux commit b6a9fa34ce4187cb69d3c588a4bbffc31ce5db8f.
+# Gitiles generates archive timestamps; pin the complete Git-visible tree instead.
+source .github/scripts/fetch-kernel-source.sh
+linux_cache="$RUNNER_TEMP/cb1-linux-source"
+if [ "$linux_sha" = "9f13091e6dd2d3576ad86e0c42ffa76b9993805a3f3a00f06981b242ea48aef9" ]; then
+  fetch_kernel_source "$linux_url" "$linux_sha" "$linux_cache" \
+    "https://kernel.googlesource.com/pub/scm/linux/kernel/git/torvalds/linux/+archive/refs/tags/v7.4-rc4.tar.gz" \
+    "90140fb0a28a580effac3a8b31f2291e18e3a53e50994b0977577257e6b4450c"
+else
+  fetch_kernel_source "$linux_url" "$linux_sha" "$linux_cache"
+fi
 
 python3 scripts/cb1-stage.py
 mkdir "$test_root/engine" "$test_root/kodi" "$test_root/ffmpeg" "$test_root/libplacebo" "$test_root/libbluray" "$test_root/linux"
@@ -68,7 +78,7 @@ tar -xf "$test_root/kodi-cb1.tar.gz" -C "$test_root/kodi" --strip-components=1
 tar -xf "$test_root/ffmpeg-cb1.tar.gz" -C "$test_root/ffmpeg" --strip-components=1
 tar -xf "$test_root/libplacebo.tar.gz" -C "$test_root/libplacebo" --strip-components=1
 tar -xf "$test_root/libbluray.tar.gz" -C "$test_root/libbluray" --strip-components=1
-tar -xf "$test_root/linux.tar.xz" -C "$test_root/linux" --strip-components=1
+tar -xf "$linux_archive" -C "$test_root/linux" --strip-components="$linux_strip_components"
 
 # Verify the Generic kernel stack against the same pinned source as the package build.
 for patch_file in packages/linux/patches/default/*.patch projects/Generic/patches/linux/*.patch; do

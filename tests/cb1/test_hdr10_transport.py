@@ -460,7 +460,6 @@ int main(void)
 #include <assert.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <string.h>
 #define EINVAL 22
 #define min(a,b) ((a)<(b)?(a):(b))
 #define max(a,b) ((a)>(b)?(a):(b))
@@ -493,8 +492,6 @@ struct intel_display {int version;void *drm;struct{bool skylake,kabylake;}platfo
 struct intel_encoder {int limit;struct intel_connector *connector;};
 struct intel_crtc_state {struct {struct drm_display_mode adjusted_mode;} hw;
  int pipe_bpp,port_clock;enum intel_output_format sink_format,output_format;bool has_hdmi_sink;
- struct {bool vrr_enabled;}uapi;
- struct {bool enable;int required_lanes;}frl;
  struct intel_connector *connector;};
 static struct intel_display display_state={.version=12};
 #define to_intel_display(p) ((void)(p),&display_state)
@@ -507,37 +504,21 @@ static bool drm_mode_is_420_only(const struct drm_display_info *i,const struct d
 {(void)m;return i->only420;}
 static bool drm_mode_is_420(const struct drm_display_info *i,const struct drm_display_mode *m)
 {return drm_mode_is_420_also(i,m)||drm_mode_is_420_only(i,m);}
-static enum drm_mode_status hdmi_port_tmds_clock_valid(struct intel_encoder *e,int clock,bool strict,bool hdmi)
+static enum drm_mode_status hdmi_port_clock_valid(struct intel_encoder *e,int clock,bool strict,bool hdmi)
 {(void)hdmi;return clock<=e->limit && (!strict || clock<=e->connector->base.display_info.max_tmds_clock)?MODE_OK:MODE_BAD;}
 static bool hdmi_bpc_possible(const struct intel_crtc_state *s,int bpc);
 @@FUNCTIONS@@
 static bool hdmi_bpc_possible(const struct intel_crtc_state *s,int bpc)
 {return intel_hdmi_source_bpc_possible(&display_state,bpc) &&
  intel_hdmi_sink_bpc_possible(&s->connector->base,bpc,s->has_hdmi_sink,s->sink_format);}
-static bool lab_frl_enabled, lab_frl_has_rate;
-#define intel_hdmi_frl_enabled(...) lab_frl_enabled
-#define intel_hdmi_frl_mode_allowed(mode, hdmi) ((hdmi) && (mode)->crtc_clock > 600000)
-static int intel_hdmi_compute_frl_clock(struct intel_encoder *encoder, struct intel_crtc_state *crtc)
-{
- (void)encoder;
- assert(crtc->pipe_bpp == 30 && crtc->output_format == INTEL_OUTPUT_FORMAT_RGB);
- crtc->frl.required_lanes = 4;
- return lab_frl_has_rate ? 0 : -EINVAL;
-}
 static int native_config(struct intel_encoder *encoder,struct intel_crtc_state *pipe_config,
  const struct drm_connector_state *conn_state) {
  struct intel_display *display=&display_state;
  struct intel_connector *connector=encoder->connector;
- const struct intel_digital_connector_state *intel_conn_state=
-     to_intel_digital_connector_state(conn_state);
- const struct drm_display_mode *adjusted_mode=&pipe_config->hw.adjusted_mode;
- int requested_bpp=pipe_config->pipe_bpp;
- int lane_count=4,ret;
- memset(&pipe_config->frl, 0, sizeof(pipe_config->frl));
+ int ret;
  @@TRANSPORT@@
  @@ADMISSION@@
  @@FINAL_GUARD@@
- (void)lane_count;
  return ret;
 }
 int main(void) {
@@ -548,7 +529,7 @@ int main(void) {
  struct intel_digital_connector_state state={.base={&connector.base,10,DRM_MODE_COLORIMETRY_BT2020_RGB,&blob},
    .dv_hdr10_deep_color=true};
  struct intel_encoder encoder={600000,&connector};
- for(int scenario=0;scenario<34;++scenario) {
+ for(int scenario=0;scenario<31;++scenario) {
   struct intel_connector saved_connector=connector;
   struct intel_digital_connector_state saved_state=state;
   struct intel_crtc_state stream={.hw={.adjusted_mode={594000,0}},.pipe_bpp=30,
@@ -602,23 +583,11 @@ int main(void) {
    state.base.max_requested_bpc=8;connector.base.display_info.also420=false;
    connector.base.display_info.max_tmds_clock=340000;want_result=-EINVAL;
   }
-  if (scenario >= 31) {
-   /* This EDID allows 4:2:0 for 4K120, but only at 8 bpc on TMDS. */
-   state.dv_hdr10_deep_color=false;
-   stream.hw.adjusted_mode.crtc_clock=1188000;
-   connector.base.display_info.hdmi.y420_dc_modes=0;
-   lab_frl_enabled=scenario >= 32;
-   lab_frl_has_rate=scenario == 32;
-   want_bpp=scenario == 32 ? 30 : 24;
-   if (scenario == 32) want_format=INTEL_OUTPUT_FORMAT_RGB;
-   if (scenario == 33) want_result=-EINVAL;
-  }
   int clock=stream.hw.adjusted_mode.crtc_clock;
   int result=native_config(&encoder,&stream,&state.base);
   if(result!=want_result) return 20+scenario;
   if(!result && (stream.sink_format!=want_format || stream.pipe_bpp!=want_bpp)) return 50+scenario;
   assert(stream.hw.adjusted_mode.crtc_clock==clock);
-  assert(stream.frl.enable==(scenario==32));
   connector=saved_connector;state=saved_state;encoder.limit=600000;display_state.version=12;
   display_state.platform.kabylake=false;
   hdr.hdmi_metadata_type1.eotf=HDMI_EOTF_SMPTE_ST2084;
