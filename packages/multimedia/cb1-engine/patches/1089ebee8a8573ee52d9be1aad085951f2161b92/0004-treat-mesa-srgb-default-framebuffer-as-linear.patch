@@ -1,0 +1,39 @@
+From 2d48f373191dc00912c0c5282da1a236cc887c5c Mon Sep 17 00:00:00 2001
+From: Chris <meischris39@hotmail.com>
+Date: Tue, 10 Nov 2026 03:21:49 +0000
+Subject: [PATCH] CB1: treat Mesa's sRGB-capable default framebuffer as linear
+ on GL
+
+Mesa gives desktop default framebuffers sRGB formats, so the encoding
+query returns GL_SRGB although writes stay linear until
+GL_FRAMEBUFFER_SRGB is enabled. The packer and the final-framebuffer
+check refused such a target.
+---
+ config/owned-sources.json | 2 +-
+ src/dvbridge_gl_api.h     | 4 ++++
+ 2 files changed, 5 insertions(+), 1 deletion(-)
+
+diff --git a/config/owned-sources.json b/config/owned-sources.json
+index 3f9346f..cc53f8c 100644
+--- a/config/owned-sources.json
++++ b/config/owned-sources.json
+@@ -81,5 +81,5 @@
+   "src/cb1_cmv40.h": "2b29fa2bfde178cf9631a75796465aff805463d8100ad9daaadfa7bc59a5d539",
+   "src/cb1_hdr10_expert.c": "f9db6f021c637bd1054cb1593ecf348b46750541a430a5334fd9051d66d06530",
+   "src/cb1_hdr10_expert.h": "3600cf66e3cccc82e3d9669a0e2b7390e4d1da7377fb04ffeeec61976e18ba74",
+-  "src/dvbridge_gl_api.h": "7c716c104de155042bc14f24b31cf134365759677b2188f7249342b290d89ad4"
++  "src/dvbridge_gl_api.h": "d841f661cb5602e854db988ac923f6f2ba8038cdbfcc99e1e190b117d21f031e"
+ }
+diff --git a/src/dvbridge_gl_api.h b/src/dvbridge_gl_api.h
+index dce4a2b..649ebcc 100644
+--- a/src/dvbridge_gl_api.h
++++ b/src/dvbridge_gl_api.h
+@@ -31,4 +31,8 @@ static inline void dvbridge_gl_color_bits(GLuint framebuffer, GLint bits[4], GLi
+         glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, attachment, sizes[i], &bits[i]);
+     glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, attachment,
+         GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, encoding);
++    /* Mesa gives desktop default framebuffers sRGB formats; writes stay linear until
++     * GL_FRAMEBUFFER_SRGB is enabled. */
++    if (*encoding == GL_SRGB && !glIsEnabled(GL_FRAMEBUFFER_SRGB))
++        *encoding = GL_LINEAR;
+ }

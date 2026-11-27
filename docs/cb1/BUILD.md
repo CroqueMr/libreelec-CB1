@@ -1,4 +1,24 @@
-# R1.0.0 build
+# CB1 builds
+
+## R1.1.1 Generic release asset
+
+Build the optional `externalhelper` add-on from the same source revision as
+the Generic x86_64 image. It includes the private wlroots library that
+restores the HDMI `max bpc` setting after an external Wayland session.
+
+```sh
+PROJECT=Generic ARCH=x86_64 ADDON_OVERWRITE=yes ./scripts/create_addon externalhelper
+```
+
+For the R1.1.1 add-on ABI, use
+`target/addons/12.80.8/Generic/x86_64/tools.externalhelper/tools.externalhelper-12.80.8.14.zip`.
+Check the ZIP integrity, the version in `tools.externalhelper/addon.xml` and the
+presence of `tools.externalhelper/lib.private/libwlroots-0.20.so`.
+
+Stage the ZIP as a separate release asset next to the Generic image and
+update TAR. Regenerate `SHA256SUMS` for the staged assets and verify it before
+publishing. Users can install the matching ZIP with **Install from zip file**
+in Kodi.
 
 ## Stable image
 
@@ -62,3 +82,16 @@ Component pins are in [versions](VERSIONS.md), `config/cb1-source-lock.json` and
 `CB1/config/hdr10-ai-dependencies.json`. Runtime assets and applicable notices must
 remain in corresponding-source exports. Rebuild hashes can vary with the toolchain,
 timestamps and build paths.
+
+## OpenGL device
+
+The `OpenGL` device builds Kodi, libplacebo and the DV bridge against desktop
+OpenGL instead of OpenGL ES:
+
+```sh
+CB1_HDR10_AI=yes PROJECT=Generic DEVICE=OpenGL ARCH=x86_64 OFFICIAL=no make image
+```
+
+Kodi's GL windowing context is generated from the DV GLES context by
+`scripts/cb1-gl-winsys.py`. When the GLES context changes, run the script on a
+checkout of the pinned Kodi fork and commit the difference there.

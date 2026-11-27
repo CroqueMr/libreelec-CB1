@@ -94,13 +94,13 @@ int main()
   CDRMAtomic drm;
   const auto XR30 = DRM_FORMAT_XRGB2101010, XB30 = DRM_FORMAT_XBGR2101010,
              AB30 = DRM_FORMAT_ABGR2101010;
-  auto exercise = [&](std::vector<uint32_t> formats, bool accepted,
+  auto exercise = [&](bool selectedPascal, std::vector<uint32_t> formats, bool accepted,
                       std::vector<uint32_t> expected)
   {
     attempts.clear(); imports.clear(); atomic.clear();
     drm.plane.formats = formats;
     boundTexture = 99;
-    auto scanout = CPascalHDR10Scanout::Create(&dev, drm, 100, 50);
+    auto scanout = CPascalHDR10Scanout::Create(&dev, drm, 100, 50, selectedPascal);
     if (bool(scanout) != accepted || attempts != expected)
     {
       std::cerr << "Format negotiation failed. Advertised ";
@@ -118,19 +118,23 @@ int main()
     assert(liveBuffers == 0);
     return true;
   };
-  if (!exercise({XB30, AB30, XR24}, true, {XB30, XB30})) return 1;
-  failedImport = XB30;
-  if (!exercise({XB30, AB30}, true, {XB30, AB30, AB30})) return 1;
+  if (!exercise(true, {XB30, AB30, XR24}, true, {XB30, XB30})) return 1;
+  if (!exercise(true, {AB30}, false, {})) return 1;
+  if (!exercise(false, {XB30, AB30}, false, {})) return 1;
+  if (!exercise(false, {XR30, XB30}, true, {XR30, XR30})) return 1;
+  failedImport = XR30;
+  if (!exercise(true, {XR30, XB30}, true, {XR30, XB30, XB30})) return 1;
+  if (!exercise(false, {XR30, XB30}, false, {XR30})) return 1;
   failedImport = 0;
-  failedUpload = XB30;
-  if (!exercise({XB30, AB30}, true, {XB30, AB30, AB30})) return 1;
+  failedUpload = XR30;
+  if (!exercise(true, {XR30, XB30}, true, {XR30, XB30, XB30})) return 1;
   failedUpload = 0;
-  failedAtomic = XB30;
-  if (!exercise({XB30, AB30}, true, {XB30, AB30, AB30})) return 1;
+  failedAtomic = XR30;
+  if (!exercise(true, {XR30, XB30}, true, {XR30, XB30, XB30})) return 1;
   failedAtomic = 0;
-  failedProbe = XB30;
-  if (!exercise({XB30, AB30}, true, {XB30, XB30, AB30, AB30})) return 1;
+  failedProbe = XR30;
+  if (!exercise(true, {XR30, XB30}, true, {XR30, XR30, XB30, XB30})) return 1;
   failedProbe = 0;
-  if (!exercise({XR24}, false, {})) return 1;
-  if (!exercise({XR30, XB30}, true, {XR30, XR30})) return 1;
+  if (!exercise(true, {XR24}, false, {})) return 1;
+  if (!exercise(true, {XR30, XB30}, true, {XR30, XR30})) return 1;
 }

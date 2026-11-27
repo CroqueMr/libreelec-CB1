@@ -1,8 +1,8 @@
 {
   "Release": {
-    "version": "CB1-R1.1.1-RC1",
-    "tag": "R1.1.1-RC1",
-    "image": "LibreELEC-Generic.x86_64-13.0-CB1-R1.1.1-RC1"
+    "version": "CB-R1.1.2",
+    "tag": "R1.1.2",
+    "image": "LibreELEC-Generic.x86_64-13.0-CB-R1.1.2"
   },
   "LibreELEC": {
     "version": "13 Beta 1 (12.95.1)",
@@ -13,7 +13,7 @@
     "version": "22.0 RC2",
     "revision": "d686683a55d50e576dd282f53fb2bf9914931b38",
     "modified": true,
-    "source_revision": "ea6e272754f8c184129a388076d3e15f45079e44"
+    "source_revision": "d058174bfe70f589a113031f8452abe14fbb261e"
   },
   "Linux": {
     "version": "7.4-rc4",
@@ -43,7 +43,7 @@
   },
   "CB1": {
     "version": "1.1",
-    "revision": "225628237343a3e1dc31baf2619dfa04c52a7aeb",
+    "revision": "1089ebee8a8573ee52d9be1aad085951f2161b92",
     "base_revision": "b852bd0b5e4c1422e0aa5e005520bca765dcb00a",
     "modified": true,
     "historical_revision": "R1.0.0-RC4-Preview:CB1/"

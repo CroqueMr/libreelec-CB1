@@ -35,6 +35,7 @@ int bound=99,draw=98,depth=0,readFormat=AV_PIX_FMT_RGBA;bool flip=false,readOK=t
 uint8_t carrierPixels[8]{};
 void glGetIntegerv(int target,int* out){*out=target==GL_READ_FRAMEBUFFER_BINDING?bound:draw;}
 void glBindFramebuffer(int target,unsigned value){(target==GL_READ_FRAMEBUFFER?bound:draw)=value;}
+inline void ClearInheritedGLErrors() {}
 struct pl_tex_params {int w=3840,h=2160,format=11;bool renderable=false;};
 struct Texture {pl_tex_params params;};
 using pl_tex=Texture*;

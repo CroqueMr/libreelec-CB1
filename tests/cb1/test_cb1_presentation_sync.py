@@ -21,6 +21,7 @@ HARNESS = r'''
 #define HAVE_DVBRIDGE 1
 #define CB1_HAS_HDR10_AI 1
 #include <cassert>
+#define CWinSystemGbmDVContext CWinSystemGbmGLESContext  // Kodi's GL/GLES context alias
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -86,7 +87,8 @@ struct CRenderManager {
  double m_aiStartPts=DVD_NOPTS_VALUE,m_displayLatency=0,m_presentpts=0,m_latencyTweak=0;
  float m_fps=24;
  std::atomic_int m_videoDelay{0};
- int m_presentsource=0,m_presentsourcePast=-1,m_presentstep=PRESENT_READY,m_lateframes=0,m_QueueSkip=0;
+ int m_presentsource=0,m_presentsourcePast=-1,m_presentstep=PRESENT_READY,m_lateframes=0;
+ std::atomic<int> m_QueueSkip{0};
  bool m_forceNext=false;Event m_presentevent;
  void UpdateDisplayLatency();
  void PrepareNextRender();
