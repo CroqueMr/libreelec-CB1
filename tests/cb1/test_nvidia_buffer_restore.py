@@ -100,9 +100,17 @@ struct Window {
  std::shared_ptr<DRM> m_DRM=std::make_shared<CDRMAtomic>();
  std::shared_ptr<Surface> m_GBM=std::make_shared<Surface>();
  CDVBridgeState m_dvState;bool m_dvStopPending=false,m_sdrConversion=false;
+ struct {struct {struct {int gamut=DVBRIDGE_GAMUT_BT709;}sdr;}policy;}m_dvSelection;
+ bool SDRBT2020DeepColorSupported()const{return false;}
+ std::optional<uint64_t> SDRBT2020MaxBpc()const{assert(false && "legacy transport must not request a wide-SDR floor");return {};}
  struct {
-   bool Captured(){return false;}
-   bool Stage(CDRMAtomic&,bool,std::optional<uint64_t>,std::optional<uint64_t> colorFormat){
+   bool captured=false;
+   unsigned staged=0;
+   bool Captured(){return captured;}
+   bool Stage(CDRMAtomic&,bool,std::optional<uint64_t>,std::optional<uint64_t> colorFormat,
+              std::optional<uint64_t> wideSDRMaxBpc){
+     ++staged;
+     assert(!wideSDRMaxBpc && "legacy transport must not assert the AMD guard");
      return !colorFormat;}
  } m_cb1ConnectorState;
  bool m_cb1RestoringPreferences=false,m_hdrConversion=false;
@@ -148,6 +156,16 @@ struct Window {
 };
 @FLIP@
 int main(){
+ {
+   Window legacy;
+   legacy.m_cb1ConnectorState.captured=true;
+   legacy.m_sdrConversion=true;
+   legacy.m_dvSelection.policy.sdr.gamut=DVBRIDGE_GAMUT_BT2020;
+   assert(legacy.StageCB1ConnectorPreferences(false));
+   assert(legacy.m_cb1ConnectorState.staged==1);
+   assert(legacy.StageCB1ConnectorPreferences(true));
+   assert(legacy.m_cb1ConnectorState.staged==2);
+ }
  // A desktop resize can restore the transport on the current drawable while stop is pending.
  for(bool stopping:{false,true}){
    for(bool nvidia:{false,true}){

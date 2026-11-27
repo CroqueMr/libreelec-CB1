@@ -60,7 +60,7 @@ struct DRM {
 };
 struct CDRMAtomic:DRM {
   bool range=false,accept=true,lastAccepted=false,lastAsync=false;
-  int calls=0;
+  int calls=0, discardedColorRequests=0;
   bool clearHDR10Plus=false, modeset=false, pending=false;
   bool fenceReady=false;
   gbm_bo* queued=nullptr;
@@ -109,6 +109,7 @@ struct CDRMAtomic:DRM {
     assert(queued&&queued->locked);
     displayed=std::exchange(queued,nullptr);pending=false;return true;
   }
+  void DiscardPendingColorRequest(){++discardedColorRequests;range=false;}
   bool HasColorRangeTransition()const{return range;}
   bool LastPageAccepted()const{return lastAccepted;}
   void FlipPage(gbm_bo* bo,bool rendered,bool,bool async)override {
@@ -135,11 +136,11 @@ struct Window {
   std::shared_ptr<DRM> m_DRM=std::make_shared<CDRMAtomic>();
   std::shared_ptr<Surface> m_GBM=std::make_shared<Surface>();
   std::shared_ptr<Bridge> m_videoLayerBridge;
-  bool m_nativeSDRActive=false,m_nativeSDRSubmitted=false,m_nativeSDRRejected=false;
+  bool m_nativeSDRActive=false,m_nativeSDRSubmitted=false,m_nativeSDRRejected=false,nativeStageOK=true;
   std::optional<uint64_t> m_queuedColorspace;
   bool StageNativeSDRSignal(bool rendered, bool& wideTransition) {
     wideTransition=rendered && m_nativeSDRActive && static_cast<CDRMAtomic&>(*m_DRM).range;
-    return true;
+    return nativeStageOK;
   }
   bool ConnectorPreferencesAllowed(){return true;}
   void DeferConnectorPreferences(){assert(false);}
@@ -189,6 +190,15 @@ int main(){
   window.FlipPage(true,false,true);
   assert(window.m_nativeSDRSubmitted);
   auto* previousWide=displayed;
+  const int wideCalls=drm->calls,wideDirty=CServiceBroker::GetGUI()->dirty;
+  window.nativeStageOK=false;window.m_queuedColorspace=1;
+  drm->range=true;drm->accept=true;
+  window.FlipPage(true,false,true);
+  assert(drm->calls==wideCalls && drm->discardedColorRequests==1 && !drm->range);
+  assert(displayed==previousWide && previousWide->locked && !window.m_GBM->m_pendingBuffer);
+  assert(window.m_nativeSDRRejected && !window.m_queuedColorspace);
+  assert(CServiceBroker::GetGUI()->dirty==wideDirty+1);
+  window.nativeStageOK=true;window.m_nativeSDRRejected=false;
   drm->range=true;drm->accept=false;
   window.FlipPage(true,false,true);
   assert(displayed==previousWide && previousWide->locked);
