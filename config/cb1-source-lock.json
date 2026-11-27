@@ -333,7 +333,7 @@
     "tests/cb1/test_native_video_telemetry.py": "c10e8392d2a917064aa75cc84e2344209c1529779ab111a1cd32585aaee40128",
     "tests/cb1/test_sdr_live_settings.py": "8c2a86dceb193d6634b3b6191fe6d540674c8a1be3e2e221890c524298c458f6",
     "tests/cb1/test_sdr_applied_metadata.py": "828d531ee9d0c6418f7d600b4947691b51ce487b6265c1b3c2b7e67eacd5cf85",
-    "tests/cb1/test_output_supersession.py": "e6f1e53ccd71615255f1e3a320677830e3fb5f29a971e6e6b422f34da648c13d",
+    "tests/cb1/test_output_supersession.py": "947af77ff5b02d6c8776a1d94161926f476983bb2fc413a979e75a62c3c237d9",
     "projects/Generic/patches/linux/linux-9943-intel-hdmi-scdc-diagnostics.patch": "5d6822eb4ddbada4c9751f6c0392d86eba93d55e531e60b7819e0f8a0afffc87",
     "tests/cb1/test_hdmi_scdc_diagnostics.py": "2700d333a25b8740adc56e10b578f4ec2dd3cfedb8b493a65b9ab4d9946bdd18",
     "projects/Generic/patches/linux/linux-9944-intel-hdmi-deferred-link-check.patch": "e73a5a3c32a8a83781dcf693bf6f096921526b910ab7373a17ddde8b62bb425b",
