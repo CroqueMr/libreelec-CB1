@@ -24,14 +24,14 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(found, [], 'Local build data must not enter release sources or runtime')
 
     def test_native_image_version_and_ai_defaults(self):
-        keys = ("CUSTOM_VERSION", "BUILDER_VERSION", "CB1_HDR10_AI")
+        keys = ("CUSTOM_VERSION", "BUILDER_VERSION", "BUILDER_NAME", "CB1_HDR10_AI")
         options = (ROOT / "projects/Generic/options").read_text()
         defaults = options.split('################################################################################', 1)[0]
         script = "unset " + " ".join(keys) + "\n" + defaults
-        script += '\nprintf "%s\\n" "$CUSTOM_VERSION" "$BUILDER_VERSION" "$CB1_HDR10_AI"'
+        script += '\nprintf "%s\\n" "$CUSTOM_VERSION" "$BUILDER_VERSION" "$BUILDER_NAME" "$CB1_HDR10_AI"'
         result = subprocess.check_output(["bash", "-c", script], text=True).splitlines()
         version = "CB-R1.1.2"
-        self.assertEqual(result, [version, version, "yes"])
+        self.assertEqual(result, [version, version, "Community & CroqueMr", "yes"])
         versions = json.loads((ROOT / "config/cb1-versions.json").read_text())
         self.assertEqual(versions["Release"]["version"], result[1])
         self.assertEqual(versions["Release"]["tag"], version.removeprefix("CB-"))
@@ -39,5 +39,22 @@ class ReleaseTests(unittest.TestCase):
                          "LibreELEC-Generic.x86_64-13.0-" + version)
 
 
+    def test_community_builder_label_and_official_override(self):
+        defaults = (ROOT / "projects/Generic/options").read_text().split(
+            '################################################################################', 1)[0]
+        image = (ROOT / "scripts/image").read_text()
+        start = image.index('[ "${BUILDER_NAME,,}" = "official" ]')
+        policy = image[start:image.index('if [ -n "${CUSTOM_VERSION}" ]; then', start)]
+        for official, name, expected in (
+            ("no", "", "Community & CroqueMr"),
+            ("no", "Custom Builder", "Custom Builder"),
+            ("yes", "", "official"),
+        ):
+            with self.subTest(official=official, name=name):
+                script = defaults + policy + '\nprintf "%s" "$DISTRO_BUILD"'
+                result = subprocess.check_output(
+                    ["bash", "-c", 'OFFICIAL="$1"; BUILDER_NAME="$2"\n' + script,
+                     "builder-label", official, name], text=True)
+                self.assertEqual(result, expected)
 if __name__ == "__main__":
     unittest.main()
