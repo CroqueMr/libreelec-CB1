@@ -61,7 +61,7 @@
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9001-dv-v1-legacy.patch": "09c2da66eddfc83b1ca16aaa12f8d1e8c3c3278c30b3bf2b17372674ce5db070",
     "packages/graphics/nvidia-open-kernel-modules/package.mk": "ddca32440dba462c4a839f1950a7f5703365a7a55ca4c4bc22e3af7c3d0ac764",
     "projects/Generic/filesystem/usr/share/kodi/media/cb1/IncludesDVProcessInfo.xml": "7aeb82566a567e0c6adcdc4ff43e76b0b0b514f4791ca54aa7b05772bee05fd0",
-    "packages/mediacenter/kodi/package.mk": "cf0d3b303a259289645fe102d08e17c696458c5179796532a4cb6e0acf985cdd",
+    "packages/mediacenter/kodi/package.mk": "61bb65dc0bdc083f795f409b8165d955235e5d6a593195c98766dff8d5b52ac1",
     "projects/Generic/patches/linux/linux-9921-amd-dv-diagnostic-and-vrr-guards.patch": "f46665ad8db5131cc6e155b295fe3de8d33c4eadb2f7df8f62dac238967eefab",
     "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9000-drm-max-bpc.patch": "9bc3e372490ad92e975d66f608f69b7ff3c5c97654dc407e02cc9bc0bb67a567",
     "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9003-dv-v1-legacy.patch": "59c8aa2fb2b7621f7db2a7b8e92c8eb2c98e0cb9511d40337ff76f56932071bd",
@@ -85,7 +85,7 @@
     "packages/graphics/nvidia/generate-pci-map.py": "78cef860e69b33ecce878be25debee19feea720c4e6efcdf7707c7ad3a26f774",
     "packages/sysutils/busybox/scripts/kernel-overlays-setup": "6ee00627c50f5ad639708d1437b41062eea7a9debfd5515521cdf689ad763d3d",
     "packages/mediacenter/kodi/patches/9902-headers-only.patch": "01f9dbd516b5aaf59ee7420be913d0928a1eca436504da847d2f5bc4aba5848b",
-    "config/cb1-versions.json": "c072198e42edef3b4b8a890cd997057695f8ded1a6ebbc26e17a6ac6e6696da2",
+    "config/cb1-versions.json": "eb572584522767311c5c93473a37cf9b494ecc596ca9746273e17371ed901ebe",
     "projects/Generic/filesystem/usr/share/kodi/media/cb1-white.png": "72ed1d13473ec391e897b602bcc7d9473e70d5ca8aa3c7c81f99ea87d7dbb4e5",
     "projects/Generic/patches/linux/linux-9900-02-drivers__gpu__drm__i915__display__intel_display_params.c.patch": "687342587646cfff52b26f217cbcc80c8cad40725324e192de67a578d6fdcd0b",
     "projects/Generic/patches/linux/linux-9901-native-hdmi-level-shifter.patch": "09525288b5514cb4595bfffb6c513fc2e1a9f20d47b1a75cbeb3c1db7cc64731",
@@ -529,7 +529,8 @@
     "projects/Generic/patches/linux/linux-9984-amd-sdr-bt2020-deep-color.patch": "b13e61d6d07d3210f2e712bddcca1edd8ceb22c6c3dea751308ceb30605eb640",
     "tests/cb1/test_hdr10_transport.py": "8144fce8f3765a74673fe77c2a124652b1442867bac8e3ff53dcae83bbc4b45b",
     "tests/cb1/test_drm_state_capture.py": "5d270e628d9c89d028c67f06a9fe2623b8df6dddbf89f6776c309a7670800cd0",
-    "tests/cb1/test_nvidia_output.py": "5499c708231055e294eb2aaf19dcf56424822662eaef59c70412e4e39afd6e69"
+    "tests/cb1/test_nvidia_output.py": "5499c708231055e294eb2aaf19dcf56424822662eaef59c70412e4e39afd6e69",
+    "tests/cb1/test_windowed_hdr_video.py": "94ecde95e9e7c1d91f46e734eb8090f622b3d5bee80d3d5aeb8a021bada262fd"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {
