@@ -525,8 +525,9 @@
     "projects/Generic/patches/linux/linux-9984-amd-sdr-bt2020-deep-color.patch": "b13e61d6d07d3210f2e712bddcca1edd8ceb22c6c3dea751308ceb30605eb640",
     "tests/cb1/test_hdr10_transport.py": "1ff179658afd5686d9c18d37e441b8f19b4036d34e6d2aca5be30dddbd7089fa",
     "projects/Generic/devices/OpenGLES/options": "b238b43d60e59c2cfd21036df3436ddd0f412c82c2514afb4c5140a0154219c5",
-    "tests/cb1/test_vulkan_addons.py": "d647153d72c4ae06d8ef792663685462a51f04c98039494228064e3738cf686c",
-    "tests/cb1/test_live_mode_admission.py": "0be73c8425fea3a2a60675eeb9c0d3d5ba13fa09dcfa66ff7cf561d609596106"
+    "tests/cb1/test_vulkan_addons.py": "269250dad60291d670fb2a3778eb89a65c3df0e77068666e0267bb3373c8c0d8",
+    "tests/cb1/test_live_mode_admission.py": "0be73c8425fea3a2a60675eeb9c0d3d5ba13fa09dcfa66ff7cf561d609596106",
+    "packages/graphics/mesa/package.mk": "017eb4290807642e41fb854bf211b40005f5c68c19d407a723afda9a439b001a"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {
