@@ -103,7 +103,11 @@ enum {DVBRIDGE_GAMUT_BT709=1,DVBRIDGE_GAMUT_BT2020=3};
 struct CWinSystemGbmGLESContext : CWinSystemGbmEGLContext {
  enum class SDRBT2020Support { Available };
  SDRBT2020Support GetSDRBT2020Support()const{return SDRBT2020Support::Available;}
+ bool SDRBT2020DeepColorSupported()const{return false;}
  bool m_sdrBT2020Rejected{};
+ std::pair<uint64_t,std::string> m_sdrBT2020OutputKey,m_pendingSDRBT2020OutputKey;
+ std::pair<uint64_t,std::string> SDRBT2020OutputKey()const{return {1,"mode"};}
+ std::optional<int> m_sdrSignal;
  bool requested=false,m_dvStopPending=false,m_dvOrdinaryFrame=false;
  bool m_dvActivating=false,m_dvOutputRetiring=false,m_hdrConversion=false,m_sdrConversion=false,m_dvPriorSDRConversion=false;
  enum class PascalHDRMode {None,Conversion,Native};
@@ -117,7 +121,7 @@ struct CWinSystemGbmGLESContext : CWinSystemGbmEGLContext {
  bool m_failedHDR10SetupRestore=false,m_dvShutdownFence=false,m_dvModeSwitchDeferred=false;
  bool completeOK=true,pollOK=true,restoreOK=true,modeOK=true,recoveryOK=true;
  Capabilities capabilities;
- bool m_dvSuperseded=false,m_dvRollbackFailed=false,m_dvFatalConsumed=false,m_dvNativeFailed=false,m_dvFallbackActive=false;
+ bool m_dvRecoveryPending=false,m_dvSuperseded=false,m_dvRollbackFailed=false,m_dvFatalConsumed=false,m_dvNativeFailed=false,m_dvFallbackActive=false;
  DVBRIDGE::OutputReason m_dvFatalReason=DVBRIDGE::OutputReason::None,m_dvActivationReason=DVBRIDGE::OutputReason::None;
  std::mutex m_dvCapabilityMutex;
  unsigned m_dvAttemptFailures=0,m_hdr10SessionStream=0;

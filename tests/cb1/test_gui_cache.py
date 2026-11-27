@@ -282,7 +282,13 @@ void Sleep(std::chrono::milliseconds duration)
 void glFinish(){}
 enum dvbridge_gamut { DVBRIDGE_GAMUT_BT709, DVBRIDGE_GAMUT_BT2020 };
 constexpr int PL_COLOR_PRIM_BT_2020=3;
-struct DRM{virtual~DRM()=default;};struct CDRMAtomic:DRM{};
+constexpr int LOGWARNING=1;
+struct CLog{template<class... T>static void Log(T...){}};
+constexpr auto SDR_BT2020_DEEP_COLOR="CB1_SDR_BT2020_DEEP_COLOR";
+struct Connector{std::optional<uint64_t> GetPropertyValue(const char*) const {return {};}};
+struct DRM{virtual~DRM()=default;Connector connector;Connector*GetConnector(){return &connector;}
+ void RequestModeset(){}};
+struct CDRMAtomic:DRM{void DiscardPendingColorRequest(){}};
 struct CDVBridgeGLES{
  struct Submission{int sourceSideData=0;};
  struct Output{struct Container{int primaries=PL_COLOR_PRIM_BT_2020;}container;}output;
@@ -293,7 +299,12 @@ struct CDVBridgeGLES{
 };
 struct Window{
  bool m_dvFrame=true,m_cb1FramePending=false;int m_nWidth=3840,m_nHeight=2160,m_videoSourceSideData=1;
- bool m_sdrConversion=false;
+ bool m_sdrConversion=false,m_sdrBT2020Rejected=false,m_dvActivating=false,m_dvSuperseded=false;
+ struct{struct{struct{int gamut=0;}sdr;}policy;}m_dvSelection;
+ bool SDRBT2020DeepColorSupported() const{return false;}
+ std::optional<uint64_t> SDRBT2020MaxBpc() const{return {};}
+ void RejectDVOutputSurface(){assert(false);}
+ void DiscardDVBridgeFrame(){assert(false);}
  std::optional<dvbridge_gamut> m_sdrSignal;
  enum class PascalHDRMode { None, Conversion, Native };
  PascalHDRMode m_pascalHDRMode=PascalHDRMode::None;

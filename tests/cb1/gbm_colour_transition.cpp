@@ -5,6 +5,8 @@
 #include <optional>
 #include <string>
 #include <vector>
+inline constexpr auto SDR_BT2020_DEEP_COLOR="CB1_SDR_BT2020_DEEP_COLOR";
+inline constexpr int DVBRIDGE_GAMUT_BT2020=3;
 struct CDRMPropertyBlob {
  CDRMPropertyBlob()=default;CDRMPropertyBlob(int,void*,int){}
  bool IsValid() const {return true;}uint64_t Get() const {return 1;}
@@ -44,6 +46,13 @@ Blob* drmModeGetPropertyBlob(int,uint64_t){return nullptr;}void drmModeFreePrope
 struct CWinSystemGbmGLESContext {
  std::shared_ptr<CDRMUtils> m_DRM=std::make_shared<CDRMAtomic>();
  CDVBridgeState m_dvState,m_cb1ConnectorState;
+ struct{struct{struct{int gamut=1;}sdr;}policy;}m_dvSelection;
+ bool SDRBT2020DeepColorSupported() const {
+  const auto drm=std::dynamic_pointer_cast<CDRMAtomic>(m_DRM);
+  return drm->connector.SupportsProperty(SDR_BT2020_DEEP_COLOR);
+ }
+ std::optional<uint64_t> SDRBT2020MaxBpc()const{return 10;}
+ uint64_t GetEffectiveMaxBpc(std::optional<uint64_t> restored)const{return restored.value_or(8);}
  bool m_dvStopPending=false;
  bool m_cb1RestoringPreferences=false,m_hdrConversion=false,m_sdrConversion=false,m_dvOrdinaryFrame=false,m_dvEndPending=false;
  bool pendingRestore=false,m_dvOutputSurface=false,pendingSurface=false;
@@ -83,6 +92,24 @@ int main(){
  drm.Commit(false);assert(state.Captured() && drm.connector.cache.at("color format")==1);
  assert(state.Stage(drm,true));drm.Commit(true);state.Restored();
  assert(!state.Captured() && drm.connector.cache.at("color format")==3);
+ // Wide SDR must stage both its ceiling and guard, and restore them together.
+ CDRMAtomic wide;wide.connector.cache["max bpc"]=8;wide.connector.cache[SDR_BT2020_DEEP_COLOR]=0;
+ assert(state.CaptureColorPreferences(wide,8));
+ assert(state.Stage(wide,false,{}, {},10));
+ assert(wide.pending.at("max bpc")==10 && wide.pending.at(SDR_BT2020_DEEP_COLOR)==1);
+ wide.Commit(true);assert(state.Stage(wide,true));
+ assert(wide.pending.at("max bpc")==8 && wide.pending.at(SDR_BT2020_DEEP_COLOR)==0);
+ state.Restored();wide.Commit(true);
+ // A transport captured on wide SDR must remember its ownership for depth
+ // admission, while the ordinary restore must never reactivate the guard.
+ wide.connector.cache["max bpc"]=10;wide.connector.cache[SDR_BT2020_DEEP_COLOR]=1;
+ assert(state.CaptureColorPreferences(wide,8));
+ assert(state.Before(SDR_BT2020_DEEP_COLOR)==1);
+ assert(state.Stage(wide,true));
+ assert(wide.pending.at("max bpc")==8 && wide.pending.at(SDR_BT2020_DEEP_COLOR)==0);
+ state.Restored();wide.Commit(true);wide.connector.cache.erase(SDR_BT2020_DEEP_COLOR);
+ assert(state.CaptureColorPreferences(wide,8) && !state.Stage(wide,false,{}, {},10));
+ assert(wide.pending.empty());state.Restored();
  CDRMAtomic other;assert(!state.Stage(other,true));
  CDRMAtomic absent;assert(state.CaptureColorPreferences(absent,{}));
  assert(!state.Captured() && absent.pending.empty());

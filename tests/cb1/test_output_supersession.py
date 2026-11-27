@@ -209,12 +209,12 @@ struct CDRMAtomic : DRM {
  bool AddProperty(void*,const char*,unsigned){return true;}
 };
 struct GBM {
- int lifetime=0;gbm_bo front,prior;bool pending=false;
+ int lifetime=0;gbm_bo front,prior;bool pending=false,refuseDeep=false;
  struct Lease{gbm_bo*value;gbm_bo*Get(){return value;}};
  GBM&GetDevice(){return *this;}GBM&GetSurface(){return *this;}void*Get(){return this;}
  void UseDVOutputLifetime(){++lifetime;}
  void ReleaseSurfaceBuffers(bool){assert(false);}
- bool CreateSurface(int,int,unsigned format,const uint64_t*,size_t,bool transaction){if(transaction){prior=front;pending=true;}front.format=format;return true;}
+ bool CreateSurface(int,int,unsigned format,const uint64_t*,size_t,bool transaction){if(refuseDeep&&format==30)return false;if(transaction){prior=front;pending=true;}front.format=format;return true;}
  void CompleteOutputSurface(bool accepted){if(pending&&!accepted)front=prior;pending=false;}
 gbm_bo*LockTransactionalBuffer(){return &front;}void CompleteTransactionalBuffer(bool){}void EndTransactionalMode(){}
  Lease LockFrontBuffer(){return {&front};}
@@ -228,9 +228,13 @@ struct CWinSystemGbm {
 struct CWinSystemGbmEGLContext:CWinSystemGbm {
  CEGLContextUtils m_eglContext;
  bool m_dvOutputSurface=false,m_dvSurfacePending=false,m_floatOutputBlocked=false,m_priorOutputVideo=false;
+ bool m_nativeSDRDeepSurfaceBlocked=false,strictNative=false;
+ bool SDRBT2020DeepColorSupported()const{return strictNative;}
+ bool WantsNativeSDRBT2020(const VideoPicture* p)const{return strictNative && p;}
+ std::optional<uint64_t> NativeSDRBT2020Colorspace()const{return strictNative ? std::optional<uint64_t>{1} : std::nullopt;}
  std::unique_ptr<VideoPicture>m_floatOutputPicture;
  Plane*m_priorOutputPlane=nullptr;unsigned m_priorOutputFormat=0;uint64_t m_priorOutputModifier=0;
- virtual int VideoOutputBitDepth(const VideoPicture*p)const{return p?p->colorBits:8;}
+ virtual int VideoOutputBitDepth(const VideoPicture*p)const{return p&&strictNative&&!m_nativeSDRDeepSurfaceBlocked ? 10 : p?p->colorBits:8;}
  virtual bool PrepareHDR10Scanout(const VideoPicture*){return false;}
  virtual bool RetainHDR10ScanoutOnTransition()const{return false;}
  virtual bool RejectDVOutputSurface(){return CompleteDVOutputSurface(false);}
@@ -272,7 +276,13 @@ struct CWinSystemGbmGLESContext : CWinSystemGbmEGLContext {
  enum class SDRBT2020Support { Available, Display, Driver };
  SDRBT2020Support sdrSupport=SDRBT2020Support::Available;
  SDRBT2020Support GetSDRBT2020Support()const{return sdrSupport;}
+ bool strictSDR=false;
+ bool SDRBT2020DeepColorSupported()const{return strictSDR;}
  bool m_sdrBT2020Rejected{};
+ std::pair<uint64_t,std::string> m_sdrBT2020OutputKey,m_pendingSDRBT2020OutputKey;
+ uint64_t edidGeneration=1;
+ std::pair<uint64_t,std::string> SDRBT2020OutputKey()const{return {edidGeneration,"mode"};}
+ std::optional<int> m_sdrSignal;
  unsigned m_dvPendingStream=0,m_dvPendingPolicy=0,m_dvFailedStream=0,m_dvFailedPolicy=0;
  struct {void Cancel(){}bool Commits(uint64_t){return true;}CModeChangeHold::Kind Holding(){return CModeChangeHold::Kind::START;}} m_modeHold;
  CHeldModeAnnouncement m_modeAnnouncement;
@@ -363,6 +373,14 @@ int main(){
  VideoPicture picture;picture.doviSourceBinding={1,1,1};picture.doviMetadata.value=picture.doviSourceBinding;
  picture.doviSourceInfo.profile=8;picture.doviSourceInfo.compatibility=1;picture.hdrType=StreamHdrType::HDR_TYPE_DOLBYVISION;
  auto request=[](Mode mode){DVBRIDGE::current.output=mode;++DVBRIDGE::current.revision;};
+ {
+  CWinSystemGbmEGLContext native;
+  native.strictNative=true;native.m_GBM->refuseDeep=true;
+  auto sdr=picture;sdr.colorBits=8;
+  check(native.SetVideoOutput(&sdr) && native.m_nativeSDRDeepSurfaceBlocked &&
+        native.m_eglContext.GetConfigAttrib(EGL_RED_SIZE)==8,
+        "a failed native deep GBM allocation recreates the original eight-bit drawable");
+ }
  for(int test=0;test<3;++test){
   CWinSystemGbmGLESContext w;setup(w);request(Mode::HDR10);
   check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==10,"HDR initial admission stages native10");
@@ -442,6 +460,19 @@ int main(){
       "a rejected wide gamut remains BT.709 for this playback policy");
   const auto previous=w.m_dvPendingPolicy;++DVBRIDGE::current.revision;DVBRIDGE::current.sdrGamma=2.2;
   check(w.PrepareDVOutputFrame(picture)&&w.m_dvPendingPolicy!=previous&&w.m_dvSelection.policy.sdr.gamut==DVBRIDGE_GAMUT_BT2020,"same effective SDR mode with changed target revision rekeys pending owner");
+ }
+ {
+  CWinSystemGbmGLESContext w;pendingMaster(w);w.strictSDR=true;request(Mode::SDR);
+  DVBRIDGE::current.sdrBT2020=true;
+  check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==10,
+      "strict wide SDR allocates a ten-bit surface");
+  w.m_sdrBT2020Rejected=true;
+  check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==8 &&
+      w.m_dvSelection.policy.sdr.gamut==DVBRIDGE_GAMUT_BT709,
+      "wide rejection retires the deep surface and renders BT.709");
+  ++w.edidGeneration;
+  check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==10,
+      "new EDID allows a fresh ten-bit candidate");
  }
  {CWinSystemGbmGLESContext w;w.m_dvSuperseded=true;check(w.EndDVBridge()&&!w.m_dvSuperseded,"successful already-ordinary cleanup clears cancellation state");}
  {
