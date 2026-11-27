@@ -37,7 +37,7 @@ int main()
   assert(target.sink.version == 2 && target.black == 0);
   assert(std::abs(target.peak - 2484) < 1);
   assert(target.reported[0] == 0.6875 && target.reported[4] == 0.1484375);
-  assert(target.reported != target.primaries);
+  assert(target.reported != target.primaries && target.GamutAdjusted());
   assert(ReadLldvDisplay(edid, 128).status == LldvEdidStatus::Incomplete);
   assert(ReadLldvDisplay(nullptr, 0).status == LldvEdidStatus::Missing);
   edid[7] ^= 1;
@@ -46,9 +46,57 @@ int main()
   cta[9] = 0x68;
   assert(read().status == LldvEdidStatus::UnsupportedBlock);
   cta[9] = 0x48;
+  // The VSVDB v2 uses 1/256 steps; a blue primary just outside BT.2020
+  // must not prevent LLDV, and the original coordinates remain observable.
+  cta[15] = 0x84;
+  target = read();
+  assert(target.status == LldvEdidStatus::Ready);
+  assert(target.reported[4] == 0.1484375 && target.reported[5] == 0.046875);
+  assert(target.reported != target.primaries && target.GamutAdjusted());
+  assert(ValidLldvPrimaries(target.primaries));
+  // Larger deviations are accepted too, as long as the fitted triangle is valid.
   cta[14] = 0x80;
   cta[15] = 0x80;
-  assert(read().status == LldvEdidStatus::UnsupportedGamut);
+  target = read();
+  assert(target.status == LldvEdidStatus::Ready);
+  assert(target.reported[4] == 0.125 && target.reported[5] == 0.03125);
+  assert(target.primaries[4] == 0.131 && target.primaries[5] == 0.046);
+  // A target already within the carrier gamut must be unchanged.
+  cta[14] = 0x45;
+  cta[15] = 0x7f;
+  target = read();
+  assert(target.status == LldvEdidStatus::Ready);
+  assert(target.reported == target.primaries && !target.GamutAdjusted());
+  // An overspecified red x+y can be fitted to a physical carrier primary.
+  cta[14] = 0xfe;
+  cta[15] = 0xff;
+  target = read();
+  assert(target.status == LldvEdidStatus::Ready);
+  assert(target.reported[0] + target.reported[1] > 1.0);
+  assert(ValidLldvPrimaries(target.primaries));
+  // A single zero green x is a populated target, not an empty block.
+  cta[12] = 0;
+  cta[13] = 0x68;
+  cta[14] = 0x45;
+  cta[15] = 0x7f;
+  target = read();
+  assert(target.status == LldvEdidStatus::Ready && target.reported[2] == 0);
+  assert(ValidLldvPrimaries(target.primaries));
+  // Validate the fitted triangle, not its geometry before projection.
+  cta[12] = 0xe6;
+  cta[13] = 0x18;
+  target = read();
+  assert(!ValidLldvPrimaries(target.reported));
+  assert(target.status == LldvEdidStatus::Ready);
+  assert(ValidLldvPrimaries(target.primaries));
+  // A corrected triangle must still contain the reference white point.
+  cta[12] = 0xfe;
+  cta[13] = 0;
+  target = read();
+  assert(target.status == LldvEdidStatus::UnsupportedGamut);
+  assert(!target.GamutAdjusted());
+  assert((target.primaries == std::array<double, 6>{}));
+  // An all-zero encoded primary block is an unusable placeholder.
   cta[12] = 0;
   cta[13] = 0;
   cta[14] = 0;
@@ -60,10 +108,59 @@ int main()
   assert(target.sink.version == 1 && target.peak == 1000 && target.black == 0);
   assert(target.status == LldvEdidStatus::Ready);
   assert(target.reported[1] == 0.3125 && target.reported[2] == 69 / 256.0);
+  cta[12] = 1;
+  target = read();
+  assert(target.status == LldvEdidStatus::Ready);
+  assert(target.reported[4] == 0.125 && target.reported[5] == 0.03125);
+  assert(target.primaries[4] == 0.131 && target.primaries[5] == 0.046);
+  cta[13] = 0;
+  cta[14] = 0;
+  cta[15] = 0;
+  assert(read().status == LldvEdidStatus::InvalidPrimaries);
   cta[12] &= ~3u;
   assert(read().status == LldvEdidStatus::NoLowLatency);
   cta[2] = 4;
   assert(read().status == LldvEdidStatus::NoDolbyVision);
+
+  // Exercise the actual V1/V2 decoders over common and extreme packed fields.
+  // Every accepted target must be in BT.2020 and contain D65; rejected targets
+  // must never expose a fitted gamut as if it were used.
+  constexpr double carrier[][2] = {{.708, .292}, {.170, .797}, {.131, .046}};
+  constexpr unsigned char fields[] = {0, 0x38, 0x7f, 0xbf, 0xfe};
+  unsigned accepted = 0, rejected = 0, adjusted = 0;
+  for (unsigned version : {1u, 2u})
+  {
+    std::memcpy(cta, lg, sizeof(lg));
+    if (version == 1)
+      std::memcpy(cta + 9, shortV1, sizeof(shortV1));
+    for (unsigned char a : fields)
+      for (unsigned char b : fields)
+        for (unsigned char c : fields)
+          for (unsigned char d : fields)
+          {
+            cta[12] = version == 1 ? (a & 0xfcu) | 1u : a;
+            cta[13] = b;
+            cta[14] = c;
+            cta[15] = d;
+            const auto result = read();
+            if (result.status != LldvEdidStatus::Ready)
+            {
+              ++rejected;
+              assert(!result.GamutAdjusted());
+              assert((result.primaries == std::array<double, 6>{}));
+              continue;
+            }
+            ++accepted;
+            adjusted += result.GamutAdjusted();
+            assert(ValidLldvPrimaries(result.primaries));
+            assert(result.GamutAdjusted() == (result.reported != result.primaries));
+            for (size_t i = 0; i < 6; i += 2)
+              for (size_t edge = 0; edge < 3; ++edge)
+                assert(LldvEdge(result.primaries[i], result.primaries[i + 1], carrier[edge],
+                                carrier[(edge + 1) % 3]) >= -1e-12);
+          }
+  }
+  assert(accepted > 0 && rejected > 0 && adjusted > 0);
 }
 '''
         with tempfile.TemporaryDirectory() as work:
@@ -74,6 +171,42 @@ int main()
                             str(kodi / 'xbmc'), str(source), '-o', str(binary)], check=True)
             subprocess.run([binary], check=True)
 
+    def test_adjusted_gamut_notice_is_bound_to_display_details(self):
+        import xml.etree.ElementTree as ET
+        kodi = Path(os.environ['KODI_NATIVE_SOURCE_TREE'])
+        menu = (kodi / 'xbmc/dialogs/DVPlaybackModes.cpp').read_text()
+        select = (kodi / 'xbmc/dialogs/GUIDialogSelect.cpp').read_text()
+        strings = (kodi / 'addons/resource.language.en_gb/resources/strings.po').read_text()
+        self.assertIn('display.GamutAdjusted() ? strings.Get(41343)', menu)
+        self.assertIn('details += "\\n\\n" + gamutNote;', menu)
+        self.assertIn('SetProperty("CB1.LldvDetailNote", gamutNote)', menu)
+        self.assertEqual(select.count('"CB1.LldvDetailNote"'), 2)
+        self.assertIn('msgctxt "#41343"\nmsgid "EDID gamut out of range — adjusted to BT.2020."', strings)
+        for api in ('GL', 'GLES'):
+            owner = (kodi / f'xbmc/windowing/gbm/WinSystemGbm{api}Context.cpp').read_text()
+            self.assertIn('gamut_adjusted={}', owner)
+            self.assertIn('display.GamutAdjusted()', owner)
+            self.assertIn('read_rgb_xy=', owner)
+            self.assertIn('used_rgb_xy=', owner)
+        # Estuary displays a full-width conditional note instead of adding an
+        # overflowing row to the two native columns. All eight detail rows fit.
+        root = ET.parse(kodi / 'addons/skin.estuary/xml/DialogTextViewer.xml').getroot()
+        group = next(g for g in root.iter('control') if g.attrib.get('type') == 'group'
+                     and g.findtext('visible') == '!String.IsEmpty(Window.Property(CB1.LldvDetailLabels))')
+        note = next(c for c in group.findall('control')
+                    if c.findtext('label') == '$INFO[Window.Property(CB1.LldvDetailNote)]')
+        self.assertIn('!String.IsEmpty(Window.Property(CB1.LldvDetailNote))', note.findtext('visible'))
+        self.assertGreaterEqual(int(note.findtext('width')), 720)
+        columns = [c for c in group.findall('control') if c.attrib.get('type') == 'textbox']
+        self.assertEqual(len(columns), 2)
+        self.assertGreaterEqual(int(columns[0].findtext('width')), 340)
+        for column in columns:
+            self.assertGreaterEqual(int(column.findtext('height')), 8 * 41)
+            self.assertLessEqual(int(column.findtext('top')) + int(column.findtext('height')),
+                                 int(note.findtext('top')))
+        close = next(c for c in group.findall('control') if c.attrib.get('type') == 'group')
+        self.assertLessEqual(int(note.findtext('top')) + int(note.findtext('height')),
+                             int(close.findtext('top')))
     def test_selector_accepts_only_the_approved_uhd_cta_modes(self):
         from test_native_video_source import body
 
