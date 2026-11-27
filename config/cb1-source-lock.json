@@ -370,7 +370,7 @@
     "tests/cb1/test_pascal_hdr10_scanout.py": "51c1e4a24733815b9f26bf9b9ebb5f53d50f355d1bb8b9cc3b06bba1b63d6d12",
     "tests/cb1/test_output_window_teardown.py": "e5927c0750c9544b44c6be08d307ac9dc2d0f5cfb691c6048be31f6e2126e987",
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9008-optional-vsif-reference.patch": "5b1f0fea996844004f837559ce7acd714a23bbf5017a1cf12f1950c23bfceeb7",
-    "config/cb1-patch-index.json": "f2ba96b6d1a59be78f051cd1e75a529125f8b95cf6a4b42ab163f8e135107023",
+    "config/cb1-patch-index.json": "0e76caf787aba7409694b8e8408e19dafeca46d2bb295b4a856b3d02f7a3dc27",
     "projects/Generic/patches/linux/linux-9948-intel-hdmi-ready-recovery.patch": "c10f4aa258ca6d2be95a175006389362ccfad3566cff1e892f0b162faf486780",
     "projects/Generic/patches/linux/linux-9970-rx550-native-dv.patch": "1cbb750f5bf019430e7762785824169b0fafcf65f458267d2cec2412c8a0b204",
     "tests/cb1/test_bluray_overlay_order.py": "538775e911baa402d135669964fb31e021a121bf66ee06d95e1068777a9bf27c",
@@ -464,7 +464,7 @@
     "tests/cb1/test_intel_hdmi_pin_out.py": "1b540ed458e20d13a417632ee67109a55204d7286f63b1995a2208127b54427c",
     "tests/cb1/amd_dv_versions.c": "a1fbcb0d09bffd2523281ebe32bba1e132630aa4ffc70ce539272d4336593dec",
     "tests/cb1/test_amd_capability_diagnostics.py": "9e7a6ca7797070e86f83665c9cc267aa6f266c00cb5bbbec0074d823e7552478",
-    "tests/cb1/test_vegam_transport.py": "8cb69f1b72860a24c7fb8a1df337f5c8d84bf519ed006365749f22c6ee290ad8",
+    "tests/cb1/test_vegam_transport.py": "01446bad1ddaf201da49c8d5217a42cfae4138ac82bf19dd53878e068ad4aaaf",
     "projects/Generic/patches/linux/linux-9972-rx550-lldv.patch": "e507b7d0abdb5fd705377a352307b6741dc996d15dc6ec20d23e02f373deddf7",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-lldv-rx550-timing.patch": "6c0837f7991572e63c41cd218edc7c5f93d2b20405e82f377e3f6acf4b9e50d5",
     "projects/Generic/patches/linux/linux-9973-intel-legacy-lldv.patch": "bea4b2a7015841041a643a307627b314cb1e57e7d55ec7331588e1ef360f6c31",
@@ -525,7 +525,9 @@
     ".github/scripts/fetch-kernel-source.sh": "0be5fe7c2860f93c21687b05ec2e0f019d95028572bbeeb1e218f730cec859a5",
     ".github/scripts/verify-kernel-tree.py": "b0bed91993ecccf77ae4aef416f45ede58af36d7bd958f534c1bff3f52322366",
     "tests/cb1/test_ci_kernel_source.py": "4014ae0ea4a6636423234a926deea50aaede01190ed2f9a09c05befe42de2bab",
-    "tests/cb1/nvidia_pascal/hdr10_scanout.cpp": "fbab7adc70757f269ad4a4265ffb25e9ec563bb0fe5b176fb6dff7a319c1e36d"
+    "tests/cb1/nvidia_pascal/hdr10_scanout.cpp": "fbab7adc70757f269ad4a4265ffb25e9ec563bb0fe5b176fb6dff7a319c1e36d",
+    "projects/Generic/patches/linux/linux-9984-amd-sdr-bt2020-deep-color.patch": "b13e61d6d07d3210f2e712bddcca1edd8ceb22c6c3dea751308ceb30605eb640",
+    "tests/cb1/test_hdr10_transport.py": "8144fce8f3765a74673fe77c2a124652b1442867bac8e3ff53dcae83bbc4b45b"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {

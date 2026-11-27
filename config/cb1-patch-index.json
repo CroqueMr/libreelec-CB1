@@ -2451,5 +2451,15 @@
     "files": {
       "kernel-open/nvidia-drm/nvidia-drm-connector.c": "Keep TV-led link color and depth tied to the Dolby VSIF until its retirement."
     }
+  },
+  "projects/Generic/patches/linux/linux-9984-amd-sdr-bt2020-deep-color.patch": {
+    "owner": "Validate only explicitly requested native AMD HDMI SDR BT.2020 deep-color transport.",
+    "files": {
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c": "Validate only explicitly requested native AMD HDMI SDR BT.2020 deep-color transport.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h": "Validate only explicitly requested native AMD HDMI SDR BT.2020 deep-color transport.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c": "Validate only explicitly requested native AMD HDMI SDR BT.2020 deep-color transport.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c": "Validate only explicitly requested native AMD HDMI SDR BT.2020 deep-color transport.",
+      "drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h": "Validate only explicitly requested native AMD HDMI SDR BT.2020 deep-color transport."
+    }
   }
 }
