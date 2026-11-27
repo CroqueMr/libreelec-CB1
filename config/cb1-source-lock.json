@@ -464,7 +464,7 @@
     "tests/cb1/test_intel_hdmi_pin_out.py": "1b540ed458e20d13a417632ee67109a55204d7286f63b1995a2208127b54427c",
     "tests/cb1/amd_dv_versions.c": "a1fbcb0d09bffd2523281ebe32bba1e132630aa4ffc70ce539272d4336593dec",
     "tests/cb1/test_amd_capability_diagnostics.py": "9e7a6ca7797070e86f83665c9cc267aa6f266c00cb5bbbec0074d823e7552478",
-    "tests/cb1/test_vegam_transport.py": "8cb69f1b72860a24c7fb8a1df337f5c8d84bf519ed006365749f22c6ee290ad8",
+    "tests/cb1/test_vegam_transport.py": "01446bad1ddaf201da49c8d5217a42cfae4138ac82bf19dd53878e068ad4aaaf",
     "projects/Generic/patches/linux/linux-9972-rx550-lldv.patch": "e507b7d0abdb5fd705377a352307b6741dc996d15dc6ec20d23e02f373deddf7",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-lldv-rx550-timing.patch": "6c0837f7991572e63c41cd218edc7c5f93d2b20405e82f377e3f6acf4b9e50d5",
     "projects/Generic/patches/linux/linux-9973-intel-legacy-lldv.patch": "bea4b2a7015841041a643a307627b314cb1e57e7d55ec7331588e1ef360f6c31",
@@ -519,7 +519,9 @@
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9010-linux-7.4-drm-state.patch": "51ec3fd81239a1a97a6b3a4194d83bd195149cbf934778640d3a2d3eef5744f7",
     "packages/graphics/nvidia-open-kernel-modules/patches/nvidia-open-kernel-modules-9011-tv-led-carrier-ownership.patch": "80b22b516b8e8f6e5aa083c24518d19314dfafd04a135397b0acbf0ad29fc3e0",
     "projects/Generic/patches/linux/linux-9983-intel-native-hdmi-frl-lab.patch": "4a81e774b09ff5e1979fc9b6b44a414530f0e7c5139423e6571cf48a25748973",
-    "tests/cb1/test_intel_frl_policy.py": "7184ea193cc21748a50a718984a9f7236a9e776d9b6d728105d486f2cebdd80b"
+    "tests/cb1/test_intel_frl_policy.py": "7184ea193cc21748a50a718984a9f7236a9e776d9b6d728105d486f2cebdd80b",
+    "projects/Generic/patches/linux/linux-9984-amd-sdr-bt2020-deep-color.patch": "b13e61d6d07d3210f2e712bddcca1edd8ceb22c6c3dea751308ceb30605eb640",
+    "tests/cb1/test_hdr10_transport.py": "1ff179658afd5686d9c18d37e441b8f19b4036d34e6d2aca5be30dddbd7089fa"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {

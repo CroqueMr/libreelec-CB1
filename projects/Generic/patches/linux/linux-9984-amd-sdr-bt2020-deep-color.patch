@@ -1,0 +1,424 @@
+From 7a23de6eccef6837adf480e00ec650e3b111eb6c Mon Sep 17 00:00:00 2001
+From: CroqueMr <82093548+CroqueMr@users.noreply.github.com>
+Date: Fri, 27 Nov 2026 13:03:20 +0100
+Subject: [PATCH] drm/amd: require deep color for opt-in SDR BT.2020
+
+Expose a separate atomic connector guard for SDR BT.2020 without
+affecting the existing HDR10 or Dolby Vision contracts. Keep candidates
+at or above ten bits and validate the actual native HDMI stream and
+colorimetry after DC negotiation.
+---
+ .../gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c |  21 ++-
+ .../gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h |   2 +
+ .../display/amdgpu_dm/amdgpu_dm_connector.c   |  52 ++++++--
+ .../drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c  | 121 ++++++++++++++++--
+ .../drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h  |   5 +
+ 5 files changed, 184 insertions(+), 17 deletions(-)
+
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
+index cde8af3..7f56cc2 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.c
+@@ -5706,6 +5706,10 @@ STATIC_IFN_KUNIT int dm_update_crtc_state(struct amdgpu_display_manager *dm,
+ 		dm_new_conn_state = to_dm_connector_state(drm_new_conn_state);
+ 		dm_old_conn_state = to_dm_connector_state(drm_old_conn_state);
+ 
++		/* DPMS off has no SDR transport to negotiate. */
++		if (dm_new_conn_state->sdr_bt2020_deep_color && !new_crtc_state->active)
++			goto skip_modeset;
++
+ 		if (!drm_atomic_crtc_needs_modeset(new_crtc_state))
+ 			goto skip_modeset;
+ 
+@@ -5756,10 +5760,18 @@ STATIC_IFN_KUNIT int dm_update_crtc_state(struct amdgpu_display_manager *dm,
+ 		    dm_new_conn_state->dv_standard == dm_old_conn_state->dv_standard &&
+ 		    dm_new_conn_state->lldv_format == dm_old_conn_state->lldv_format &&
+ 		    dm_new_conn_state->hdr10_deep_color == dm_old_conn_state->hdr10_deep_color &&
++		    dm_new_conn_state->sdr_bt2020_deep_color ==
++			    dm_old_conn_state->sdr_bt2020_deep_color &&
++		    amdgpu_dm_sdr_bt2020_stream_valid(dm_new_conn_state,
++						      dm_old_crtc_state->stream) &&
+ 		    amdgpu_dm_is_timing_unchanged_for_freesync(new_crtc_state, old_crtc_state))
+ 			goto skip_modeset;
+ 
+ 		if (dm_new_crtc_state->stream &&
++		    dm_new_conn_state->sdr_bt2020_deep_color ==
++			    dm_old_conn_state->sdr_bt2020_deep_color &&
++		    amdgpu_dm_sdr_bt2020_stream_valid(dm_new_conn_state,
++						      dm_old_crtc_state->stream) &&
+ 		    dc_is_stream_unchanged(new_stream, dm_old_crtc_state->stream) &&
+ 		    dc_is_stream_scaling_unchanged(new_stream, dm_old_crtc_state->stream)) {
+ 			new_crtc_state->mode_changed = false;
+@@ -6753,8 +6765,12 @@ STATIC_IFN_KUNIT int amdgpu_dm_atomic_check(struct drm_device *dev,
+ 		 * penalty of locking the private state object and
+ 		 * allocating a new dc_state.
+ 		 */
+-		if (state->async_update)
++		if (state->async_update) {
++			ret = amdgpu_dm_sdr_bt2020_atomic_check(state);
++			if (ret)
++				goto fail;
+ 			return 0;
++		}
+ 	}
+ 
+ 	/* Check scaling and underscan changes*/
+@@ -6936,6 +6952,9 @@ STATIC_IFN_KUNIT int amdgpu_dm_atomic_check(struct drm_device *dev,
+ 	/* Native DC validation/format selection owns the final depth. Never
+ 	 * promote a requested max bpc or framebuffer depth into a link guarantee. */
+ 	ret = amdgpu_dm_hdr10_atomic_check(state);
++	if (ret)
++		goto fail;
++	ret = amdgpu_dm_sdr_bt2020_atomic_check(state);
+ 	if (ret)
+ 		goto fail;
+ 	{
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h
+index 8ab8cbe..de500bb 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm.h
+@@ -832,6 +832,7 @@ struct amdgpu_dm_connector {
+ 	struct drm_property *lldv_format_property;
+ 	struct drm_property *lldv_native_formats_property;
+ 	struct drm_property *hdr10_deep_color_property;
++	struct drm_property *sdr_bt2020_deep_color_property;
+ 	uint32_t connector_id;
+ 	int bl_idx;
+ 
+@@ -1110,6 +1111,7 @@ struct dm_connector_state {
+ 	bool dv_standard;
+ 	unsigned int lldv_format;
+ 	bool hdr10_deep_color;
++	bool sdr_bt2020_deep_color;
+ 
+ 	enum amdgpu_rmx_type scaling;
+ 	uint8_t underscan_vborder;
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
+index 86e48a5..219c9af 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_connector.c
+@@ -928,6 +928,9 @@ STATIC_IFN_KUNIT void fill_stream_properties_from_drm_display_mode(
+ 	const bool deep_tmds = stream->link &&
+ 		stream->link->connector_signal == SIGNAL_TYPE_HDMI_TYPE_A &&
+ 		amdgpu_dm_hdr10_tmds(connector_state, stream->signal);
++	const bool deep_sdr = connector_state &&
++		to_dm_connector_state(connector_state)->sdr_bt2020_deep_color;
++	const bool deep_color = deep_tmds || deep_sdr;
+ 
+ 	if (connector->connector_type != DRM_MODE_CONNECTOR_WRITEBACK)
+ 		aconnector = to_amdgpu_dm_connector(connector);
+@@ -1042,16 +1045,18 @@ STATIC_IFN_KUNIT void fill_stream_properties_from_drm_display_mode(
+ 	 * candidate, so silently switching to it would hide an enumeration
+ 	 * bug and produce a stream the caller never asked to validate.
+ 	 */
+-	if (deep_tmds && requested_encoding == PIXEL_ENCODING_YCBCR422) {
++	if (deep_color && stream->signal == SIGNAL_TYPE_HDMI_TYPE_A &&
++	    requested_encoding == PIXEL_ENCODING_YCBCR422) {
+ 		timing_out->display_color_depth =
+ 			requested_bpc == 10 && info->max_tmds_clock > 0 &&
+ 			timing_out->pix_clk_100hz <= (unsigned int)info->max_tmds_clock * 10 ?
+ 			COLOR_DEPTH_101010 : COLOR_DEPTH_888;
+-	} else if (deep_tmds) {
++	} else if (deep_color) {
+ 		/* The iterator already selected a depth advertised for this encoding. */
+ 		timing_out->display_color_depth = requested_bpc == 16 ? COLOR_DEPTH_161616 :
+ 			requested_bpc == 12 ? COLOR_DEPTH_121212 : COLOR_DEPTH_101010;
+-		if (!adjust_colour_depth_from_display_info(timing_out, info))
++		if (stream->signal != SIGNAL_TYPE_HDMI_FRL &&
++		    !adjust_colour_depth_from_display_info(timing_out, info))
+ 			timing_out->display_color_depth = COLOR_DEPTH_888;
+ 	} else if (is_hdmi_ep) {
+ 		adjust_colour_depth_from_display_info(timing_out, info);
+@@ -2029,6 +2034,14 @@ int amdgpu_dm_connector_atomic_set_property(struct drm_connector *connector,
+ 		return 0;
+ 	}
+ 
++	if (to_amdgpu_dm_connector(connector)->sdr_bt2020_deep_color_property &&
++	    property == to_amdgpu_dm_connector(connector)->sdr_bt2020_deep_color_property) {
++		if (val > 1)
++			return -EINVAL;
++		dm_new_state->sdr_bt2020_deep_color = val;
++		return 0;
++	}
++
+ 	if (property == to_amdgpu_dm_connector(connector)->dv_standard_property) {
+ 		if (val > 1)
+ 			return -EINVAL;
+@@ -2116,6 +2129,12 @@ int amdgpu_dm_connector_atomic_get_property(struct drm_connector *connector,
+ 		return 0;
+ 	}
+ 
++	if (to_amdgpu_dm_connector(connector)->sdr_bt2020_deep_color_property &&
++	    property == to_amdgpu_dm_connector(connector)->sdr_bt2020_deep_color_property) {
++		*val = dm_state->sdr_bt2020_deep_color;
++		return 0;
++	}
++
+ 	if (property == to_amdgpu_dm_connector(connector)->dv_standard_property) {
+ 		*val = dm_state->dv_standard;
+ 		return 0;
+@@ -2567,7 +2586,7 @@ amdgpu_dm_create_validate_stream_for_sink(struct drm_connector *connector,
+ 	bool is_hdmi_ep = false;
+ 	unsigned int i, j;
+ 
+-	if (!dm_state)
++	if (!dm_state || amdgpu_dm_sdr_bt2020_validate(dm_state))
+ 		return NULL;
+ 
+ 	if (connector->connector_type != DRM_MODE_CONNECTOR_WRITEBACK)
+@@ -2589,7 +2608,9 @@ amdgpu_dm_create_validate_stream_for_sink(struct drm_connector *connector,
+ 	}
+ 
+ 	signal = aconnector->dc_link->connector_signal;
+-	deep_tmds = amdgpu_dm_hdr10_tmds(drm_state, signal);
++	/* SDR and HDR use the same encoding-specific CTA deep-color capabilities. */
++	deep_tmds = amdgpu_dm_hdr10_tmds(drm_state, signal) ||
++		dm_state->sdr_bt2020_deep_color;
+ 	if (deep_tmds && drm_mode_is_420_only(info, drm_mode) && drm_state->color_format &&
+ 	    drm_state->color_format != DRM_CONNECTOR_COLOR_FORMAT_YCBCR420)
+ 		return NULL;
+@@ -2747,6 +2768,10 @@ amdgpu_dm_create_validate_stream_for_sink(struct drm_connector *connector,
+ 					stream->dv_native_lldv ? enc : stream->timing.pixel_encoding);
+ 			}
+ 
++			if (dc_result == DC_OK &&
++			    !amdgpu_dm_sdr_bt2020_stream_valid(dm_state, stream))
++				dc_result = DC_UNSUPPORTED_VALUE;
++
+ 			if (dc_result == DC_OK)
+ 				return stream;
+ 
+@@ -2777,6 +2802,8 @@ enum drm_mode_status amdgpu_dm_connector_mode_valid(struct drm_connector *connec
+ 	int result = MODE_ERROR;
+ 	struct dc_sink *dc_sink;
+ 	struct drm_display_mode *test_mode;
++	struct dm_connector_state probe_state;
++	const struct dm_connector_state *dm_state;
+ 	/* TODO: Unhardcode stream count */
+ 	struct dc_stream_state *stream;
+ 	/* we always have an amdgpu_dm_connector here since we got
+@@ -2812,9 +2839,15 @@ enum drm_mode_status amdgpu_dm_connector_mode_valid(struct drm_connector *connec
+ 			      (test_mode->flags & DRM_MODE_FLAG_3D_FRAME_PACKING) ?
+ 			      CRTC_STEREO_DOUBLE : 0);
+ 
++	/* A session's SDR requirement must not prune the general mode inventory. */
++	dm_state = to_dm_connector_state(connector->state);
++	if (dm_state && dm_state->sdr_bt2020_deep_color) {
++		probe_state = *dm_state;
++		probe_state.sdr_bt2020_deep_color = false;
++		dm_state = &probe_state;
++	}
+ 	stream = amdgpu_dm_create_validate_stream_for_sink(connector, test_mode,
+-						 to_dm_connector_state(connector->state),
+-						 NULL);
++						 dm_state, NULL);
+ 	drm_mode_destroy(connector->dev, test_mode);
+ 	if (stream) {
+ 		dc_stream_release(stream);
+@@ -2945,7 +2978,9 @@ amdgpu_dm_connector_atomic_check(struct drm_connector *conn,
+ 	    to_dm_connector_state(old_con_state)->lldv_format ||
+ 	    !!new_con_state->hdr10plus_metadata != !!old_con_state->hdr10plus_metadata ||
+ 	    to_dm_connector_state(new_con_state)->hdr10_deep_color !=
+-	    to_dm_connector_state(old_con_state)->hdr10_deep_color) {
++	    to_dm_connector_state(old_con_state)->hdr10_deep_color ||
++	    to_dm_connector_state(new_con_state)->sdr_bt2020_deep_color !=
++	    to_dm_connector_state(old_con_state)->sdr_bt2020_deep_color) {
+ 		new_crtc_state = drm_atomic_get_crtc_state(state, crtc);
+ 		if (IS_ERR(new_crtc_state))
+ 			return PTR_ERR(new_crtc_state);
+@@ -3620,6 +3655,7 @@ void amdgpu_dm_connector_init_helper(struct amdgpu_display_manager *dm,
+ 	if (connector_type == DRM_MODE_CONNECTOR_HDMIA
+ 		|| (connector_type == DRM_MODE_CONNECTOR_DisplayPort && !aconnector->mst_root))
+ 		drm_connector_attach_broadcast_rgb_property(&aconnector->base);
++	amdgpu_dm_sdr_bt2020_attach(aconnector);
+ 	amdgpu_dm_dv_attach(aconnector);
+ 
+ 	drm_object_attach_property(&aconnector->base.base,
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c
+index 2ef1aaa..305ea78 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.c
+@@ -64,6 +64,20 @@ static bool dv_lldv_native_supported(enum dce_version version)
+ 	return dv_display_supported(version) || version == DCE_VERSION_11_2;
+ }
+ 
++void amdgpu_dm_sdr_bt2020_attach(struct amdgpu_dm_connector *connector)
++{
++	/* The SDR depth contract is independent of the experimental DV families. */
++	if (connector->base.connector_type == DRM_MODE_CONNECTOR_HDMIA &&
++	    connector->dc_link && dc_is_hdmi_signal(connector->dc_link->connector_signal)) {
++		connector->sdr_bt2020_deep_color_property =
++			drm_property_create_bool(connector->base.dev, DRM_MODE_PROP_ATOMIC,
++						 "CB1_SDR_BT2020_DEEP_COLOR");
++		if (connector->sdr_bt2020_deep_color_property)
++			drm_object_attach_property(&connector->base.base,
++						   connector->sdr_bt2020_deep_color_property, 0);
++	}
++}
++
+ void amdgpu_dm_dv_attach(struct amdgpu_dm_connector *connector)
+ {
+ 	struct amdgpu_device *adev = drm_to_adev(connector->base.dev);
+@@ -191,6 +205,92 @@ int amdgpu_dm_hdr10_atomic_check(struct drm_atomic_commit *state)
+ 	return 0;
+ }
+ 
++int amdgpu_dm_sdr_bt2020_validate(const struct dm_connector_state *state)
++{
++	const struct drm_connector_state *con = &state->base;
++
++	if (!state->sdr_bt2020_deep_color)
++		return 0;
++	if (!con->connector || !con->crtc ||
++	    con->connector->connector_type != DRM_MODE_CONNECTOR_HDMIA ||
++	    !con->connector->display_info.is_hdmi ||
++	    !con->connector->display_info.has_hdmi_infoframe ||
++	    !to_amdgpu_dm_connector(con->connector)->sdr_bt2020_deep_color_property ||
++	    state->hdr10_deep_color || amdgpu_dm_dv_transport(state) ||
++	    con->hdr_output_metadata || con->hdr10plus_metadata ||
++	    con->max_requested_bpc < 10 ||
++	    (con->colorspace != DRM_MODE_COLORIMETRY_BT2020_RGB &&
++	     con->colorspace != DRM_MODE_COLORIMETRY_BT2020_YCC))
++		return -EINVAL;
++
++	return 0;
++}
++
++bool amdgpu_dm_sdr_bt2020_stream_valid(const struct dm_connector_state *state,
++				      const struct dc_stream_state *stream)
++{
++	if (!state->sdr_bt2020_deep_color)
++		return true;
++	if (amdgpu_dm_sdr_bt2020_validate(state) || !stream ||
++	    stream->dv_standard || stream->dv_low_latency || stream->dv_native_lldv ||
++	    !dc_is_hdmi_signal(stream->signal) || !stream->link ||
++	    !dc_is_hdmi_signal(stream->link->connector_signal) ||
++	    stream->link != to_amdgpu_dm_connector(state->base.connector)->dc_link ||
++	    amdgpu_dm_hdr10_depth(stream->timing.display_color_depth) < 10 ||
++	    stream->out_transfer_func.tf == TRANSFER_FUNCTION_PQ ||
++	    stream->out_transfer_func.tf == TRANSFER_FUNCTION_HLG ||
++	    stream->out_transfer_func.tf == TRANSFER_FUNCTION_HLG12 ||
++	    (stream->hdr_static_metadata.valid &&
++	     stream->hdr_static_metadata.sb[1] != HDMI_EOTF_TRADITIONAL_GAMMA_SDR))
++		return false;
++
++	/* A FRL-capable sink can still negotiate a native TMDS stream. */
++	if (stream->signal == SIGNAL_TYPE_HDMI_TYPE_A &&
++	    (stream->phy_pix_clk <= 0 ||
++	     stream->phy_pix_clk > state->base.connector->display_info.max_tmds_clock))
++		return false;
++
++	switch (stream->timing.pixel_encoding) {
++	case PIXEL_ENCODING_RGB:
++		return state->base.colorspace == DRM_MODE_COLORIMETRY_BT2020_RGB &&
++			(stream->output_color_space == COLOR_SPACE_2020_RGB_FULLRANGE ||
++			 stream->output_color_space == COLOR_SPACE_2020_RGB_LIMITEDRANGE);
++	case PIXEL_ENCODING_YCBCR444:
++	case PIXEL_ENCODING_YCBCR422:
++	case PIXEL_ENCODING_YCBCR420:
++		/* DC's AVI builder signals BT.709 for this gamma22 combination. */
++		return state->base.colorspace == DRM_MODE_COLORIMETRY_BT2020_YCC &&
++			stream->output_color_space == COLOR_SPACE_2020_YCBCR_LIMITED &&
++			stream->out_transfer_func.tf != TRANSFER_FUNCTION_GAMMA22;
++	default:
++		return false;
++	}
++}
++
++int amdgpu_dm_sdr_bt2020_atomic_check(struct drm_atomic_commit *state)
++{
++	struct drm_connector *connector;
++	struct drm_connector_state *con;
++	int i;
++
++	for_each_new_connector_in_state(state, connector, con, i) {
++		struct drm_crtc_state *cs;
++
++		if (connector->connector_type != DRM_MODE_CONNECTOR_HDMIA ||
++		    !to_dm_connector_state(con)->sdr_bt2020_deep_color || !con->crtc)
++			continue;
++		cs = drm_atomic_get_new_crtc_state(state, con->crtc);
++		/* No transport to validate while DPMS is off. */
++		if (cs && !cs->active)
++			continue;
++		if (!cs || !amdgpu_dm_sdr_bt2020_stream_valid(to_dm_connector_state(con),
++							     to_dm_crtc_state(cs)->stream))
++			return -EINVAL;
++	}
++
++	return 0;
++}
++
+ static int dv_copy_packet(struct dc_info_packet *packet, const u8 *wire, size_t size)
+ {
+ 	memset(packet, 0, sizeof(*packet));
+@@ -439,13 +539,13 @@ int amdgpu_dm_dv_add_affected(struct drm_atomic_commit *state)
+ 	struct drm_crtc *crtc;
+ 	struct drm_crtc_state *crtc_state;
+ 	struct drm_connector *connector;
+-	struct drm_connector_state *con_state;
++	struct drm_connector_state *con_state, *old_con_state;
+ 	int i, j, ret;
+ 
+ 	for_each_new_crtc_in_state(state, crtc, crtc_state, i) {
+ 		struct dc_stream_state *stream = to_dm_crtc_state(crtc_state)->stream;
+ 		bool requested = stream && stream->dv_standard;
+-		bool hdr10 = false;
++		bool deep_color = false;
+ 		struct drm_connector_list_iter iter;
+ 
+ 		/* Connector state is protected by the native connection lock. */
+@@ -461,20 +561,25 @@ int amdgpu_dm_dv_add_affected(struct drm_atomic_commit *state)
+ 			con_state = connector->state;
+ 			if (connector->connector_type == DRM_MODE_CONNECTOR_HDMIA &&
+ 			    con_state && con_state->crtc == crtc &&
+-			    to_dm_connector_state(con_state)->hdr10_deep_color)
+-				hdr10 = true;
++			    (to_dm_connector_state(con_state)->hdr10_deep_color ||
++			     to_dm_connector_state(con_state)->sdr_bt2020_deep_color))
++				deep_color = true;
+ 		}
+ 		drm_connector_list_iter_end(&iter);
+ 
+-		for_each_new_connector_in_state(state, connector, con_state, j) {
++		for_each_oldnew_connector_in_state(state, connector, old_con_state, con_state, j) {
+ 			if (connector->connector_type == DRM_MODE_CONNECTOR_HDMIA &&
+ 			    con_state->crtc == crtc && amdgpu_dm_dv_transport(to_dm_connector_state(con_state)))
+ 				requested = true;
+ 			if (connector->connector_type == DRM_MODE_CONNECTOR_HDMIA &&
+-			    con_state->crtc == crtc && to_dm_connector_state(con_state)->hdr10_deep_color)
+-				hdr10 = true;
++			    ((con_state->crtc == crtc &&
++			      (to_dm_connector_state(con_state)->hdr10_deep_color ||
++			       to_dm_connector_state(con_state)->sdr_bt2020_deep_color)) ||
++			     (old_con_state->crtc == crtc &&
++			      to_dm_connector_state(old_con_state)->sdr_bt2020_deep_color)))
++				deep_color = true;
+ 		}
+-		if (!requested && !hdr10)
++		if (!requested && !deep_color)
+ 			continue;
+ 		ret = drm_atomic_add_affected_connectors(state, crtc);
+ 		if (ret)
+diff --git a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h
+index 4372ab2..593392e 100644
+--- a/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h
++++ b/drivers/gpu/drm/amd/display/amdgpu_dm/amdgpu_dm_dv.h
+@@ -14,12 +14,17 @@ static inline bool amdgpu_dm_dv_transport(const struct dm_connector_state *state
+ }
+ 
+ u32 amdgpu_dm_lldv_native_formats(struct drm_connector *connector);
++void amdgpu_dm_sdr_bt2020_attach(struct amdgpu_dm_connector *connector);
+ void amdgpu_dm_dv_attach(struct amdgpu_dm_connector *connector);
+ int amdgpu_dm_dv_add_affected(struct drm_atomic_commit *state);
+ int amdgpu_dm_dv_atomic_check(struct drm_atomic_commit *state);
+ int amdgpu_dm_hdr10_validate(const struct dm_connector_state *state);
+ unsigned int amdgpu_dm_hdr10_depth(enum dc_color_depth depth);
+ int amdgpu_dm_hdr10_atomic_check(struct drm_atomic_commit *state);
++int amdgpu_dm_sdr_bt2020_validate(const struct dm_connector_state *state);
++bool amdgpu_dm_sdr_bt2020_stream_valid(const struct dm_connector_state *state,
++				      const struct dc_stream_state *stream);
++int amdgpu_dm_sdr_bt2020_atomic_check(struct drm_atomic_commit *state);
+ int amdgpu_dm_dv_configure_stream(struct dc_stream_state *stream,
+ 				const struct dm_connector_state *state,
+ 				const struct drm_display_mode *mode);
