@@ -15,12 +15,12 @@ check read garbage depths and left INVALID_ENUM pending on desktop GL.
  4 files changed, 32 insertions(+), 5 deletions(-)
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index 312c4b3..1f0253e 100644
+index f4042b1..3f9346f 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -1,7 +1,7 @@
  {
-   "src/dvbridge_fel.c": "6c0d3a7fee253f6eadf03c4a8c7909fd2e97a5395494206bfb1bcd9798a85f4f",
+   "src/dvbridge_fel.c": "cc38c1569fe00c07bb8db57e6ff0d42b376b9917281093d108cfa2f09031ce21",
    "src/dvbridge_gl_pack.h": "2ccd974503fbcbb33678ee2eff076a7a086bcd1796efa97010a1eebb901143f5",
 -  "src/dvbridge_gl_pack.c": "5bbed682b3b2f15de2fb0abeb8010d40e8b995cea7921f3c5e2706f37b21f52d",
 +  "src/dvbridge_gl_pack.c": "dcb6175b3cbe927ce09b3efec05d24100cebf0715c4e72186b8725625c392a60",
@@ -31,14 +31,14 @@ index 312c4b3..1f0253e 100644
    "src/dvbridge_placebo.h": "1ae453d519231b702dcf128fa6a5c8347491485f746023bf5f7c8ef478ccfef4",
    "src/dvbridge_policy.c": "372986bc8bacd0cb68ca4af440a0b255e2954b1f357cfe84a3fbb9199b8b561d",
    "src/dvbridge_policy.h": "560dbfb112f687461ef9f394d867188724dbbd74135329876325fde4cc793392",
--  "src/dvbridge_render.c": "9c46d8f3fcba71ec66468c9fb8ca4a5c74fb6584ffe4dde93ecea8743bdd8118",
-+  "src/dvbridge_render.c": "38ba4135cb139ed405b05c2f65ae2518545c2d28ff15f71f475f608bd98641af",
+-  "src/dvbridge_render.c": "5d8a03a09e4b1108886fe524e2958889da38fa63471eab7872f3c4a30ce6d2b7",
++  "src/dvbridge_render.c": "d98cec0daf29a88249caf34dfd9f6caa1db1a423f31fbb2ca61f3a72007f1eee",
    "src/dvbridge_fel_seek.h": "bdc2944c719f354c4189fd4411e6c5ffe94d1afc4f500d3f5708fce34d12ec58",
    "src/dvbridge_render.h": "c26b48281a291026c766e40aef651482dd18dcd6fd008b33bf85fe7c9e8e1c85",
    "src/dvbridge_gl_frame.c": "6cbcb4b4c0427ca8196dbd4821aa6a771594fe6388c7adfcacd937e45da27c66",
 @@ -81,5 +81,5 @@
    "src/cb1_cmv40.h": "2b29fa2bfde178cf9631a75796465aff805463d8100ad9daaadfa7bc59a5d539",
-   "src/cb1_hdr10_expert.c": "62265a6cf584c3f134aefbfb79ee50f4e033779c89ef10d53c887dacc4b80bdd",
+   "src/cb1_hdr10_expert.c": "f9db6f021c637bd1054cb1593ecf348b46750541a430a5334fd9051d66d06530",
    "src/cb1_hdr10_expert.h": "3600cf66e3cccc82e3d9669a0e2b7390e4d1da7377fb04ffeeec61976e18ba74",
 -  "src/dvbridge_gl_api.h": "d1c315243ac60207e8e67af4eb570facfbd470050e2899e46492cd6b50c22a74"
 +  "src/dvbridge_gl_api.h": "7c716c104de155042bc14f24b31cf134365759677b2188f7249342b290d89ad4"
@@ -93,10 +93,10 @@ index abfbbec..8e835dc 100644
          red != 8 || green != 8 || blue != 8 || samples > 1 || encoding != GL_LINEAR)
          goto restore;
 diff --git a/src/dvbridge_render.c b/src/dvbridge_render.c
-index f82664b..be6c024 100644
+index 58d051d..d7ecf4c 100644
 --- a/src/dvbridge_render.c
 +++ b/src/dvbridge_render.c
-@@ -4066,12 +4066,17 @@ static bool dv_final_framebuffer(unsigned framebuffer,unsigned alpha_bits)
+@@ -4076,12 +4076,17 @@ static bool dv_final_framebuffer(unsigned framebuffer,unsigned alpha_bits)
      GLint draw,read,bits[4],encoding=0;
      glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&draw);glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING,&read);
      glBindFramebuffer(GL_FRAMEBUFFER,framebuffer);

@@ -16,10 +16,17 @@ class DriverReceipt(unittest.TestCase):
 #include <cassert>
 #include <cstdint>
 #include <optional>
+#include <string>
 #include <string_view>
 constexpr int LOGWARNING=1;
-struct CLog {template<class... T> static void Log(T...) {}}
-;
+struct CLog {
+ static inline int warnings=0;
+ static inline std::string operation,status,depth;
+ static void Log(int,const char*) {++warnings;}
+ static void Log(int,const char*,const char* op,std::string st,std::string bpc,uint64_t) {
+  ++warnings; operation=op; status=st; depth=bpc;
+ }
+};
 struct Connector {
  bool driverStatus=true;
  std::optional<uint64_t> status=1,depth=10;
@@ -39,9 +46,10 @@ int main() {
  CDRMAtomic d;
  d.AcceptHDR10Plus(true);assert(d.m_hdr10plusActive && !d.m_hdr10plusClearRequired);
  d.con.status=2;d.AcceptHDR10Plus(true);
+ assert(CLog::warnings==1 && CLog::operation=="enable" && CLog::status=="2" && CLog::depth=="10");
  assert(!d.m_hdr10plusActive && d.m_hdr10plusClearRequired);
  assert(d.m_hdr10plusRejectedGeneration==11 && d.m_hdr10plusRejectedEdid==73);
- d.AcceptHDR10Plus(false);assert(d.m_hdr10plusClearRequired);
+ d.AcceptHDR10Plus(false);assert(d.m_hdr10plusClearRequired && CLog::warnings==1);
  d.con.status=0;d.AcceptHDR10Plus(false);
  assert(!d.m_hdr10plusActive && !d.m_hdr10plusClearRequired);
  for(auto depth:{0,8,9}) {
@@ -52,7 +60,14 @@ int main() {
   d.con.depth=depth;d.AcceptHDR10Plus(true);
   assert(d.m_hdr10plusActive && !d.m_hdr10plusClearRequired);
  }
- d.con.status.reset();d.AcceptHDR10Plus(true);assert(!d.m_hdr10plusActive);
+ d.con.status.reset();d.con.depth.reset();++d.m_hdr10plusGeneration;
+ d.AcceptHDR10Plus(true);assert(!d.m_hdr10plusActive);
+ assert(CLog::warnings==2 && CLog::status=="unavailable" && CLog::depth=="unavailable");
+ d.con.status=1;d.con.depth=8;++d.m_hdr10plusGeneration;
+ d.AcceptHDR10Plus(true);assert(!d.m_hdr10plusActive);
+ assert(CLog::warnings==3 && CLog::status=="1" && CLog::depth=="8");
+ ++d.m_hdr10plusGeneration;d.AcceptHDR10Plus(false);
+ assert(CLog::warnings==4 && CLog::operation=="clear");
  d.con.driverStatus=false;d.AcceptHDR10Plus(true);
  assert(d.m_hdr10plusActive && !d.m_hdr10plusClearRequired);
 }
