@@ -13,7 +13,7 @@
     "version": "22.0 RC2",
     "revision": "d686683a55d50e576dd282f53fb2bf9914931b38",
     "modified": true,
-    "source_revision": "60c2d0ab9de9959ff615c927198176f6793aeb56"
+    "source_revision": "d7de4d1a533492545a9bd1779f3ed9a82aa53865"
   },
   "Linux": {
     "version": "7.4-rc4",
