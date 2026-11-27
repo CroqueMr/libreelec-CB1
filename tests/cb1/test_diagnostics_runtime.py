@@ -798,8 +798,8 @@ int main() {
   assert(w.SetFullScreen(true,film,false));
   assert(!w.m_dvCapabilities.nativeDV && w.m_dvAvailableNativeDV);
   film.rate=60; w.m_DRM->accept=false;
-  assert(w.SetFullScreen(true,film,false)); // Preserve ordinary caller's historical return.
-  assert(!w.m_dvCapabilities.nativeDV);
+  assert(!w.SetFullScreen(true,film,false)); // A refused mode must reach the resolution owner.
+  assert(w.m_DRM->rate==120 && !w.m_dvCapabilities.nativeDV);
   w.m_DRM->accept=true; w.m_DRM->receipt=false;
   assert(w.SetFullScreen(true,film,false));
   assert(!w.m_dvCapabilities.nativeDV); // A test/request is not an accepted mode.
