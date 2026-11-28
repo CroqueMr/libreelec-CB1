@@ -49,13 +49,6 @@ For a fresh installation use the `.img.gz` image. For an existing installation u
 
 [![Quick Switch with Dolby Vision Master Reference active and highlighted](docs/cb1/images/quick-switch-intel-1917-balanced.png)](docs/cb1/images/quick-switch-intel-1917-balanced.png)
 
-## Add-ons
-
-Optional community-maintained tools, installed separately:
-
-- **[CB1 PlayerProcessInfo](https://github.com/frodo19/service-cb1-ppi)** by frodo19 — Customize the Player Information panel's colours, text styling and transparency.
-- **[TinyPPI Mobile](https://github.com/CE-Repo/tinyppi-mobile)** by CE-Repo — Android companion for live playback information, library browsing and remote playback control via the optional CB1 PlayerProcessInfo web server.
-
 ## Dolby Vision
 
 Common sources include **Profile 5**, **Profile 7 MEL/FEL**, **Profile 8.1/8.2/8.4**, and **Profile 10**. Circuit availability also depends on the exact source and output. [Playback settings](docs/cb1/PLAYBACK.md) · [Circuit versions](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/CIRCUITS.md)
@@ -150,10 +143,16 @@ Both tiers require native HDMI. [Performance details](docs/cb1/PERFORMANCE-GUIDE
 - **Video upscalers** — matching live-action and animation crops, median and P95 GPU time, with Kodi Default identified. The source resolution selects one of two filters. [Settings and results](docs/cb1/PERFORMANCE-GUIDE.md#video-upscalers) · [AMD comparison PDF](docs/reports/upscaler-comparison-amd.pdf)
 - **FEL upscaling** — enlarges the enhancement layer during Dolby Vision reconstruction. [VAAPI, Bilinear and Reference GPU comparison](docs/cb1/FEL-UPSCALING.md)
 
+## Add-ons
+
+Optional community-maintained tools, installed separately:
+
+- **[CB1 PlayerProcessInfo](https://github.com/frodo19/service-cb1-ppi)** by frodo19 — Customize the Player Information panel's colours, text styling and transparency.
+- **[TinyPPI Mobile](https://github.com/CE-Repo/tinyppi-mobile)** by CE-Repo — Android companion for live playback information, library browsing and remote playback control via the optional CB1 PlayerProcessInfo web server.
+
 ## What's next?
 
-- **BD-J menus** — Improve performance and rework how Blu-ray menus are handled.
-- **Playback performance** — Optimize decoding and rendering across formats, including Dolby Vision FEL and 60 fps content, and Nvidia drivers
+- **Stability and performance** — The priority is a stable, high-performance build across supported hardware, formats and playback circuits.
 - **Bug fixes** — Investigate and fix previously unknown bugs reported through [GitHub Issues](https://github.com/CroqueMr/libreelec-CB1/issues).
 - **New features** — Add features based on user suggestions.
 
