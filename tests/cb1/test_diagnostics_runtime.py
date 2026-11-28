@@ -145,6 +145,7 @@ struct CDVBridgeGLES {
  uint64_t m_diagnosticStream=7,m_prepares=0,m_directFrames=0,m_presentations=120,m_failedPresentations=0;
  uint64_t m_lastSummary=0,m_lastReported=0,m_rawELImports=0,m_rawELHits=0;
  uint64_t m_lastPresentedSourcePicture=0,m_nonadvancingSource=0,m_sourceGaps=0;
+ uint64_t m_sdrDVOverlayRefreshRevision=0;
  struct Binding{uint64_t stream=7,picture=31,revision=11;}m_pendingBinding;
  struct{uint64_t revision=13;}m_requested;
  int m_effectiveMode=8;
@@ -712,7 +713,7 @@ struct CServiceBroker {
 };
 struct Admission {bool usable=false; DVBRIDGE::OutputReason reason{};};
 struct Caps {unsigned generation=1;bool nativeDV=false,hdr10=false,hdr10plus=false,processingKnown=false;
-  std::array<Admission,7> processing{},hdr10Processing{};};
+  std::array<Admission,7> processing{},hdr10Processing{};std::array<Admission,2> sdrExpansion{};};
 inline int currentEglContext = 1;
 inline int eglGetCurrentContext() {return currentEglContext;}
 inline bool pl_opengl_has_ext(int,const char*) {return true;}
@@ -763,6 +764,7 @@ struct CWinSystemGbmGLESContext:CWinSystemGbm,CRenderSystemGLES {
   bool SupportsDVOutputMode() const {return m_DRM->rate<=60;}
   int m_nWidth=3840,m_nHeight=2160,m_renderableType=EGL_OPENGL_ES3_BIT;
   EGL m_eglContext; Caps m_dvCapabilities; std::mutex m_dvCapabilityMutex;
+  uint64_t m_nativeSDRCapabilityRevision{};
   std::unique_ptr<Info> m_info=std::make_unique<Info>();
   const Info* GetDisplayInfo() const {return m_info.get();}
   std::unique_ptr<CDVBridgeGLES> m_dvBridge;
@@ -791,30 +793,38 @@ int main() {
   CWinSystemGbmGLESContext w;
   w.RefreshDVOutputCapabilities();
   assert(!w.m_dvCapabilities.nativeDV && w.m_dvAvailableNativeDV);
+  assert(w.m_nativeSDRCapabilityRevision==1);
   RESOLUTION_INFO film; film.rate=24000.0/1001;
   assert(w.SetFullScreen(true,film,false));
   assert(w.m_DRM->rate<24 && w.m_dvCapabilities.nativeDV);
+  assert(w.m_nativeSDRCapabilityRevision==2);
   film.rate=120;
   assert(w.SetFullScreen(true,film,false));
   assert(!w.m_dvCapabilities.nativeDV && w.m_dvAvailableNativeDV);
+  assert(w.m_nativeSDRCapabilityRevision==3);
   film.rate=60; w.m_DRM->accept=false;
   assert(!w.SetFullScreen(true,film,false)); // A refused mode must reach the resolution owner.
   assert(w.m_DRM->rate==120 && !w.m_dvCapabilities.nativeDV);
+  assert(w.m_nativeSDRCapabilityRevision==3);
   w.m_DRM->accept=true; w.m_DRM->receipt=false;
   assert(w.SetFullScreen(true,film,false));
   assert(!w.m_dvCapabilities.nativeDV); // A test/request is not an accepted mode.
+  assert(w.m_nativeSDRCapabilityRevision==3);
   w.m_dvStartupEdidUntil=1;
   w.m_dvLldvStatus.display.expected=256;
   w.m_dvLldvStatus.display.received=128;
   w.RefreshDVOutputCapabilities();
   assert(w.PendingDVStartupEdid());
+  assert(w.m_nativeSDRCapabilityRevision==4);
   w.m_dvLldvStatus.display.received=256;
   currentEglContext=EGL_NO_CONTEXT;
   w.RefreshDVOutputCapabilities();
   assert(w.PendingDVStartupEdid());
+  assert(w.m_nativeSDRCapabilityRevision==4);
   currentEglContext=1;
   w.RefreshDVOutputCapabilities();
   assert(!w.PendingDVStartupEdid());
+  assert(w.m_nativeSDRCapabilityRevision==5);
 }
 ''')
 

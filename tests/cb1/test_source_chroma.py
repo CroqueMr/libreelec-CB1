@@ -33,7 +33,7 @@ struct Layer {
  dvbridge_gl_layout layout=DVBRIDGE_P010;int width=16,height=16;
  dvbridge_gl_plane planes[3]{};AVChromaLocation chromaLocation=AVCHROMA_LOC_LEFT;
  struct{unsigned profile=0,informationGeneration=9;}sourceInfo;
- pl_hdr_metadata hdr{};bool hlg=false,fullRange=false;Binding binding;
+ pl_hdr_metadata hdr{};bool hlg=false,fullRange=false;Binding binding;bool sdrInput{};AVColorSpace sdrMatrix=AVCOL_SPC_UNSPECIFIED;AVColorPrimaries sdrPrimaries=AVCOL_PRI_UNSPECIFIED;AVColorTransferCharacteristic sdrTransfer=AVCOL_TRC_UNSPECIFIED;
  unsigned sourceSerial=7;std::shared_ptr<Side> sourceSideData=std::make_shared<Side>();
 };
 bool importOK=true;
@@ -195,6 +195,8 @@ constexpr int AVCHROMA_LOC_UNSPECIFIED=0,AVCHROMA_LOC_LEFT=1,AVCHROMA_LOC_CENTER
        PL_CHROMA_UNKNOWN=10,PL_CHROMA_LEFT=11,PL_CHROMA_CENTER=12,PL_CHROMA_TOP_LEFT=13;
 constexpr int PL_COLOR_SYSTEM_BT_2020_NC=1,PL_COLOR_PRIM_BT_2020=2,
  PL_COLOR_TRC_HLG=3,PL_COLOR_TRC_PQ=4,PL_COLOR_LEVELS_FULL=5,PL_COLOR_LEVELS_LIMITED=6;
+enum {AVCOL_PRI_BT2020=9,AVCOL_PRI_SMPTE170M=6,AVCOL_PRI_BT470BG=5,AVCOL_PRI_BT709=1,AVCOL_TRC_GAMMA22=4,AVCOL_TRC_GAMMA28=5,AVCOL_TRC_IEC61966_2_1=13,AVCOL_SPC_BT2020_NCL=9,AVCOL_SPC_BT709=1,AVCOL_SPC_UNSPECIFIED=2};
+enum {PL_COLOR_PRIM_BT_601_525=7,PL_COLOR_PRIM_BT_601_625=8,PL_COLOR_PRIM_BT_709=9,PL_COLOR_TRC_GAMMA22=10,PL_COLOR_TRC_GAMMA28=11,PL_COLOR_TRC_SRGB=12,PL_COLOR_TRC_BT_1886=13,PL_COLOR_SYSTEM_BT_709=14,PL_COLOR_SYSTEM_BT_601=15};
 struct Binding{bool Valid()const{return true;}};
 struct Dynamic{struct{double maxscl[3]{.1,.2,.3},average_maxrgb=.05;
  unsigned num_distribution_maxrgb_percentiles=0;
@@ -210,7 +212,7 @@ struct HDR{float scene_max[3]{},scene_avg{},min_luma{},max_luma{},max_cll{};int 
  bool operator==(int value)const{return sentinel==value && scene_max[0]==0;}};
 struct Layer {int layout=0,width=8,height=8,planes[3]{};double pts=0;
  Binding binding;Side* sourceSideData=nullptr;unsigned sourceSerial=0;
- bool hlg=false,fullRange=false;int hdr=0;
+ bool hlg=false,fullRange=false,sdrInput=false;int hdr=0,sdrMatrix=0,sdrPrimaries=0,sdrTransfer=0;
  int chromaLocation=AVCHROMA_LOC_LEFT;struct{int profile=8;unsigned informationGeneration=1;}sourceInfo;};
 struct Frame {Frame* enhancement_layer=nullptr;float x=0,y=0;
  struct{int sys=0,levels=0;}repr;struct{int primaries=0,transfer=0;HDR hdr;}color;};

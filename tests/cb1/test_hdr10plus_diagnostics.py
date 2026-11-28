@@ -220,7 +220,7 @@ struct Window {
  struct{struct{int mode;}policy;}m_dvSelection;
  struct{struct{struct{int max_luma=1000;}hdr;}target;struct{bool level6=true;}output;}session;
  int GetOutputBitDepth(){return 10;}bool UseLimitedColor(){return false;}
- void Report(int mode){m_dvSelection.policy.mode=mode;BLOCK}
+ void Report(int mode){bool sdrExpansion=false;m_dvSelection.policy.mode=mode;BLOCK}
 };
 int main(){Window w;w.Report(3);assert(DVBRIDGE::lines.back().find("policy=Expert")!=std::string::npos);
  assert(w.session.target.hdr.max_luma==1000);

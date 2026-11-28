@@ -64,7 +64,7 @@ int main(){
         repo=Path(__file__).resolve().parents[2]
         tree=Path(os.environ['KODI_NATIVE_SOURCE_TREE'])
         s=(tree/'xbmc/cores/VideoPlayer/DVDCodecs/Video/DVOutputSettings.h').read_text()
-        enums='\n'.join(re.findall(r'enum class (?:OutputMode|HDR10SourceMode|HLGSourceMode)[^;]+;',s))
+        enums='\n'.join(re.findall(r'enum class (?:OutputMode|HDR10SourceMode|HLGSourceMode|SDRSourceMode)[^;]+;',s))
         preferences=s.split('struct OutputPreferences',1)[1].split('inline std::mutex&',1)[0]
         render=(tree/'xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp').read_text()
         prepare=body(render,'CDVBridgeGLES::FrameStatus CDVBridgeGLES::PrepareFrame(')
@@ -87,7 +87,7 @@ int main(){
  p.cmv40Mode=4;p.cmv40Headroom=20;p.peak=1234;p.disableL2Trims=true;
  enum class FrameStatus{Ready,Unsupported};
  cb1_cmv40_options prepared{};unsigned preparations=0;
- auto prepareOptions=[&](const dvbridge_policy* selected){auto preferences=p;
+ auto prepareOptions=[&](const dvbridge_policy* selected){auto preferences=p;const bool expansion=false;
   SELECTION
   REJECTION
   ADMISSION

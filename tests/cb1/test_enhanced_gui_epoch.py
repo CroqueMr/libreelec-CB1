@@ -12,9 +12,9 @@ class EnhancedGUIEpoch(unittest.TestCase):
         expression=code[start:code.index(';',start)+1]
         program=r"""
 #include <cassert>
-constexpr int DVBRIDGE_MODE_HDR10_EXPERT=3, DVBRIDGE_MODE_ENHANCED_DV=4,
+constexpr int DVBRIDGE_MODE_HDR10_BASIC=2, DVBRIDGE_MODE_HDR10_EXPERT=3, DVBRIDGE_MODE_ENHANCED_DV=4,
               DVBRIDGE_MODE_MASTER_REFERENCE=5, DVBRIDGE_MODE_SDR=7, DVBRIDGE_MODE_PLAYER_LED=8;
-bool refresh(int mode, bool allowPacked, bool m_committedPacked, bool sameGeometry=true)
+bool refresh(int mode, bool allowPacked, bool m_committedPacked, bool sameGeometry=true, bool expansion=false)
 {
   struct { int mode; } policy{mode};
   bool asyncOverlayRefresh=false;
@@ -23,6 +23,9 @@ bool refresh(int mode, bool allowPacked, bool m_committedPacked, bool sameGeomet
 }
 int main()
 {
+  assert(refresh(DVBRIDGE_MODE_HDR10_BASIC,true,false,true,true));
+  assert(!refresh(DVBRIDGE_MODE_HDR10_BASIC,true,false));
+  assert(!refresh(DVBRIDGE_MODE_HDR10_BASIC,true,true,true,true));
   assert(refresh(DVBRIDGE_MODE_HDR10_EXPERT,true,false));
   assert(!refresh(DVBRIDGE_MODE_HDR10_EXPERT,false,false));
   assert(!refresh(DVBRIDGE_MODE_HDR10_EXPERT,true,false,false));

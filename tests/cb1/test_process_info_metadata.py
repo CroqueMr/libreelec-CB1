@@ -343,7 +343,7 @@ struct Layer {
  dvbridge_gl_layout layout=DVBRIDGE_P010;int width=16,height=16;dvbridge_gl_plane planes[3]{};
  AVChromaLocation chromaLocation=AVCHROMA_LOC_LEFT;
  struct {unsigned profile{},informationGeneration=9;}sourceInfo;
- pl_hdr_metadata hdr{};bool hlg{},fullRange{};
+ pl_hdr_metadata hdr{};bool hlg{},fullRange{};bool sdrInput{};AVColorSpace sdrMatrix=AVCOL_SPC_UNSPECIFIED;AVColorPrimaries sdrPrimaries=AVCOL_PRI_UNSPECIFIED;AVColorTransferCharacteristic sdrTransfer=AVCOL_TRC_UNSPECIFIED;
  struct {bool Valid()const{return true;}}binding;
  unsigned sourceSerial=7;std::shared_ptr<const VideoSourceSideData> sourceSideData;
 };

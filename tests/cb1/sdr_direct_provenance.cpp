@@ -48,7 +48,7 @@ static void decoded(Picture*pVideoPicture,AVFrame*m_pFrame,AVDOVIDecoderConfigur
 }
 static CDVBridgeGLES::Layer copied_layer(std::shared_ptr<Picture>picture){
  struct {std::shared_ptr<Picture>doviSourcePicture;CDVMetadataBuffer doviMetadata;}buffer{picture,picture->doviMetadata};
- const auto&source=*picture;bool hdr10=!source.doviSourceInfo.profile;
+ const auto&source=*picture;bool plain=!source.doviSourceInfo.profile;
  CDVBridgeGLES::Layer layer{};
  @LAYER_BINDING@
  @LAYER_COPY@

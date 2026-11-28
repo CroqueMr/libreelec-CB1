@@ -66,6 +66,7 @@ struct VideoPicture {
 };
 __ACTUAL_BODY_0_END____ACTUAL_BODY_1_END__
 namespace DVBRIDGE {
+ bool IsSDRExpansionSource(const VideoPicture&){return false;}
  OutputPreferences current;
  OutputPreferences FrameOutputSettings(bool=false,bool=false){return current;}
  inline std::string lastStage,lastFailure;
@@ -88,6 +89,7 @@ namespace DVBRIDGE {
 using Capabilities=DVBRIDGE::OutputCapabilities;
 using Selection=DVBRIDGE::OutputSelection;
 struct dvbridge_hdr10_session {struct {unsigned max_luminance=1000,min_luminance=50,max_cll=1000,max_fall=400;bool level6=true;}output;struct {struct {float max_luma=1000;}hdr;}target;};
+decltype(dvbridge_hdr10_session::target) pl_color_space_hdr10{};
 bool dvbridge_hdr10_session_init(dvbridge_hdr10_session*,const void*,size_t){return true;}
 struct CModeChangeHold{enum class Kind{START,STOP};};
 struct CDVWindowRetirement {static void PollOnce(){}};
@@ -167,7 +169,7 @@ struct CDVBridgeGLES {
   bool Close(){++closed;gl=false;return true;}
  };
  enum class FrameStatus {Ready,Pending,Busy,Failed,Reused,Unsupported};
- struct Layer {Binding binding;double pts=0;bool lease=true;int scalingMethod=0;struct {unsigned profile=8; uint64_t informationGeneration{}; }sourceInfo;};
+ struct Layer {Binding binding;double pts=0;bool lease=true,sdrInput=false;int scalingMethod=0;struct {unsigned profile=8; uint64_t informationGeneration{}; }sourceInfo;};
  bool m_submissionAsync=false,m_asyncEligible=false,m_hdr10plusSubmits=false;
  struct {bool asyncEligible=false;}m_submission;
  pl_renderer m_renderer=&rendererToken;pl_opengl m_gl=nullptr;pl_log m_log=nullptr;void*m_packer=&packer;pl_tex m_scanout=nullptr;bool m_pending=false,m_prepared=false,m_live=true,m_hdr10=false;unsigned m_outputBits=0,m_scanoutFramebuffer=0;Binding m_failedIdentity{};
@@ -177,7 +179,7 @@ struct CDVBridgeGLES {
  bool m_direct=false,m_dvPolicyActive=false,m_pendingOverlayVisible=false,m_overlayVisible=false,m_nativeOverlayEnabled=false,m_directUsable=false,m_fallback=false;
  bool Advanced(){return false;}void Reset(){m_pending=m_prepared=false;}int m_spatialMethod=0,m_pendingHDR10Fallback=0,m_nativeOverlay=0;
  dvbridge_gamut m_sdrGamut{};
- uint64_t m_geometryRevision=0,m_committedRevision=0,m_nativeOverlayRevision=0,m_committedOverlayRevision=0,m_pendingOverlayRevision=0;
+ uint64_t m_geometryRevision=0,m_committedRevision=0,m_nativeOverlayRevision=0,m_committedOverlayRevision=0,m_pendingOverlayRevision=0,m_sdrDVOverlayRefreshRevision=0;
  Binding m_committedBinding{},m_pendingBinding{},m_pendingIdentity{};
  decltype(VideoPicture::doviMetadata)m_pendingMetadata;
  dvbridge_mode m_effectiveMode=DVBRIDGE_MODE_DISABLED,m_committedMode=DVBRIDGE_MODE_DISABLED;
@@ -190,7 +192,7 @@ struct CDVBridgeGLES {
   dvbridge_geometry geometry,const DVBRIDGE::OutputPreferences& preferences,bool allowPacked,const dvbridge_policy* selected,bool allowAsync) __ACTUAL_BODY_2_END__
  bool Initialize(bool allowSoftware,bool hdr10,std::shared_ptr<Context> context,bool sdr,unsigned framebuffer=0) __ACTUAL_BODY_18_END__
  void SetHDR10PlusVersion(int){}
- bool SetHDR10Session(const dvbridge_hdr10_session&,unsigned,bool){return true;}
+ bool sessionOK=true;bool SetHDR10Session(const dvbridge_hdr10_session&,unsigned,bool){return sessionOK;}
  bool rebindHDR=false,rebindSDR=false;
  void Cancel(){} bool RebindOutputSurface(bool hdr10,bool sdr=false,unsigned framebuffer=0) __ACTUAL_BODY_19_END__
  template<class... T> Binding SelectionIdentity(T...){return {};}
@@ -198,15 +200,25 @@ struct CDVBridgeGLES {
 struct State {bool CapturePlayerLed(...){captured=true;return true;}bool Capture(...){captured=true;return true;}const char* CaptureFailure(){return "none";}void Restored(){captured=false;}bool captured=false; bool Captured()const{return captured;}
  template<class T> bool Stage(T&,bool){return true;}};
 struct Mode {int hdisplay=3840,vdisplay=2160;unsigned clock=296703,htotal=4400,vtotal=2250;};
-struct Connector {bool SupportsProperty(const char*){return true;}std::optional<unsigned>GetPropertyValue(const char*){return 0;}};
+struct Connector {unsigned guard=0;bool SupportsProperty(const char*){return true;}std::optional<unsigned>GetPropertyValue(const char*){return guard;}};
 struct DRM {virtual ~DRM()=default;Mode mode;const Mode*GetSelectedMode(){return &mode;}};
 struct gbm_bo;
 struct CDRMAtomic : DRM {
  void AllowModeset(){}
  unsigned failures=0;unsigned DVActivationFailures(){return failures;}void FailDVActivation(int){++failures;}void ResetDVActivation(){failures=0;}void SetCB1TimingPeriod(uint64_t){}bool CanRetryDVActivation(bool){return true;}int DVActivationError(){return failures?22:0;}
  Plane plane;Plane*GetGuiPlane(){return &plane;}Plane*GetVideoPlane(){return nullptr;}bool FindVideoPlane(unsigned,uint64_t){return true;}bool FindGuiPlane(unsigned,uint64_t){return true;}bool HasQuirk(int){return false;}void SetActive(bool){}bool TestFramebuffer(gbm_bo*){return true;}
- void SetDVActivationPending(bool){} Connector connector;Connector*GetConnector(){return &connector;}bool IsSelectedModeCommitted(){return true;}bool FlipPageTransactional(void*,bool){return true;}
- bool AddProperty(void*,const char*,unsigned){return true;}
+ void SetDVActivationPending(bool){} Connector connector;Connector*GetConnector(){return &connector;}bool IsSelectedModeCommitted(){return true;}
+ bool recordRecovery=false,rejectNext=false;int guard=-1,metadata=-1;
+ std::vector<std::pair<int,int>> recovery;
+ bool FlipPageTransactional(void*,bool){
+  if(recordRecovery)recovery.emplace_back(guard,metadata);
+  if(rejectNext){rejectNext=false;guard=metadata=-1;return false;}
+  if(guard>=0)connector.guard=guard;
+  guard=metadata=-1;return true;}
+ bool AddProperty(void*,const char*name,unsigned value){
+  if(std::string_view(name)=="DVBRIDGE_HDR10_DEEP_COLOR")guard=value;
+  if(std::string_view(name)=="HDR_OUTPUT_METADATA")metadata=value;
+  return true;}
 };
 struct GBM {
  int lifetime=0;gbm_bo front,prior;bool pending=false,refuseDeep=false;
@@ -317,7 +329,9 @@ bool StopDVBridgePlayback();bool HoldCB1Stop(){return false;}uint64_t m_masterFr
  bool RetireDVContext();
  bool PrepareDVOutputFrame(const VideoPicture&);
  bool ConfigureSDRConversion(const VideoPicture&){return BeginDVBridge();}
-bool RestoreFailedHDR10Setup(){m_failedHDR10SetupRestore=false;return true;}void AnnounceCB1Mode(bool){}void CompleteCB1Mode(bool,bool){}bool FlipDVBridgePage(State& state,bool){state.Restored();return true;}
+bool RestoreFailedHDR10Setup();
+ bool StageOrdinaryHDR10Recovery(){return m_DRM->AddProperty(m_DRM->GetConnector(),"HDR_OUTPUT_METADATA",0);}
+ void CompleteOrdinaryHDR10Recovery(){}void AnnounceCB1Mode(bool){}void CompleteCB1Mode(bool,bool){}bool FlipDVBridgePage(State& state,bool){state.Restored();return true;}
  bool ConfigureHDR10Conversion(const VideoPicture&);
  bool BeginDVBridge();
  bool m_dvHDR10Failed=false,m_dvSDRFailed=false,m_dvPlayerLedFailed=false;
@@ -346,6 +360,7 @@ bool CWinSystemGbmGLESContext::RetireDVContext()__ACTUAL_BODY_6_END__
 bool CWinSystemGbmGLESContext::PrepareDVOutputFrame(const VideoPicture& picture)__ACTUAL_BODY_7_END__
 bool CWinSystemGbmGLESContext::BeginDVBridge()__ACTUAL_BODY_8_END__
 bool CWinSystemGbmGLESContext::ConfigureHDR10Conversion(const VideoPicture& picture)__ACTUAL_BODY_9_END__
+bool CWinSystemGbmGLESContext::RestoreFailedHDR10Setup()__ACTUAL_BODY_26_END__
 bool CWinSystemGbmGLESContext::RejectDVOutputSurface()__ACTUAL_BODY_10_END__
 bool CWinSystemGbmGLESContext::PollRejectedDVSurface()__ACTUAL_BODY_11_END__
 DVBRIDGE::OutputSelection CWinSystemGbmGLESContext::SelectedDVOutput(const VideoPicture* picture) const__ACTUAL_BODY_12_END__
@@ -474,6 +489,28 @@ int main(){
   check(w.PrepareDVOutputFrame(picture)&&w.GetOutputBitDepth()==10,
       "new EDID allows a fresh ten-bit candidate");
  }
+ // A second original stream can reconfigure the existing HDR10 transport.
+ {
+   CWinSystemGbmGLESContext w;setup(w);request(Mode::HDR10);
+   check(w.PrepareDVOutputFrame(picture),"first converted HDR setup");
+   check(w.CompleteDVOutputSurface(true),"accept first converted surface");w.m_dvActivating=false;
+   check(w.m_hdrDeepColorPrevious==0,"first session captures original ordinary guard");
+   w.m_DRM->connector.guard=1; // The first HDR frame was accepted.
+   auto next=picture;next.doviSourceBinding.stream=2;next.doviMetadata.value=next.doviSourceBinding;
+   check(w.ConfigureHDR10Conversion(next),"second converted source setup");
+   check(w.m_hdrDeepColorPrevious==0,"new source must not overwrite original guard with self-owned value");
+   w.m_dvBridge->sessionOK=false;
+   check(!w.ConfigureHDR10Conversion(next),"failed replacement setup");
+   check(w.m_hdrDeepColorPrevious==0,"failed setup must retain original ownership until restore");
+   w.m_DRM->recordRecovery=true;w.m_DRM->rejectNext=true;
+   check(!w.EndDVBridge() && w.m_hdrDeepColorPrevious==0 && w.m_failedHDR10SetupRestore,
+         "a rejected recovery retains ownership");
+   check(w.EndDVBridge() && !w.m_hdrDeepColorPrevious && !w.m_failedHDR10SetupRestore,
+         "an accepted recovery releases ownership");
+   check(w.m_DRM->recovery.size()>=2 && w.m_DRM->recovery[0]==std::pair{0,0} &&
+         w.m_DRM->recovery[1]==std::pair{0,0},"both recovery commits pair SDR metadata with guard zero");
+
+ }
  {CWinSystemGbmGLESContext w;w.m_dvSuperseded=true;check(w.EndDVBridge()&&!w.m_dvSuperseded,"successful already-ordinary cleanup clears cancellation state");}
  {
   CWinSystemGbmGLESContext w;pendingMaster(w);request(Mode::HDR10);w.m_dvContext->pollFailed=true;
@@ -494,6 +531,7 @@ int main(){
   program=program.replace('__ACTUAL_BODY_7_END__',body(window,'bool CWinSystemGbmGLESContext::PrepareDVOutputFrame(const VideoPicture& picture)'))
   program=program.replace('__ACTUAL_BODY_8_END__',body(window,'bool CWinSystemGbmGLESContext::BeginDVBridge()'))
   program=program.replace('__ACTUAL_BODY_9_END__',body(window,'bool CWinSystemGbmGLESContext::ConfigureHDR10Conversion(const VideoPicture& picture)'))
+  program=program.replace('__ACTUAL_BODY_26_END__',body(window,'bool CWinSystemGbmGLESContext::RestoreFailedHDR10Setup()'))
   program=program.replace('__ACTUAL_BODY_10_END__',body(window,'bool CWinSystemGbmGLESContext::RejectDVOutputSurface()'))
   program=program.replace('__ACTUAL_BODY_11_END__',body(window,'bool CWinSystemGbmGLESContext::PollRejectedDVSurface()'))
   program=program.replace('__ACTUAL_BODY_12_END__',body(window,'DVBRIDGE::OutputSelection CWinSystemGbmGLESContext::SelectedDVOutput(const VideoPicture* picture) const'))

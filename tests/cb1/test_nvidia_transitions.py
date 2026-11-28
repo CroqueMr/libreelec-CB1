@@ -33,6 +33,9 @@ struct CDRMAtomic {
   bool IsSelectedModeCommitted() const {return committed;}
   bool IsActive() const {return active;}
   bool SetActive(bool value) {active=value;return true;}
+  struct Connector {bool SupportsProperty(const char*)const{return false;}} connector;
+  Connector* GetConnector(){return &connector;}
+  bool AddProperty(Connector*,const char*,unsigned){return true;}
   Mode* GetSelectedMode() {return &mode;}
   bool FlipPageTransactional(gbm_bo*,bool,bool=false) {
     commits.push_back(active); return static_cast<int>(commits.size())!=reject;
@@ -61,7 +64,7 @@ struct CWinSystemGbm {
   unsigned requeues=0;
   bool StageTransportPreferences(){return true;}
  bool RequeueOutputProperties() {++requeues;return true;}
-  bool FlipDVBridgePage(CDVBridgeState&,bool,bool=false,bool=false,gbm_bo* = nullptr);
+  bool FlipDVBridgePage(CDVBridgeState&,bool,bool=false,bool=false,gbm_bo* = nullptr,bool=false);
 };
 METHOD
 int main() {

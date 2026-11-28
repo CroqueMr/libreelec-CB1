@@ -147,7 +147,8 @@ int main() {
   assert(state.Stage(drm,true));
   assert(drm.staged.at("DVBRIDGE_DV_STANDARD_LAB")==0);
   assert(drm.staged.at("max bpc")==12);
-  assert(drm.staged.at("DVBRIDGE_HDR10_DEEP_COLOR")==1);
+  assert(state.Before("DVBRIDGE_HDR10_DEEP_COLOR")==1);
+  assert(drm.staged.at("DVBRIDGE_HDR10_DEEP_COLOR")==0);
   CDRMAtomic other;
   assert(!state.Stage(other,false));
   CWinSystemGbmGLESContext window{&drm};
