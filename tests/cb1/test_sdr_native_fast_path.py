@@ -80,6 +80,12 @@ int main(){
  DVBRIDGE::native=false;step();assert(requested && w.prepares==6);
  DVBRIDGE::native=true;w.restore=true;w.prepareOK=false;
  assert(!w.PrepareRendererFrame(p,requested));assert(w.prepares==7);
+   auto retained=std::make_shared<VideoPicture>(p);
+   w.m_deferredOrdinaryPicture=retained;
+   w.m_dvOrdinaryFrame=true;
+   assert(w.PrepareRendererFrame(*retained,requested) && !requested && w.prepares==7);
+   w.m_deferredOrdinaryPicture.reset();w.m_dvOrdinaryFrame=false;
+
  w.restore=false;w.prepareOK=true;Context idle;w.m_dvContext=&idle;w.m_dvBridge=true;step();assert(!requested && w.prepares==8);
  step();assert(w.prepares==8);
  w.pending=true;step();assert(w.prepares==9);
