@@ -314,7 +314,7 @@
     "packages/mediacenter/kodi/cb1/src/cb1_hdr10_ingress.c": "cb704114ed95ebc2d6c50aa410f71ec1eb1a74f6c94bfd18d66c09b0e1331032",
     "packages/mediacenter/kodi/cb1/src/dvbridge_policy.c": "372986bc8bacd0cb68ca4af440a0b255e2954b1f357cfe84a3fbb9199b8b561d",
     "packages/mediacenter/kodi/cb1/config/owned-sources.json": "b834ee469184b4ab4b9292efc051cc807c1ef83a161772e270d0dca62c7f42b2",
-    "tests/cb1/test_diagnostics_runtime.py": "84e5a5f3caeeb13b38f9e24fe9596384aa18eab3bcd046c19726c1098c27d842",
+    "tests/cb1/test_diagnostics_runtime.py": "55b71fae9888c5de601b6af791f65e810b23994bf4525ae386bade921284e91e",
     "tests/cb1/test_fel_facts.py": "39717d8a179e5f2f71798f5a9382a6476aba23dfaf0047e7513387aaebc5461c",
     "packages/mediacenter/kodi/cb1/src/dvbridge_render.c": "c08a48036ce3ea5c082f54036a7def395cf44af859053a9998ea64bfe30bb4dc",
     "packages/mediacenter/kodi/cb1/src/cb1_circuit.h": "0257bdfe0ae6c0963b3dd91b0548e518e24e1ec46dba446222dff87cca113045",
