@@ -38,6 +38,7 @@ int main()
   assert(std::abs(target.peak - 2484) < 1);
   assert(target.reported[0] == 0.6875 && target.reported[4] == 0.1484375);
   assert(target.reported != target.primaries && target.GamutAdjusted());
+  assert(!target.SignificantGamutAdjustment()); // actual G5 V2 quantization
   assert(ReadLldvDisplay(edid, 128).status == LldvEdidStatus::Incomplete);
   assert(ReadLldvDisplay(nullptr, 0).status == LldvEdidStatus::Missing);
   edid[7] ^= 1;
@@ -61,12 +62,14 @@ int main()
   assert(target.status == LldvEdidStatus::Ready);
   assert(target.reported[4] == 0.125 && target.reported[5] == 0.03125);
   assert(target.primaries[4] == 0.131 && target.primaries[5] == 0.046);
+  assert(target.SignificantGamutAdjustment());
   // A target already within the carrier gamut must be unchanged.
   cta[14] = 0x45;
   cta[15] = 0x7f;
   target = read();
   assert(target.status == LldvEdidStatus::Ready);
   assert(target.reported == target.primaries && !target.GamutAdjusted());
+  assert(!target.SignificantGamutAdjustment());
   // An overspecified red x+y can be fitted to a physical carrier primary.
   cta[14] = 0xfe;
   cta[15] = 0xff;
@@ -95,6 +98,7 @@ int main()
   target = read();
   assert(target.status == LldvEdidStatus::UnsupportedGamut);
   assert(!target.GamutAdjusted());
+  assert(!target.SignificantGamutAdjustment());
   assert((target.primaries == std::array<double, 6>{}));
   // An all-zero encoded primary block is an unusable placeholder.
   cta[12] = 0;
@@ -113,6 +117,7 @@ int main()
   assert(target.status == LldvEdidStatus::Ready);
   assert(target.reported[4] == 0.125 && target.reported[5] == 0.03125);
   assert(target.primaries[4] == 0.131 && target.primaries[5] == 0.046);
+  assert(target.SignificantGamutAdjustment());
   cta[13] = 0;
   cta[14] = 0;
   cta[15] = 0;
@@ -161,6 +166,25 @@ int main()
           }
   }
   assert(accepted > 0 && rejected > 0 && adjusted > 0);
+  // The warning threshold measures each xy correction, not the six-value sum.
+  LldvDisplay sample{};
+  sample.status = LldvEdidStatus::Ready;
+  const double limit = std::sqrt(2.0) / 256.0;
+  for (size_t i = 0; i < 6; i += 2)
+  {
+    sample.reported[i] = std::nextafter(limit, 0.0);
+    assert(sample.GamutAdjusted() && !sample.SignificantGamutAdjustment());
+    sample.reported[i] = limit;
+    assert(!sample.SignificantGamutAdjustment());
+    sample.reported[i] = std::nextafter(limit, 1.0);
+    assert(sample.SignificantGamutAdjustment());
+    sample.reported[i] = 0;
+  }
+  sample.reported = {1.0/256, 1.0/256, 1.0/256, 1.0/256, 1.0/256, 1.0/256};
+  assert(!sample.SignificantGamutAdjustment());
+  sample.status = LldvEdidStatus::InvalidPrimaries;
+  assert(!sample.SignificantGamutAdjustment());
+
 }
 '''
         with tempfile.TemporaryDirectory() as work:
@@ -177,11 +201,11 @@ int main()
         menu = (kodi / 'xbmc/dialogs/DVPlaybackModes.cpp').read_text()
         select = (kodi / 'xbmc/dialogs/GUIDialogSelect.cpp').read_text()
         strings = (kodi / 'addons/resource.language.en_gb/resources/strings.po').read_text()
-        self.assertIn('display.GamutAdjusted() ? strings.Get(41343)', menu)
+        self.assertIn('display.SignificantGamutAdjustment() ? strings.Get(41343)', menu)
         self.assertIn('details += "\\n\\n" + gamutNote;', menu)
         self.assertIn('SetProperty("CB1.LldvDetailNote", gamutNote)', menu)
         self.assertEqual(select.count('"CB1.LldvDetailNote"'), 2)
-        self.assertIn('msgctxt "#41343"\nmsgid "EDID gamut out of range — adjusted to BT.2020."', strings)
+        self.assertIn('msgctxt "#41343"\nmsgid "EDID primaries adjusted to BT.2020 gamut."', strings)
         for api in ('GL', 'GLES'):
             owner = (kodi / f'xbmc/windowing/gbm/WinSystemGbm{api}Context.cpp').read_text()
             self.assertIn('gamut_adjusted={}', owner)
