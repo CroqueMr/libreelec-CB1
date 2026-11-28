@@ -2,7 +2,7 @@
   "Release": {
     "version": "CB1-R1.2.0",
     "tag": "R1.2.0",
-    "image": "LibreELEC-Generic.x86_64-13.0-CB1-R1.2.0"
+    "image": "LibreELEC-x86_64-13.0-CB1-R1.2.0"
   },
   "LibreELEC": {
     "version": "13 Beta 1 (12.95.1)",
