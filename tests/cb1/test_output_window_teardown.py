@@ -28,7 +28,11 @@ struct CWinSystemGbmEGLContext {
  bool pending=false,retired=false; int destroyed=0;
  bool DestroyWindow(){assert(!pending && retired); ++destroyed; return true;}
 };
+struct VideoPicture {};
 struct CWinSystemGbmGLESContext : CWinSystemGbmEGLContext {
+ std::shared_ptr<const VideoPicture> m_deferredOrdinaryPicture;
+ enum class OrdinaryDraw { Deferred, Awaiting, Attempted, Drawn };
+ OrdinaryDraw m_deferredOrdinaryDraw=OrdinaryDraw::Deferred;
  struct {void Cancel(){}} m_modeHold;
  bool m_dvOrdinaryFrame=false,m_dvStopPending=false,endOK=true,retireOK=true,rollbackOK=true;
  bool recreateOK=true; int rollbacks=0,swaps=0,m_nWidth=1280,m_nHeight=720;
@@ -57,10 +61,14 @@ int main() {
  ordinary.pending=ordinary.m_dvOrdinaryFrame=ordinary.m_dvStopPending=true;
  ordinary.mode=CWinSystemGbmGLESContext::PascalHDRMode::Native;
  ordinary.m_pascalHDRScanout=std::make_unique<int>(1);
+ ordinary.m_deferredOrdinaryPicture=std::make_shared<VideoPicture>();
+ ordinary.m_deferredOrdinaryDraw=CWinSystemGbmGLESContext::OrdinaryDraw::Drawn;
  assert(ordinary.DestroyWindow());
  // Drawable rollback does not complete the stopped movie's SDR cleanup.
  assert(ordinary.destroyed==1 && ordinary.rollbacks==1 && !ordinary.m_dvOrdinaryFrame && ordinary.m_dvStopPending);
  assert(ordinary.mode==CWinSystemGbmGLESContext::PascalHDRMode::None && !ordinary.m_pascalHDRScanout);
+ assert(!ordinary.m_deferredOrdinaryPicture && ordinary.m_deferredOrdinaryDraw==
+        CWinSystemGbmGLESContext::OrdinaryDraw::Deferred);
  CWinSystemGbmGLESContext failed;
  failed.pending=failed.m_dvOrdinaryFrame=true; failed.rollbackOK=false;
  assert(!failed.DestroyWindow() && failed.destroyed==0 && failed.pending);

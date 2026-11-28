@@ -57,6 +57,7 @@ struct CWinSystemGbm {
 };
 struct CWinSystemGbmGLESContext : CWinSystemGbm {
   std::shared_ptr<DRM> m_DRM{&driver, [](DRM*) {}};
+  std::shared_ptr<const int> m_deferredOrdinaryPicture;
   bool m_dvModeSwitchDeferred{};
   DVBRIDGE::SourceBinding m_preparedSource{}, m_cb1PageSource{}, m_cb1DisplayedSource{};
   std::optional<PlayerLedPage> m_playerLedPage;
@@ -129,6 +130,9 @@ int main() {
   cpu.queue.push_back(1);
   assert(pending()); // A new decoder epoch behind a duplicate FIFO head.
   cpu.queue.clear();
+  window.m_deferredOrdinaryPicture = std::make_shared<const int>(1);
+  assert(pending()); // A retained ordinary picture still owns a pending presentation.
+  window.m_deferredOrdinaryPicture.reset();
   manager.m_queued.push_back(1);
   assert(pending());
   manager.m_queued.clear();
