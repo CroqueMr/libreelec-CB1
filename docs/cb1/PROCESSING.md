@@ -3,7 +3,7 @@
 CB1 reconstructs source images, applies the selected processing mode and prepares
 output metadata. Kodi retains decoding, audio, subtitles and playback timing.
 
-Native HDR10/HLG/SDR and [stereoscopic 3D](3D.md) remain outside CB1 conversion.
+Native HDR10/HLG/SDR and [stereoscopic 3D](3D.md) remain outside CB1 conversion. Eligible SDR sources can optionally use the new SDR-to-HDR10 or SDR-to-Dolby-Vision expansion circuits. [SDR default playback](PLAYBACK.md#sdr-default-playback).
 See [hardware support](HARDWARE.md) for supported integrated and dedicated GPUs.
 
 ## Reference and Master Reference
@@ -26,7 +26,7 @@ every profile is accepted by every rendering mode. Unsupported Master inputs use
 the existing output-selection fallback; they are not silently reconstructed by
 the reference algorithm.
 
-The source-tree focus is [Master Reference](../../CB1/docs/MASTER-REFERENCE.md).
+The source-tree focus is [Master Reference](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/MASTER-REFERENCE.md).
 Expert settings select YCbCr or IPT-PQc2 Master output. This changes the payload
 inside the RGB8 Dolby Vision tunnel, not the HDMI container. Profile 5 uses the
 shared direct IPT path in both Master variants.
@@ -223,7 +223,7 @@ metadata, not ordinary 8-bit SDR. HDR10 conversion requires a driver-validated
 10-bit-or-higher output. [Hardware](HARDWARE.md).
 
 Full source equations and execution details are in
-[CB1 algorithms](../../CB1/docs/ALGORITHMS.md).
+[CB1 algorithms](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/ALGORITHMS.md).
 
 
 ## SDR and original HLG routing
@@ -235,7 +235,7 @@ SDR policy mode 7 is reported as telemetry policy 8 because telemetry 7 already
 identifies HDR10+ Rendering. Committed SDR carries flag 32 and reports `sdr`;
 processing metadata stays distinct from transmitted metadata, which is empty.
 
-Original HLG offers native playback, Dolby Vision Rendering and SDR conversion. [HLG engine contracts](../../CB1/docs/SDR-HLG.md)
+Original HLG offers native playback, Dolby Vision Rendering and SDR conversion. [HLG engine contracts](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/SDR-HLG.md)
 The source preference is independent of HDR10/HDR10+ and Dolby Vision. Source
 classification gives Dolby Vision configuration/RPU priority over HLG transfer,
 so P8.4/P10.4 cannot enter plain-HLG analysis. Layer imports retain original HLG

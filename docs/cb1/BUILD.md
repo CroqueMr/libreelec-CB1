@@ -1,6 +1,17 @@
 # CB1 builds
 
-## R1.1.1 Generic release asset
+## CB1-R1.2.0 x86-64 image
+
+Use the [pinned build source](https://github.com/CroqueMr/libreelec-CB1/tree/225e0f7951dd41c4616e95f4e744463c4bf58534) on a non-root Linux x86-64 build host with LibreELEC dependencies. The Generic recipes fetch the exact CB1 1.2, Kodi, FFmpeg, libplacebo and libbluray revisions and verify their archives. The bundled CB1 snapshot remains a historical staging input, not the current linked engine. See [versions and component sources](VERSIONS.md).
+
+```sh
+python3 scripts/cb1-stage.py --check
+PROJECT=Generic ARCH=x86_64 OFFICIAL=no make image
+```
+
+The default output files are `LibreELEC-x86_64-13.0-CB1-R1.2.0.img.gz` and `LibreELEC-x86_64-13.0-CB1-R1.2.0.tar`. The internal platform remains `Generic.x86_64`. `/etc/os-release` reports `CB1-R1.2.0` and `Community & CroqueMr`. The matched driver stacks are NVIDIA R620 620.73.04 and R580 580.196.07.
+
+## Optional externalhelper release asset
 
 Build the optional `externalhelper` add-on from the same source revision as
 the Generic x86_64 image. It includes the private wlroots library that
@@ -10,7 +21,7 @@ restores the HDMI `max bpc` setting after an external Wayland session.
 PROJECT=Generic ARCH=x86_64 ADDON_OVERWRITE=yes ./scripts/create_addon externalhelper
 ```
 
-For the R1.1.1 add-on ABI, use
+For the current 12.80.8 add-on ABI, use
 `target/addons/12.80.8/Generic/x86_64/tools.externalhelper/tools.externalhelper-12.80.8.14.zip`.
 Check the ZIP integrity, the version in `tools.externalhelper/addon.xml` and the
 presence of `tools.externalhelper/lib.private/libwlroots-0.20.so`.
@@ -20,7 +31,7 @@ update TAR. Regenerate `SHA256SUMS` for the staged assets and verify it before
 publishing. Users can install the matching ZIP with **Install from zip file**
 in Kodi.
 
-## Stable image
+## Historical R1.0.0 Stable image
 
 From the Stable source commit, stage the bundled sources and use LibreELEC's
 version overrides for the Generic image.
@@ -36,7 +47,7 @@ Review `/etc/release` and `/etc/os-release` in the assembled SYSTEM. The version
 and builder version both identify Stable. Keep qualification media, profiles
 and diagnostic service overrides in the test environment.
 
-## RC3 build
+## Historical R1.0.0 RC3 build
 
 Requires a Linux x86-64 host, LibreELEC build dependencies and the complete source tree.
 
@@ -46,7 +57,7 @@ published image's active sources and remove obsolete patches accidentally includ
 in the original source export. The original release tag and binary assets are
 unchanged. The source configuration uses the logical ID `R1.0.0-RC3`.
 
-The published [RC3 release](https://github.com/CroqueMr/libreelec-x86-DV/releases/tag/R1.0.0-RC3)
+The published [RC3 release](https://github.com/CroqueMr/libreelec-CB1/releases/tag/R1.0.0-RC3)
 provides ready-to-install images and corresponding-source archives. When building
 from an older source download, use the synchronized checkout above rather than
 reapplying the superseded patches.
@@ -72,7 +83,7 @@ movies, extracted frames and private oracle fixtures are not release inputs.
 
 For regression checks, use the matched-source preparation in
 `.github/scripts/prepare-test-sources.sh` or set the dependency/source paths consumed
-by `tests/cb1`. Engine test requirements are listed in [CB1 build](../../CB1/docs/BUILD.md).
+by `tests/cb1`. Engine test requirements are listed in [CB1 build](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/BUILD.md).
 Hardware-dependent checks require the corresponding GPU and display route.
 The CI preparation exports the matching Kodi archive as `KODI_UPSTREAM_ARCHIVE`;
 native display tests also require the host libdrm development headers.

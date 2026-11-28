@@ -39,4 +39,4 @@ independently of this setting. Player information reports the method actually
 used, not just the saved preference.
 
 [Rendering modes](PROCESSING.md) | [Settings](PLAYBACK.md) |
-[VAAPI implementation details](../../CB1/docs/FEL-VAAPI.md)
+[VAAPI implementation details](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/FEL-VAAPI.md)

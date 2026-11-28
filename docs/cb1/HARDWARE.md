@@ -18,6 +18,7 @@
 | AMD Radeon RX 6000, RDNA 2 | RX 6400, 6600, 6700 XT, 6800, 6900 XT | Supported |
 | AMD Radeon RX 7000, RDNA 3 | RX 7600, 7700 XT, 7800 XT, 7900 XT / XTX | Supported |
 | AMD Radeon RX 9000, RDNA 4 | RX 9070 / 9070 XT | DCN4 transport implemented; physical qualification pending |
+| AMD Radeon RX 550, Lexa | RX 550 (1002:699f) | Experimental, limited native HDMI UHD 23.976 Hz DV/LLDV route; physical qualification pending |
 | AMD Radeon RX Vega M, DCE 11.22 | Vega M GL / GH | Supported, [transport](VEGA-M.md) |
 | Intel Arc A / B | A750, A770, B570, B580 | Supported, [firmware and HDMI](INTEL-ARC.md) |
 | Intel Iris Xe MAX, DG1 | Iris Xe MAX | Supported on an admitted native HDMI path. [Driver and HDMI](INTEL-ARC.md) |
@@ -33,9 +34,9 @@ display engines. DCN4's native color blocks and atomic admission are software
 tested; RX9000 HDMI byte preservation is not physically qualified here.
 Polaris RX400/500 and discrete Vega remain outside the general allowlist. The experimental RX 550 path applies to device 1002:699f at UHD 23.976 Hz in standard TV-led Dolby Vision. Vega-based Ryzen APUs use a different display path.
 
-NVIDIA uses matched 615.78.08 open kernel modules, firmware, proprietary userspace
+NVIDIA uses matched 620.73.04 open kernel modules, firmware, proprietary userspace
 and a VAAPI-to-NVDEC bridge. The default open-module stack requires Turing or
-newer. Pascal automatically selects the matched R580 stack in the same image.
+newer. Pascal automatically selects the matched R580 580.196.07 stack in the same image.
 [NVIDIA driver requirements](https://github.com/NVIDIA/open-gpu-kernel-modules#compatible-gpus)
 and [licensing](LICENSING.md).
 

@@ -7,7 +7,7 @@ Join the [LibreELEC forum thread](https://forum.libreelec.tv/thread/30362-x86-64
 1. In Kodi, go to **Settings → System → Logging** and turn on **Enable debug logging**.
 2. Reproduce the problem. Note when it happened and what you did just before it.
 3. Go to **Settings → LibreELEC → System → Submit Log**. Select **Upload latest Kodi log and configs, and view the short URL**. If Kodi crashed, upload the latest crash log from the same menu too.
-4. [Open a GitHub issue](https://github.com/CroqueMr/libreelec-x86-DV/issues/new/choose) and paste the short URL displayed on screen into the **Debug log short URL** field. Include the build version, CPU/GPU, TV or projector, HDMI connections, source format and frame rate, and the selected playback mode. Describe what you expected, what happened, and the exact steps to reproduce it.
+4. [Open a GitHub issue](https://github.com/CroqueMr/libreelec-CB1/issues/new/choose) and paste the short URL displayed on screen into the **Debug log short URL** field. Include the build version, CPU/GPU, TV or projector, HDMI connections, source format and frame rate, and the selected playback mode. Describe what you expected, what happened, and the exact steps to reproduce it.
 5. Turn debug logging off when you're done.
 
 ## Request a feature

@@ -15,7 +15,7 @@ successful-output receipt.
 | AMD admitted DCN 1.x / 2.x / 3.x families | Admitted DV route | Native AMD output | Frame-owned output, at least 10 bits | Same frame-owned deep output |
 | AMD DCN4.01 / 4.2 / 4.2B | Implemented DV route; physical qualification pending | Native AMD output | Shared frame-owned output, at least 10 bits | Same guarded output contract |
 | AMD Vega M, DCE11.22 | Supported | Native DCE output | Supported DCE packet path | Supported guarded DCE deep output |
-| NVIDIA R615, Turing and newer | Supported | Native output, PQ and HLG capabilities checked separately | Supported commit-coupled native packet routes | Same supported deep-output routes |
+| NVIDIA R620, Turing and newer | Supported | Native output, PQ and HLG capabilities checked separately | Supported commit-coupled native packet routes | Same supported deep-output routes |
 | NVIDIA R580, same image | Supported | Native output, PQ and HLG capabilities checked separately | Supported native HDMI 4:2:2 10-bit route | Same supported 4:2:2 10-bit route |
 
 Ordinary native HDR follows each driver's policy, including dithering where
@@ -39,17 +39,16 @@ Intel DP converters remain subject to their native protocol validation.
 AMD DV remains limited to its explicit display-engine allowlist. Vega M is a
 separate supported DCE11.22 path. DCN4.01/4.2/4.2B reuse verified native neutral
 color-block programming; physical RX9000 output remains unqualified.
-Discrete Polaris/Vega are not admitted. Native HDR admission is separate from
+Discrete Polaris/Vega are outside the general DV allowlist, apart from the narrow experimental RX 550 Lexa route. Native HDR admission is separate from
 the custom DV allowlist.
 
-R615 retains matched 615.78.08 modules, firmware and userspace. Its native depth
+R620 uses matched 620.73.04 modules, firmware and userspace. Its native depth
 ceiling is 12 bits; EDID and bandwidth still gate selection. This can also raise
 automatic SDR/DP/4:2:2 depth. The existing ordinary max-bpc property uses native
 automatic selection from 10 upward, not a newly guaranteed hard ceiling.
 Strict HDR requests instead honor their requested ceiling: below 10 is refused,
 10/11 requests 10, and 12 or more tries validated native 12 then 10.
-DV remains explicitly 8-bit. Actual accepted depth is queried, not inferred from
-the framebuffer.
+Standard TV-led Dolby Vision uses its RGB8 tunnelling contract; native player-led LLDV uses an admitted deep-colour transport. Actual accepted depth is queried, not inferred from the framebuffer.
 
 NVIDIA HDR10+ uses native packet slots: unreserved legacy slots on Turing/Ampere,
 the second shared slot on Ada and advanced slot 9 on Blackwell, outside the
@@ -94,7 +93,7 @@ late-apply fault suppresses the accepted HDR10+ state and requires an explicit
 successful clear. Uncertain occupied slots are not silently reused. Stop and
 DV/HDR/SDR transitions restore the output contract.
 
-R615 refuses native VRR reuse of an owned or uncertain legacy slot until a
+R620 refuses native VRR reuse of an owned or uncertain legacy slot until a
 separate clear succeeds. R580 preserves a slot already taken by a native EMP
 owner and retains the HDR10+ fault instead of disabling that owner's packet.
 An unresolved native presentation can require driver recovery; no synthetic
@@ -111,6 +110,8 @@ packet. Kodi rejects native HDR10+ staging if its actual drawable falls below
 | --- | --- |
 | DV Reference / Master Reference / Adaptive | Admitted DV V1/V2 TV-Led link |
 | HDR10 to Dolby Vision Rendering / Dolby Vision Adaptive HDR Mapping | Same admitted DV link |
+| SDR / HLG to Dolby Vision Rendering | Same admitted TV-led DV link |
+| SDR to HDR10 Rendering | Native PQ output, actual depth at least 10 bits |
 | HDR10+ to DV, metadata-guided | Same admitted DV link. HDR10+ Native explicitly enables the native source path. |
 | DV to HDR10 Rendering / LLDV Reference – HDR10 Output | Native PQ output, actual depth at least 10 bits |
 | LLDV Reference – Native | Dolby Vision EDID target, compatible driver and low-latency HDMI transport |

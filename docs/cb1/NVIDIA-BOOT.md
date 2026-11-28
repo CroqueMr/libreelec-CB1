@@ -1,5 +1,7 @@
 # NVIDIA startup: R580 candidate and KMS ordering
 
+Historical startup investigation. For the current R620/R580 image, see [Versions](VERSIONS.md).
+
 Local candidate based on RC3 (`80a9ab2d6218e0e83fb8e0ee4127bd5c60eced26`).
 Not a claim of a successful physical GTX or Xonar boot.
 
