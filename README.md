@@ -19,7 +19,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="docs/cb1/images/cb1-version-white-dot.svg">
-  <img src="docs/cb1/images/cb1-version-light.svg" alt="CB-R1.1.2 · CB1 1.1" width="100%">
+  <img src="docs/cb1/images/cb1-version-light.svg" alt="CB-R1.2.0 · CB1 1.2" width="100%">
 </picture>
 
 <p align="center">

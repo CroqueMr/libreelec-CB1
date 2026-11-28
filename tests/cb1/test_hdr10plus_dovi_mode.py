@@ -1,5 +1,6 @@
 """Run native HDR10+-guided selection and selected-picture metadata ownership."""
 import os
+import json
 from pathlib import Path
 import re
 import subprocess
@@ -9,6 +10,8 @@ from test_native_video_source import TREE, body
 
 REPO = Path(__file__).resolve().parents[2]
 ENGINE = Path(os.environ.get('CB1_TEST_ENGINE', str(REPO/'CB1')))
+EXPECTED_ENGINE = 'CB1 ' + (json.loads((REPO/'config/cb1-versions.json').read_text())['CB1']['version']
+                            if os.environ.get('CB1_TEST_ENGINE') else '1.1')
 
 
 class HDR10PlusDVModeTests(unittest.TestCase):
@@ -304,7 +307,7 @@ int main(){
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
             code, binary = root/'check.cpp', root/'check'
-            code.write_text('#include "cb1_cmv40.h"\n'+program)
+            code.write_text('#include "cb1_cmv40.h"\n'+program.replace("EXPECTED_ENGINE", EXPECTED_ENGINE))
             objects = []
             for index, source in enumerate(sources):
                 if source.suffix != '.c':
@@ -394,7 +397,7 @@ int main(){
 #include <cassert>
 #include <cstring>
 int main(){
- assert(!std::strcmp(cb1_engine_version(),"CB1 1.1"));
+ assert(!std::strcmp(cb1_engine_version(),"EXPECTED_ENGINE"));
  assert(CB1_DV_HDR10PLUS==12 && CB1_HDR10_DV_REFERENCE==7 && CB1_HDR10_DV_ADAPTIVE==8);
  const char* guided=cb1_circuit_version(static_cast<cb1_circuit>(13));
  assert(guided && !std::strcmp(guided,"CB1-HDR10PDVR.1.0"));
@@ -943,7 +946,7 @@ int main(){
  assert(result.informationGeneration==17 && !result.metadata && result.output.hdr10PlusDV);
  assert(result.output.guidedSourceFields==2 && result.output.guidedEstimatedFields==5);
  assert(result.output.untranslatedCurve && result.output.untranslatedSaturation);
- assert(result.output.circuit=="CB1-HDR10PDVR.1.0" && result.output.engine=="CB1 1.1");
+ assert(result.output.circuit=="CB1-HDR10PDVR.1.0" && result.output.engine=="EXPECTED_ENGINE");
  assert(result.output.emittedL1[1]==3079);
  assert(CDVPlaybackInfo::Mode(result.output)=="Dolby Vision : Rendering");
  // Display mapping is a committed-frame fact, independent of later preferences.

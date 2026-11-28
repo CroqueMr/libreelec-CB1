@@ -30,7 +30,7 @@ class ReleaseTests(unittest.TestCase):
         script = "unset " + " ".join(keys) + "\n" + defaults
         script += '\nprintf "%s\\n" "$CUSTOM_VERSION" "$BUILDER_VERSION" "$BUILDER_NAME" "$CB1_HDR10_AI"'
         result = subprocess.check_output(["bash", "-c", script], text=True).splitlines()
-        version = "CB-R1.1.2"
+        version = "CB-R1.2.0"
         self.assertEqual(result, [version, version, "Community & CroqueMr", "yes"])
         versions = json.loads((ROOT / "config/cb1-versions.json").read_text())
         self.assertEqual(versions["Release"]["version"], result[1])
