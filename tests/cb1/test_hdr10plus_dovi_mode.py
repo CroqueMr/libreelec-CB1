@@ -525,6 +525,9 @@ int main(){
 #include <vector>
 namespace DVBRIDGE { ENUMS
 PREFERENCES
+enum class OutputRoute {Vanilla,NativeDV,HDR10,SDR,PlayerLed};
+struct OutputSelection {OutputRoute route{};dvbridge_policy policy{};OutputReason reason{};};
+OutputSelection SelectSDRExpansionOutput(const OutputPreferences& preferences,const OutputCapabilities& caps) EXPANSION
 }
 enum class StreamHdrType{HDR_TYPE_NONE,HDR_TYPE_HDR10PLUS,HDR_TYPE_HLG};
 struct CDVPlaybackModes {static StreamHdrType SourceType(){return StreamHdrType::HDR_TYPE_NONE;}};
@@ -573,7 +576,7 @@ int main(){
   assert(!settings[2].properties.back().second);
  }
 }
-'''.replace('ENUMS',enums).replace('PREFERENCES',preferences).replace('ADMISSION',admission))
+'''.replace('ENUMS',enums).replace('PREFERENCES',preferences).replace('EXPANSION',body((TREE/'xbmc/cores/VideoPlayer/DVDCodecs/Video/DVOutputSelection.h').read_text(),'inline OutputSelection SelectSDRExpansionOutput(')).replace('ADMISSION',admission))
 
     def test_only_captured_selected_metadata_can_guide_a_full_source_picture(self):
         helper = TREE/'xbmc/cores/VideoPlayer/VideoRenderers/HDR10PlusDVSource.h'
@@ -783,6 +786,7 @@ struct Picture {
  int64_t doviSourcePts=1000;unsigned iFlags=0;std::string stereoMode;
  std::shared_ptr<const VideoSourceSideData> sourceSideData;
 };
+namespace DVBRIDGE { bool IsSDRExpansionSource(const Picture&){return false;} }
 struct Window {
  bool m_dvImportUsable=false;DVBRIDGE::SourceBinding m_dvImportBinding{};
  uint64_t m_dvImportGeneration=0;
