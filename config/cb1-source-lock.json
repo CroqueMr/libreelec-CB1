@@ -318,7 +318,7 @@
     "tests/cb1/test_fel_facts.py": "39717d8a179e5f2f71798f5a9382a6476aba23dfaf0047e7513387aaebc5461c",
     "packages/mediacenter/kodi/cb1/src/dvbridge_render.c": "c08a48036ce3ea5c082f54036a7def395cf44af859053a9998ea64bfe30bb4dc",
     "packages/mediacenter/kodi/cb1/src/cb1_circuit.h": "0257bdfe0ae6c0963b3dd91b0548e518e24e1ec46dba446222dff87cca113045",
-    "README.md": "db137e5fee0f5eefa27260d9601a1b7bdb8efaa68716aef2e469cb6940cea126",
+    "README.md": "142c8a77e65e8e4edeee09a6b9a50c1cd7db601e01bea96b46ef4fa417951797",
     "docs/cb1/README.md": "5caa320f72a1dd04ca4929d0db85741e49cc09ee3abd24e635b258bdef032fb9",
     "docs/cb1/RELEASE-RC4-PREVIEW-UPDATE3.md": "29c6368b9f8d424e3a56f0fddbfccc714b79762e1ba8a540d712e7f55781ebdb",
     "tests/cb1/test_sdr_capture_color.py": "71bff46f3c9de349bdd3762dcef48d3f024f89e82e025537851490ea658242bc",
