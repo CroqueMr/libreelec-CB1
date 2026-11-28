@@ -119,9 +119,10 @@ struct Binding{int picture=0;bool Valid()const{return picture>0;}};
 struct Metadata{const char* Data()const{return "dv";}::Binding Binding()const{return {1};}};
 struct Picture{SourceInfo doviSourceInfo;std::shared_ptr<Side> sourceSideData;int chroma_position{};::Binding doviSourceBinding{1};
  StreamHdrType hdrType=StreamHdrType::HDR_TYPE_DOLBYVISION;double pts=1000000,doviSourcePts=1000000;
- int color_range{};bool hasDisplayMetadata{},hasLightMetadata{};
+ int color_range{},color_space{},color_primaries{},color_transfer{};bool hasDisplayMetadata{},hasLightMetadata{};
  struct{bool has_luminance{};double max_luminance{},min_luminance{};}displayMetadata;
  struct{unsigned MaxCLL{},MaxFALL{};}lightMetadata;};
+namespace DVBRIDGE {bool IsSDRExpansionSource(const Picture&){return false;}}
 struct Plane{unsigned id,texwidth,texheight;};
 struct YuvImage{int plane[3]{},stride[3]{};};
 struct VideoBuffer{void GetPlanes(int*){} void GetStrides(int*){}};
@@ -130,7 +131,7 @@ struct Buffer{std::shared_ptr<Picture>doviSourcePicture=std::make_shared<Picture
  Metadata doviMetadata;double doviPts=100;bool loaded=false;YuvImage image;
  Plane fields[1][3]={{{11,3840,1920},{12,1920,960},{13,1920,960}}};};
 struct CDVBridgeGLES{struct Layer{int layout{},scalingMethod{},autoScalingMethod{},width{},height{};
- double pts{};::Binding binding{};std::shared_ptr<void>lease;SourceInfo sourceInfo;std::shared_ptr<Side> sourceSideData;unsigned sourceSerial{};int chromaLocation{};bool fullRange{},hdr10PlusSource{},hlg{};HDR hdr;
+ double pts{};::Binding binding{};std::shared_ptr<void>lease;SourceInfo sourceInfo;std::shared_ptr<Side> sourceSideData;unsigned sourceSerial{};int chromaLocation{};bool fullRange{},hdr10PlusSource{},hlg{},sdrInput{};int sdrMatrix{},sdrPrimaries{},sdrTransfer{};HDR hdr;
  struct{unsigned texture;int width,height;}planes[3]{};};};
 struct WindowBase{virtual ~WindowBase()=default;};
 namespace KODI::WINDOWING::GBM{struct CWinSystemGbmGLESContext:WindowBase{

@@ -22,7 +22,7 @@ class PausedQuickSwitch(unittest.TestCase):
 #include <memory>
 #include <string>
 enum class StreamHdrType { HDR_TYPE_NONE, HDR_TYPE_HDR10, HDR_TYPE_DOLBYVISION,
- HDR_TYPE_HLG, HDR_TYPE_HDR10PLUS };
+ HDR_TYPE_HLG, HDR_TYPE_HDR10PLUS, HDR_TYPE_COUNT };
 struct VideoStreamInfo {bool valid{};StreamHdrType hdrType{};std::string stereoMode;};
 constexpr int CURRENT_STREAM=-1, WINDOW_DIALOG_SELECT=12000, LOGINFO=1, LOGDEBUG=0;
 struct CApplicationPlayer {
@@ -44,7 +44,7 @@ struct CServiceBroker {
  static Resources& GetResourcesComponent(){static Resources value;return value;}
 };
 namespace DVBRIDGE {
-struct Capabilities {bool stereoSource{},sourceKnown{},isDV{},isHDR10{};};
+struct Capabilities {bool stereoSource{},sourceKnown{},isDV{},isHDR10{},isSDR{};};
 struct Snapshot {struct {Capabilities capabilities;}transaction;};
 struct StreamTelemetry {static inline Snapshot value;static Snapshot Read(){return value;}};
 template<class... T>void DiagnosticLog(T...){}
@@ -74,6 +74,10 @@ int main(){
  for(auto type:{H::HDR_TYPE_NONE}){
   player->info={true,type,""};assert(!CDVPlaybackModes::ShowMenu());
  }
+ old.isDV=false;old.isSDR=true;
+ player->info={true,H::HDR_TYPE_NONE,"mono"};assert(CDVPlaybackModes::ShowMenu());
+ player->info={false,H::HDR_TYPE_NONE,""};assert(!CDVPlaybackModes::ShowMenu());
+ player->info={true,H::HDR_TYPE_NONE,"left_right"};assert(!CDVPlaybackModes::ShowMenu());
  player->info={true,H::HDR_TYPE_DOLBYVISION,"left_right"};assert(!CDVPlaybackModes::ShowMenu());
  player->info={false,H::HDR_TYPE_DOLBYVISION,""};assert(!CDVPlaybackModes::ShowMenu());
  player->info.valid=true;player->active=false;assert(!CDVPlaybackModes::ShowMenu());

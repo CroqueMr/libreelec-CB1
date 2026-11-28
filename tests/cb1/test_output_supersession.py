@@ -66,6 +66,7 @@ struct VideoPicture {
 };
 __ACTUAL_BODY_0_END____ACTUAL_BODY_1_END__
 namespace DVBRIDGE {
+ bool IsSDRExpansionSource(const VideoPicture&){return false;}
  OutputPreferences current;
  OutputPreferences FrameOutputSettings(bool=false,bool=false){return current;}
  inline std::string lastStage,lastFailure;
@@ -88,6 +89,7 @@ namespace DVBRIDGE {
 using Capabilities=DVBRIDGE::OutputCapabilities;
 using Selection=DVBRIDGE::OutputSelection;
 struct dvbridge_hdr10_session {struct {unsigned max_luminance=1000,min_luminance=50,max_cll=1000,max_fall=400;bool level6=true;}output;struct {struct {float max_luma=1000;}hdr;}target;};
+decltype(dvbridge_hdr10_session::target) pl_color_space_hdr10{};
 bool dvbridge_hdr10_session_init(dvbridge_hdr10_session*,const void*,size_t){return true;}
 struct CModeChangeHold{enum class Kind{START,STOP};};
 struct CDVWindowRetirement {static void PollOnce(){}};
@@ -167,7 +169,7 @@ struct CDVBridgeGLES {
   bool Close(){++closed;gl=false;return true;}
  };
  enum class FrameStatus {Ready,Pending,Busy,Failed,Reused,Unsupported};
- struct Layer {Binding binding;double pts=0;bool lease=true;int scalingMethod=0;struct {unsigned profile=8; uint64_t informationGeneration{}; }sourceInfo;};
+ struct Layer {Binding binding;double pts=0;bool lease=true,sdrInput=false;int scalingMethod=0;struct {unsigned profile=8; uint64_t informationGeneration{}; }sourceInfo;};
  bool m_submissionAsync=false,m_asyncEligible=false,m_hdr10plusSubmits=false;
  struct {bool asyncEligible=false;}m_submission;
  pl_renderer m_renderer=&rendererToken;pl_opengl m_gl=nullptr;pl_log m_log=nullptr;void*m_packer=&packer;pl_tex m_scanout=nullptr;bool m_pending=false,m_prepared=false,m_live=true,m_hdr10=false;unsigned m_outputBits=0,m_scanoutFramebuffer=0;Binding m_failedIdentity{};

@@ -1,0 +1,42 @@
+From c779bc7637e0942c2627f7dd8d5803b9f1f1913c Mon Sep 17 00:00:00 2001
+From: Chris <meischris39@hotmail.com>
+Date: Tue, 10 Nov 2026 03:21:48 +0000
+Subject: [PATCH] CB1: find desktop GL through glvnd's opengl.pc too
+
+LibreELEC's OpenGL device builds Mesa with glvnd, which provides
+opengl.pc and no gl.pc.
+---
+ config/owned-sources.json | 2 +-
+ src/CMakeLists.txt        | 3 ++-
+ 2 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/config/owned-sources.json b/config/owned-sources.json
+index b3b0b86..6bc0be1 100644
+--- a/config/owned-sources.json
++++ b/config/owned-sources.json
+@@ -25,7 +25,7 @@
+   "src/cb1_hdr10_temporal.h": "41908e5fd369a6906322bd98c2470e4abf34a138867d10624988ea3c2a8ae1e8",
+   "src/cb1_l1l3_model.c": "b79de37755814ad9ae3b99a089a070cb3a2e0bee98cfa121ab787332887fd88b",
+   "src/cb1_l1l3_model.h": "9d34cc7c145a91cabcf60cc57c41f6cf736686f79e09cb2019333f2c418af0ea",
+-  "src/CMakeLists.txt": "9fdb7c20418e63ab7f678a973fa7a2e7604dfaf8ae6ba5fd72cde52e116aaf48",
++  "src/CMakeLists.txt": "2f81428d000c3d5d7f9642ea667f26fa455c3e072548142cd49f469c7947bc55",
+   "src/dvbridge_core.c": "37d4d9f79ac1baec3b0f0ce632f844fcb01b3b13a40391b3e02a15a2108d4219",
+   "src/dvbridge_core.h": "a20192013d7ae5d01b1ea596a79c306cfc3ad25e663e4e4052dc2339266af9e4",
+   "src/dvbridge_creative.c": "ec9c450a4af41a45003564794916471df4f87ba5d711c2c8ac08fe8111c1283d",
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 9b63b00..efc6cab 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -46,7 +46,8 @@ pkg_check_modules(DVAvutil REQUIRED IMPORTED_TARGET libavutil>=59.12.100)
+ pkg_check_modules(DVAvcodec REQUIRED IMPORTED_TARGET libavcodec>=62)
+ # Kodi's render API decides which GL the bridge links: desktop OpenGL or OpenGL ES.
+ if(TARGET ${APP_NAME_LC}::OpenGl)
+-  pkg_check_modules(DVGles REQUIRED IMPORTED_TARGET gl)
++  # glvnd ships desktop GL as opengl.pc; Mesa without glvnd as gl.pc.
++  pkg_search_module(DVGles REQUIRED IMPORTED_TARGET gl opengl)
+   set(DVBRIDGE_DESKTOP_GL ON)
+ else()
+   pkg_check_modules(DVGles REQUIRED IMPORTED_TARGET glesv2)
+-- 
+2.55.0.windows.5
+
