@@ -18,6 +18,7 @@ class NativeSDRFastPath(unittest.TestCase):
         code = r"""
 #include <cassert>
 #include <cstdint>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <tuple>
@@ -35,6 +36,8 @@ struct VideoPicture {bool sdr=true;DVBRIDGE::SourceBinding doviSourceBinding;};
 namespace DVBRIDGE {bool IsSDRExpansionSource(const VideoPicture&p){return p.sdr;}}
 struct Context{bool GL()const{return true;}};
 struct Window {
+ std::shared_ptr<const VideoPicture> m_deferredOrdinaryPicture;
+ bool m_dvStopPending=false;
  bool m_dvOrdinaryFrame=false,m_dvEndPending=false,m_dvRecoveryPending=false,
       m_dvRejectedSurface=false,m_dvRollbackFailed=false,m_dvActivating=false,
       m_dvOutputRetiring=false,m_dvSuperseded=false,m_dvShutdownFence=false;

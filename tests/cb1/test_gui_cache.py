@@ -217,6 +217,7 @@ struct CRenderSystemGLES{unsigned passes=0;bool BeginRender(){++passes;return tr
 struct CWinSystemGbmGLESContext:CRenderSystemGLES{
  bool m_cb1FramePending=true,m_dvFrame=true,held=true;bool&m_guiCacheValid=cache;unsigned commits=0;
  void PresentFrame(bool,bool){if(!held){++commits;m_cb1FramePending=m_dvFrame=false;}}
+ void BeginDeferredOrdinaryVideo(){}
  void BindNativePascalHDRFramebuffer(){}
  bool BeginRender() @BEGIN@
 };
