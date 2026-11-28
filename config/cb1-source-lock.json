@@ -74,7 +74,7 @@
     "tests/cb1/test_nvidia_refresh_cycle.py": "427f9b208f353e0d2dc98aa1a10bf830517d7255aab2e9ce6a081610dbc5246f",
     "tests/cb1/test_gui_viewport.py": "a25a487cf7e0b9db346e4a1e30fc4f1b8befeca964bcf528bdeb58f10fbea7b5",
     "tests/cb1/test_gui_composite_clip.py": "d6b87dcc778f9db5d1c5876e8cbe2399de52a66a4644855a8d258b6b3e6d5aa5",
-    "tests/cb1/test_nvidia_buffer_restore.py": "1f718552a91029ed46816f8c8ee734cbd3303e2e495639b031cd77d1109d8f82",
+    "tests/cb1/test_nvidia_buffer_restore.py": "b4ae76ef132e4fb3d1a3c3c2fc32a799c16877a206925e612f03cc38bf1423f8",
     "projects/Generic/patches/kodi/kodi-9999-zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz-stop-sdr-gui.patch": "6d607a9751438763d0b260c01f210091c92e3778481153f82d9720489914bbfe",
     "tests/cb1/test_sdr_output_restore.py": "f866e671770c04aa348ed1e9e8fa4be748ed4e692ce29fc18113e84273fe63cb",
     "tests/cb1/test_nvidia_transitions.py": "f5c493cc93b0dc5413f6327769eb8005a6a84fe9bfafcbece12720e5cf5d2a52",
@@ -368,7 +368,7 @@
     "tests/cb1/test_lldv_format.py": "aea2c0c67a9e015904b21e3933a4cbb2b484860e283ab79a9428eb25cdb9c74d",
     "tests/cb1/test_lldv_player_info.py": "7303e656eb1852428b01d5fc5386c149461fd23948c80e8d754139edeeb8031e",
     "tests/cb1/test_pascal_hdr10_scanout.py": "51c1e4a24733815b9f26bf9b9ebb5f53d50f355d1bb8b9cc3b06bba1b63d6d12",
-    "tests/cb1/test_output_window_teardown.py": "e5927c0750c9544b44c6be08d307ac9dc2d0f5cfb691c6048be31f6e2126e987",
+    "tests/cb1/test_output_window_teardown.py": "ad4e6dc14ef8104ff156639c905488769591e4db5b855b06707ac712e763934d",
     "packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9008-optional-vsif-reference.patch": "5b1f0fea996844004f837559ce7acd714a23bbf5017a1cf12f1950c23bfceeb7",
     "config/cb1-patch-index.json": "0e76caf787aba7409694b8e8408e19dafeca46d2bb295b4a856b3d02f7a3dc27",
     "projects/Generic/patches/linux/linux-9948-intel-hdmi-ready-recovery.patch": "c10f4aa258ca6d2be95a175006389362ccfad3566cff1e892f0b162faf486780",
@@ -511,7 +511,7 @@
     "packages/multimedia/cb1-engine/package.mk": "afe84125284d212293e34b982f324802ab9c521625ca32175a7c80d14fbe2f43",
     "packages/multimedia/cb1-udfread-source/package.mk": "ec6796161396523fbcee60e9b370d80950fbf1ddb284ada1e53efa93ec648566",
     "tests/cb1/test_decoder_replay.py": "5945e13c1edba4e42e5368ef11471681a821cfe652ad2cdc7049979e9d2f3a34",
-    "tests/cb1/test_fel_eof.py": "9a956ef486dd45aa7172bf6c5a004492a991e5257bb0e410e39e5d9d8f6663d3",
+    "tests/cb1/test_fel_eof.py": "69f58a96231c350ccc5b18ec9348acad28dced44aa3019b7af7fb46dcd66717d",
     "tests/cb1/test_dv_startup_edid.py": "2c226c18439653d8013f852f64a6513e506c1110e3ab6cd2a6984cda43ff2489",
     "projects/Generic/patches/linux/linux-9981-amd-hdmi-vsif-ownership.patch": "d3f3b10a82d6e9b8138261c77395e61c1b1e4a103d903cceb58acd7224aaf963",
     "projects/Generic/patches/linux/linux-9982-amd-frl-opt-in.patch": "fb459b673e0303a8a404242198646f3a40c74c2aa7511c776a4288b669012c3a",
@@ -541,7 +541,8 @@
     "tests/cb1/test_enhanced_completion.py": "06b4b1f638ff90987bb43d9d1ada5fbfc4e18c01ad49e0fe26e4c73d27e08f8f",
     "tests/cb1/test_sdr_native_fast_path.py": "31afb0f6f56605a223e32bd88ba1d0af650699d54ee013301fe286bd301eb787",
     "tests/cb1/test_live_ordinary_layer.py": "aa67f11841546c13bfc325f97b36a596b8e044b16e395faaee7cd144bdbb954a",
-    "tests/cb1/test_gl_handoff_slots.py": "272a4e1985ed078c2abd75860cd12c764e7cec3d0dd346135955ac3df8b302fd"
+    "tests/cb1/test_gl_handoff_slots.py": "272a4e1985ed078c2abd75860cd12c764e7cec3d0dd346135955ac3df8b302fd",
+    "tests/cb1/test_gui_prepared_frame.py": "b792b46b3e6bdb54098dc4c8b2d9217f1f6a00e2a74f31bdf6281643fabf61be"
   },
   "staging": {
     "projects/Generic/patches/ffmpeg/ffmpeg-9900-04-ts-dovi-layer.patch": {
