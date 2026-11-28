@@ -43,7 +43,7 @@ enum class FrameStatus {Failed,Ready,Pending};
 struct Admission {
  Layer base;Layer* enhancement=nullptr;Geometry geometry,m_sourceGeometry;
  bool m_geometryKnown=true,m_pending=false,m_hasCommitted=true,allowPacked=true;
- bool m_committedPacked=true,m_direct=true,m_dvPolicyActive=false;
+ bool m_committedPacked=true,m_direct=true,m_dvPolicyActive=false,expansion=false;
  bool m_overlayVisible=true,m_pendingOverlayVisible=true;
  bool m_nativeOverlayEnabled=true;int m_nativeOverlay=0;
  int m_effectiveMode=5,m_committedMode=5;struct {int mode=5;uint64_t lldv_edid_generation{};struct {int gamut{};} sdr;}policy;

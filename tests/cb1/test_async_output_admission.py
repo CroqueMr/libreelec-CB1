@@ -76,6 +76,7 @@ struct State
   bool m_pending = false, m_hasCommitted = true, m_committedPacked = false;
   bool sameGeometry = true, allowPacked = true, allowAsync = true, asyncSetting = true;
   bool m_fallback = false, m_pendingHDR10Fallback = false, m_directUsable = true;
+  bool expansion = false;
   int m_nativeOverlayRevision = 0, m_committedOverlayRevision = 0;
   uint64_t m_committedRevision = 10, m_geometryRevision = 10;
   Binding m_committedBinding;
@@ -119,6 +120,26 @@ int main()
   State hdr10;
   hdr10.mode = hdr10.m_committedMode = DVBRIDGE_MODE_HDR10_EXPERT;
   assert(hdr10.prepare() && hdr10.m_geometryRevision == 11);
+  State expandedHdr;
+  expandedHdr.mode = expandedHdr.m_committedMode = DVBRIDGE_MODE_HDR10_BASIC;
+  expandedHdr.expansion = true;
+  assert(expandedHdr.prepare() && expandedHdr.m_geometryRevision == 11);
+  State ordinaryHdr;
+  ordinaryHdr.mode = ordinaryHdr.m_committedMode = DVBRIDGE_MODE_HDR10_BASIC;
+  assert(!ordinaryHdr.prepare());
+  for (int guard = 0; guard < 6; ++guard)
+  {
+    State blockedHdr;
+    blockedHdr.mode = blockedHdr.m_committedMode = DVBRIDGE_MODE_HDR10_BASIC;
+    blockedHdr.expansion = true;
+    if (guard == 0) blockedHdr.sameGeometry = false;
+    if (guard == 1) blockedHdr.allowPacked = false;
+    if (guard == 2) blockedHdr.allowAsync = false;
+    if (guard == 3) blockedHdr.base.lease = false;
+    if (guard == 4) blockedHdr.m_fallback = true;
+    if (guard == 5) blockedHdr.m_committedMode = DVBRIDGE_MODE_STANDARD;
+    assert(!blockedHdr.prepare());
+  }
   State ordinary;
   ordinary.mode = ordinary.m_committedMode = DVBRIDGE_MODE_STANDARD;
   assert(!ordinary.prepare());
