@@ -179,7 +179,7 @@ struct CDVBridgeGLES {
  bool m_direct=false,m_dvPolicyActive=false,m_pendingOverlayVisible=false,m_overlayVisible=false,m_nativeOverlayEnabled=false,m_directUsable=false,m_fallback=false;
  bool Advanced(){return false;}void Reset(){m_pending=m_prepared=false;}int m_spatialMethod=0,m_pendingHDR10Fallback=0,m_nativeOverlay=0;
  dvbridge_gamut m_sdrGamut{};
- uint64_t m_geometryRevision=0,m_committedRevision=0,m_nativeOverlayRevision=0,m_committedOverlayRevision=0,m_pendingOverlayRevision=0,m_sdrDVOverlayRefreshRevision=0;
+ uint64_t m_geometryRevision=0,m_committedRevision=0,m_nativeOverlayRevision=0,m_committedOverlayRevision=0,m_pendingOverlayRevision=0,m_sdrOverlayRefreshRevision=0;
  Binding m_committedBinding{},m_pendingBinding{},m_pendingIdentity{};
  decltype(VideoPicture::doviMetadata)m_pendingMetadata;
  dvbridge_mode m_effectiveMode=DVBRIDGE_MODE_DISABLED,m_committedMode=DVBRIDGE_MODE_DISABLED;
