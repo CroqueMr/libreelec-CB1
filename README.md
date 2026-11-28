@@ -30,6 +30,7 @@
   <a href="#recommended-hardware">Recommended hardware</a> ·
   <a href="#dolby-vision-output-accuracy">Output accuracy</a> ·
   <a href="#benchmarks-and-upscalers">Benchmarks and upscalers</a> ·
+  <a href="#add-ons">Add-ons</a> ·
   <a href="#whats-next">What's next?</a> ·
   <a href="#found-a-bug-or-have-a-feature-suggestion">Report a bug or suggest a feature</a>
 </p>
@@ -47,6 +48,13 @@ For a fresh installation use the `.img.gz` image. For an existing installation u
 ### Quick Switch
 
 [![Quick Switch with Dolby Vision Master Reference active and highlighted](docs/cb1/images/quick-switch-intel-1917-balanced.png)](docs/cb1/images/quick-switch-intel-1917-balanced.png)
+
+## Add-ons
+
+Optional community-maintained tools, installed separately:
+
+- **[CB1 PlayerProcessInfo](https://github.com/frodo19/service-cb1-ppi)** by frodo19 — Customize the Player Information panel's colours, text styling and transparency.
+- **[TinyPPI Mobile](https://github.com/CE-Repo/tinyppi-mobile)** by CE-Repo — Android companion for live playback information, library browsing and remote playback control via the optional CB1 PlayerProcessInfo web server.
 
 ## Dolby Vision
 
