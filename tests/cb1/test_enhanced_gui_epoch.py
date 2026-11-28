@@ -10,22 +10,28 @@ class EnhancedGUIEpoch(unittest.TestCase):
         code=shipped_code('xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp')
         start=code.index('    asyncOverlayRefresh = sameGeometry')
         expression=code[start:code.index(';',start)+1]
+        start=code.index('  const bool sdrOverlayRefresh =')
+        retained=code[start:code.index(';',start)+1]
         program=r"""
 #include <cassert>
-constexpr int DVBRIDGE_MODE_HDR10_BASIC=2, DVBRIDGE_MODE_HDR10_EXPERT=3, DVBRIDGE_MODE_ENHANCED_DV=4,
+constexpr int DVBRIDGE_MODE_STANDARD=1, DVBRIDGE_MODE_HDR10_BASIC=2, DVBRIDGE_MODE_HDR10_EXPERT=3, DVBRIDGE_MODE_ENHANCED_DV=4,
               DVBRIDGE_MODE_MASTER_REFERENCE=5, DVBRIDGE_MODE_SDR=7, DVBRIDGE_MODE_PLAYER_LED=8;
-bool refresh(int mode, bool allowPacked, bool m_committedPacked, bool sameGeometry=true, bool expansion=false)
+bool refresh(int mode, bool allowPacked, bool m_committedPacked, bool sameGeometry=true, bool expansion=false, bool retained=false)
 {
   struct { int mode; } policy{mode};
-  bool asyncOverlayRefresh=false;
-"""+expression+r"""
-  return asyncOverlayRefresh;
+  bool asyncOverlayRefresh=false, m_hasCommitted=true, allowAsync=true;
+  int m_committedMode=mode, m_committedBinding=1;
+  struct {int binding=1;} base;
+  int m_nativeOverlayRevision=0,m_committedOverlayRevision=0;
+"""+retained+expression+r"""
+  return retained ? sdrOverlayRefresh : asyncOverlayRefresh;
 }
 int main()
 {
-  assert(refresh(DVBRIDGE_MODE_HDR10_BASIC,true,false,true,true));
-  assert(!refresh(DVBRIDGE_MODE_HDR10_BASIC,true,false));
-  assert(!refresh(DVBRIDGE_MODE_HDR10_BASIC,true,true,true,true));
+  assert(refresh(DVBRIDGE_MODE_HDR10_BASIC,true,false,true,true,true));
+  assert(!refresh(DVBRIDGE_MODE_HDR10_BASIC,true,false,true,false,true));
+  assert(!refresh(DVBRIDGE_MODE_HDR10_BASIC,true,true,true,true,true));
+  assert(!refresh(DVBRIDGE_MODE_HDR10_BASIC,true,false,true,true));
   assert(refresh(DVBRIDGE_MODE_HDR10_EXPERT,true,false));
   assert(!refresh(DVBRIDGE_MODE_HDR10_EXPERT,false,false));
   assert(!refresh(DVBRIDGE_MODE_HDR10_EXPERT,true,false,false));

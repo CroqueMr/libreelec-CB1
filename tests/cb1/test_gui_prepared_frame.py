@@ -26,7 +26,8 @@ struct CRenderSystemGLES {
 struct CWinSystemGbmGLESContext : CRenderSystemGLES {
   bool m_cb1FramePending=true,m_dvFrame=true,kmsPending=true;
   bool m_guiCacheValid=true;
-  unsigned submitted=0;
+  unsigned submitted=0,ordinaryPasses=0;
+  void BeginDeferredOrdinaryVideo() { ++ordinaryPasses; }
   bool CompleteDVBridgePage(unsigned) { return !kmsPending; }
   void BindNativePascalHDRFramebuffer() {}
   void PresentFrame(bool,bool) {
@@ -41,15 +42,15 @@ int main() {
   CWinSystemGbmGLESContext window;
   // The old KMS page still holds the queue; the next prepared picture owns its GUI.
   assert(!window.BeginRender());
-  assert(window.guiPasses==0 && window.submitted==0);
+  assert(window.guiPasses==0 && window.submitted==0 && window.ordinaryPasses==0);
   window.kmsPending=false;
   const bool draw=window.BeginRender();
   assert(!draw && "Submitted prepared picture must not be redrawn in the same pass");
   assert((!draw || window.submitted==1) &&
          "GUI overwrite admitted before prepared picture and its L5 snapshot were submitted");
-  assert(window.submitted==1);
+  assert(window.submitted==1 && window.ordinaryPasses==0);
   assert(window.BeginRender());
-  assert(window.submitted==1);
+  assert(window.submitted==1 && window.ordinaryPasses==1);
   // Ordinary rendering does not submit or wait for a CB1 frame.
   CWinSystemGbmGLESContext ordinary;
   ordinary.m_cb1FramePending=ordinary.m_dvFrame=false;

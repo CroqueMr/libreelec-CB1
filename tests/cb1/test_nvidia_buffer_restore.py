@@ -37,7 +37,12 @@ constexpr unsigned DRM_FORMAT_XRGB8888=1,DRM_FORMAT_ARGB8888=2;
 constexpr unsigned DRM_MODE_FLAG_INTERLACE=1,DRM_MODE_FLAG_DBLSCAN=2;
 enum {DVBRIDGE_GAMUT_BT709,DVBRIDGE_GAMUT_BT2020};
 enum {AVCOL_TRC_BT709,AVCOL_PRI_BT709,AVCOL_PRI_BT2020,AVCOL_SPC_BT709,AVCOL_SPC_BT2020_NCL};
-struct VideoPicture {int color_transfer{},color_primaries{},color_space{},colorBits{};};
+struct VideoPicture {int color_transfer{},color_primaries{},color_space{},colorBits{};
+ struct {unsigned informationGeneration=1;} doviSourceInfo;};
+struct CServiceBroker {
+ static CServiceBroker& GetDataCacheCore(){static CServiceBroker service;return service;}
+ unsigned GetVideoProcessingGeneration()const{return 1;}
+};
 unsigned gbm_bo_get_format(gbm_bo* bo){return bo->format;}
 unsigned gbm_bo_get_width(gbm_bo*){return 3840;}
 unsigned gbm_bo_get_height(gbm_bo*){return 2160;}
@@ -97,6 +102,12 @@ struct Surface {
 };
 namespace DVBRIDGE {struct PlaybackNotification{static void OrdinaryOutputAccepted(bool){}};}
 struct Window {
+ std::shared_ptr<const VideoPicture> m_deferredOrdinaryPicture;
+ enum class OrdinaryDraw { Deferred, Awaiting, Attempted, Drawn };
+ OrdinaryDraw m_deferredOrdinaryDraw=OrdinaryDraw::Deferred;
+ Window& GetGfxContext(){return *this;}
+ bool IsFullScreenVideo()const{return true;}
+ bool CancelDeferredOrdinaryVideo(){assert(false);return false;}
  std::shared_ptr<DRM> m_DRM=std::make_shared<CDRMAtomic>();
  std::shared_ptr<Surface> m_GBM=std::make_shared<Surface>();
  CDVBridgeState m_dvState;bool m_dvStopPending=false,m_sdrConversion=false;
