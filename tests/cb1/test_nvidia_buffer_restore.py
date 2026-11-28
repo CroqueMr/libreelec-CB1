@@ -47,22 +47,22 @@ inline constexpr int QUIRK_AMD_HDR10_HDMI_AUTO_FORMAT = 4;
 struct CDRMAtomic:DRM {
  bool HasQuirk(int)const{return false;}
  struct Connector {std::string_view GetType()const{return "HDMI-A";}
-  bool SupportsProperty(const char*){return false;}
+  bool strict=false;bool SupportsProperty(const char* name){return strict && std::string_view(name)=="DVBRIDGE_HDR10_DEEP_COLOR";}
   std::optional<int> GetPropertyEnumValue(const char*,const char*)const{return {};}}connector;
  struct Mode {unsigned hdisplay=3840,vdisplay=2160,flags=0,htotal=4400,vtotal=2250,clock=594000;}mode;
  bool stageOK=true,commitOK=true,active=false;unsigned accepted=0,missing=0;
- int stagedHDR=-1;
+ int stagedHDR=-1,stagedGuard=-1;
  unsigned rejectAttempt=0;
- std::vector<int> attemptedHDR;
+ std::vector<int> attemptedHDR,attemptedGuard;
  gbm_bo* acceptedBuffer=nullptr;
  auto* GetConnector(){return &connector;} auto* GetSelectedMode(){return &mode;}
- bool AddProperty(Connector*,const char*,int){return true;}
+ bool AddProperty(Connector*,const char* name,int value){if(std::string_view(name)=="DVBRIDGE_HDR10_DEEP_COLOR")stagedGuard=value;return true;}
  bool IsActive(){return active;} bool IsSelectedModeCommitted(){return true;}
  void SetActive(bool value){active=value;}
  bool HasPendingCB1Page(){return false;}
  bool FlipPageTransactional(gbm_bo* bo,bool,bool=false){
    if(!bo){++missing;return false;}
-   attemptedHDR.push_back(stagedHDR);
+   attemptedHDR.push_back(stagedHDR);attemptedGuard.push_back(stagedGuard);stagedGuard=-1;
    stagedHDR=-1;
    if(!commitOK || attemptedHDR.size()==rejectAttempt)return false;
    ++accepted;acceptedBuffer=bo;return true;
@@ -75,7 +75,7 @@ struct CDVBridgeState {
  enum class Backend{KERNEL,NVIDIA};Backend backend=Backend::NVIDIA;bool captured=true;
  bool Captured(){return captured;}Backend CapturedBackend(){return backend;}
  int capturedHDR=461;
- bool Stage(CDRMAtomic& drm,bool restore){if(restore)drm.stagedHDR=capturedHDR;return drm.stageOK;}
+ bool Stage(CDRMAtomic& drm,bool restore){if(restore){drm.stagedHDR=capturedHDR;if(drm.connector.strict)drm.stagedGuard=0;}return drm.stageOK;}
  void Restored(){captured=false;}
 };
 struct Surface {
@@ -189,11 +189,12 @@ int main(){
    auto carrier=alternate?std::make_shared<gbm_bo>():nullptr;
    Window window;auto drm=std::dynamic_pointer_cast<CDRMAtomic>(window.m_DRM);
    window.m_dvState.backend=nvidia?CDVBridgeState::Backend::NVIDIA:CDVBridgeState::Backend::KERNEL;
-   drm->active=active;
+   drm->active=active;drm->connector.strict=true;
    bool result=hdr?window.HDR(carrier):window.Ordinary(true);
    assert(result && "NVIDIA restoration must not acquire the same GBM buffer twice");
    assert(drm->missing==0 && drm->acceptedBuffer);
    assert(drm->accepted==(nvidia&&active?2u:1u));
+   if(hdr) for(int guard:drm->attemptedGuard) assert(guard==1 && "every converted HDR destination commit must retain the strict guard");
    assert(!window.m_GBM->m_pendingBuffer);
    auto& surface=*window.m_GBM;
    assert(drm->acceptedBuffer==(nvidia?surface.m_buffers.back()->Get():surface.m_scanoutBuffer->Get()));
@@ -209,6 +210,13 @@ int main(){
    assert(!failed.m_GBM->m_pendingBuffer);
    fd->commitOK=true;
    assert(hdr?failed.HDR(carrier):failed.Ordinary(true));
+   if(hdr&&nvidia&&active){
+     Window retry;auto rd=std::static_pointer_cast<CDRMAtomic>(retry.m_DRM);
+     rd->active=true;rd->connector.strict=true;rd->rejectAttempt=1;
+     assert(retry.HDR(carrier));
+     assert(rd->attemptedGuard.size()==2);
+     for(int guard:rd->attemptedGuard)assert(guard==1);
+   }
    Window absent;absent.m_GBM->m_surface=false;
    assert(!(hdr?absent.HDR():absent.Ordinary(true)) && absent.m_dvState.captured);
  }
