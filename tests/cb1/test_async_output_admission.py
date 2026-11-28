@@ -50,7 +50,7 @@ int main(){
     def test_sdr_gui_redraw_keeps_async_scanout(self):
         source = (TREE / 'xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp').read_text()
         prepare = body(source, 'CDVBridgeGLES::FrameStatus CDVBridgeGLES::PrepareFrame(')
-        begin = prepare.index('  bool ', prepare.index('uint64_t revision ='))
+        begin = prepare.index(chr(10), prepare.index('uint64_t revision =')) + 1
         refresh = prepare[begin:prepare.index('  if (m_failedIdentity', begin)]
         begin = prepare.index('  const bool eligible', begin)
         admission = prepare[begin:prepare.index('  if (m_dvPolicyActive)', begin)]
@@ -78,7 +78,7 @@ struct State
   bool m_fallback = false, m_pendingHDR10Fallback = false, m_directUsable = true;
   bool expansion = false;
   int m_nativeOverlayRevision = 0, m_committedOverlayRevision = 0;
-  uint64_t m_committedRevision = 10, m_geometryRevision = 10;
+  uint64_t m_committedRevision = 10, m_geometryRevision = 10, m_sdrDVOverlayRefreshRevision = 0;
   Binding m_committedBinding;
   enum dvbridge_mode m_committedMode = DVBRIDGE_MODE_SDR, mode = DVBRIDGE_MODE_SDR;
   struct { Binding binding; bool lease = true; } base;
@@ -140,6 +140,42 @@ int main()
     if (guard == 5) blockedHdr.m_committedMode = DVBRIDGE_MODE_STANDARD;
     assert(!blockedHdr.prepare());
   }
+  State expandedDV;
+  expandedDV.mode = expandedDV.m_committedMode = DVBRIDGE_MODE_STANDARD;
+  expandedDV.expansion = true;
+  expandedDV.m_committedPacked = true;
+  expandedDV.m_nativeOverlayRevision = 1;
+  assert(expandedDV.prepare() && expandedDV.m_geometryRevision == 11);
+  assert(expandedDV.m_sdrDVOverlayRefreshRevision == 11);
+  // Re-enter the exact rekey after retirement and again after L1 Busy.
+  assert(expandedDV.prepare(11) && expandedDV.m_geometryRevision == 11);
+  assert(expandedDV.prepare(11) && expandedDV.m_geometryRevision == 11);
+  assert(expandedDV.m_sdrDVOverlayRefreshRevision == 11);
+  State superseded = expandedDV;
+  superseded.base.binding.picture++;
+  assert(!superseded.prepare(11));
+  assert(superseded.m_sdrDVOverlayRefreshRevision == 0);
+  State settings = expandedDV;
+  assert(!settings.prepare(12));
+  assert(settings.m_sdrDVOverlayRefreshRevision == 0);
+  State resized = expandedDV;
+  resized.sameGeometry = false;
+  assert(!resized.prepare(11));
+  assert(resized.m_sdrDVOverlayRefreshRevision == 0);
+  State capturing = expandedDV;
+  capturing.allowPacked = false;
+  assert(!capturing.prepare(11));
+  assert(capturing.m_sdrDVOverlayRefreshRevision == 0);
+  State unleased = expandedDV;
+  unleased.base.lease = false;
+  assert(!unleased.prepare(11));
+  State notExpanded = expandedDV;
+  notExpanded.expansion = false;
+  assert(!notExpanded.prepare(11));
+  assert(notExpanded.m_sdrDVOverlayRefreshRevision == 0);
+  State fallback = expandedDV;
+  fallback.m_fallback = true;
+  assert(!fallback.prepare(11));
   State ordinary;
   ordinary.mode = ordinary.m_committedMode = DVBRIDGE_MODE_STANDARD;
   assert(!ordinary.prepare());

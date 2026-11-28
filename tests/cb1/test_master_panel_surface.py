@@ -51,7 +51,7 @@ struct Admission {
  int m_spatialMethod=0;
  struct {uint64_t revision=3;} preferences;
  Binding m_committedBinding,m_pendingBinding,m_failedIdentity{0,0,0},m_pendingIdentity;
- uint64_t m_committedRevision=7,m_geometryRevision=0,m_lldvEdidGeneration=0;
+ uint64_t m_committedRevision=7,m_geometryRevision=0,m_lldvEdidGeneration=0,m_sdrDVOverlayRefreshRevision=0;
  uint64_t m_nativeOverlayRevision=2,m_committedOverlayRevision=1,m_pendingOverlayRevision=2;
  bool allowAsync=true,asyncSetting=true,fallback=false,m_fallback=false;
  bool m_pendingHDR10Fallback=false,m_directUsable=false,m_pendingMetadata=false;

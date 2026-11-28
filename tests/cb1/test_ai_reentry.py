@@ -363,6 +363,7 @@ struct Renderer{
  std::optional<int>m_hdr10plusMetadata=1;std::vector<int>m_rawELCache{1};
  bool m_firstFrame=false,m_prepared=true,m_packed=true,m_direct=true;
  bool m_pending=true,m_asyncEligible=true,m_dvPolicyActive=true;
+ unsigned long long m_sdrDVOverlayRefreshRevision=12;
  bool m_aiFrame=true,m_aiOutputAccepted=true;
  std::optional<int> m_aiGuidance=1;
  struct Submission{int sequence;}m_submission{12};
@@ -377,6 +378,7 @@ int main(){
   assert(sceneClears==previousSceneClears+1);
   assert(!r.m_pending && !r.m_prepared && !r.m_packed);
   assert(!r.m_asyncEligible && !r.m_submission.sequence);
+  assert(r.m_sdrDVOverlayRefreshRevision==0);
   assert(r.m_dvPolicyActive==active);
   assert(!r.m_aiFrame && !r.m_aiOutputAccepted && r.m_rawELCache.empty());
   assert(!r.m_aiGuidance);

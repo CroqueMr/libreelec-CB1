@@ -145,6 +145,7 @@ struct CDVBridgeGLES {
  uint64_t m_diagnosticStream=7,m_prepares=0,m_directFrames=0,m_presentations=120,m_failedPresentations=0;
  uint64_t m_lastSummary=0,m_lastReported=0,m_rawELImports=0,m_rawELHits=0;
  uint64_t m_lastPresentedSourcePicture=0,m_nonadvancingSource=0,m_sourceGaps=0;
+ uint64_t m_sdrDVOverlayRefreshRevision=0;
  struct Binding{uint64_t stream=7,picture=31,revision=11;}m_pendingBinding;
  struct{uint64_t revision=13;}m_requested;
  int m_effectiveMode=8;
