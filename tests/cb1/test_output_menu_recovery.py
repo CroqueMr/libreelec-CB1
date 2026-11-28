@@ -34,7 +34,7 @@ struct StringUtils {
 };
 #endif
 using dvbridge_mode=int;
-constexpr int DVBRIDGE_MODE_DISABLED=0, DVBRIDGE_MODE_STANDARD=1, DVBRIDGE_MODE_MASTER_REFERENCE=5, DVBRIDGE_MODE_SDR=7, DVBRIDGE_MODE_PLAYER_LED=8;
+constexpr int DVBRIDGE_MODE_DISABLED=0, DVBRIDGE_MODE_STANDARD=1, DVBRIDGE_MODE_HDR10_BASIC=2, DVBRIDGE_MODE_MASTER_REFERENCE=5, DVBRIDGE_MODE_SDR=7, DVBRIDGE_MODE_PLAYER_LED=8;
 enum class StreamHdrType {HDR_TYPE_NONE,HDR_TYPE_HDR10,HDR_TYPE_DOLBYVISION,HDR_TYPE_HLG,HDR_TYPE_HDR10PLUS};
 struct CDVPlaybackModes {
  static inline StreamHdrType nativeSource=StreamHdrType::HDR_TYPE_NONE;
@@ -43,9 +43,12 @@ struct CDVPlaybackModes {
 namespace DVBRIDGE {
 enum class OutputMode {Standard, HDR10, Disabled};
 enum class HDR10SourceMode {Native, ReferenceDV, EnhancedDV, HDR10PlusDV, SDR, HDR10PlusPassthrough};
-struct Preferences { OutputMode output{}; HDR10SourceMode hdr10Source{};
+enum class SDRSourceMode {Native,HDR10,DolbyVision};
+struct Preferences { OutputMode output{}; HDR10SourceMode hdr10Source{}; SDRSourceMode sdrSource{};
  double peak=1000,expertPeak=1000; int gamut=2,expertGamut=2;
  bool ProfileValid(int=0) const { return peak>0 && gamut>0; } } preferences;
+struct Selection {OutputReason reason{};};
+Selection SelectSDRExpansionOutput(const Preferences&,const OutputCapabilities&){return {}; }
 Preferences FrameOutputSettings() {return preferences;}
 std::mutex& OutputSettingsMutex() {static std::mutex mutex;return mutex;}
 struct Selectors {OutputMode output;void Apply(Preferences& copy) const {copy.output=output;}};

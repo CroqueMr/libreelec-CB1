@@ -8,7 +8,7 @@ from shipped_kodi import shipped_code
 class EnhancedCompletion(unittest.TestCase):
     def test_bounded_completion_retains_the_current_picture(self):
         code=shipped_code('xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp')
-        start=code.index('  if (capturing || (metadata.Data() &&')
+        start=code.index('  if (capturing || layer.sdrInput || (metadata.Data() &&')
         end=code.index('  // A paused final surface',start)
         program=r'''
 #include <cassert>
@@ -29,6 +29,7 @@ static int polls;
 Status run(bool authored,int mode,bool capturing,Status initial,int readyAfter,bool expired=false){
   struct {bool present;const void* Data()const{return present?this:nullptr;}} metadata{authored};
   struct {int mode;} policy{mode};
+  struct {bool sdrInput=false;} layer;
   struct Bridge{int remaining;bool PollReady(){++polls;return --remaining<=0;}
     Status PollStatus(uint64_t){assert(false && "Legacy wait must remain nonblocking");return Status::Failed;}
     void PrefetchHardwareFEL(int,int){assert(false && "Legacy path must not prefetch");}} bridge{readyAfter};

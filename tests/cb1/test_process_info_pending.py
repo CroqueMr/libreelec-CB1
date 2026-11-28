@@ -26,11 +26,11 @@ using VideoProcessingReason=DVBRIDGE::OutputReason;
 using Identity=DVBRIDGE::SourceBinding;
 struct Transaction { Identity identity; int requested{},effective{},enhancement{},atomicError{}; unsigned retryCount{};
   bool restored{}; DVBRIDGE::OutputReason reason{DVBRIDGE::OutputReason::None}; const char* stage="";
-  bool hdr10AI{}; };
+  bool hdr10AI{},sdrExpanded{}; };
 struct Output { unsigned flags{},stream{},revision{}; int requested{},effective{},enhancement{};
-  DVBRIDGE::OutputReason reason{DVBRIDGE::OutputReason::None}; bool hdr10AI{}; };
+  DVBRIDGE::OutputReason reason{DVBRIDGE::OutputReason::None}; bool hdr10AI{},sdrExpanded{}; };
 struct Data { Transaction transaction; Output output; int nativeHDR10PlusFallbackLabel{}; };
-struct CDVPlaybackInfo { static const char* RequestedPolicy(int,bool=false) {return "policy";} };
+struct CDVPlaybackInfo { static const char* RequestedPolicy(int,bool=false) {return "policy";} static const char* Policy(const Output&){return "policy";} };
 struct StringUtils { template<class... T> static std::string Format(const char*,T...) {return "error";} };
 POLICY_TEXT
 std::map<std::string,std::string> properties;

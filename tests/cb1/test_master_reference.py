@@ -25,7 +25,7 @@ bool eligible(int mode,bool m_directUsable,bool lease=true){
  bool allowAsync=true,asyncSetting=true,fallback=false,m_fallback=false,m_pendingHDR10Fallback=false;
  bool m_hasCommitted=true,sameGeometry=true,asyncOverlayRefresh=false;struct{int mode;}policy{mode};int m_committedMode=mode;
  struct Binding{int stream=1,revision=1;};struct Layer{bool lease;Binding binding;};
- Layer base{lease,{}},*enhancement=nullptr;Binding m_committedBinding;int revision=1,m_committedRevision=1;
+ Layer base{lease,{}},*enhancement=nullptr;Binding m_committedBinding;int revision=1,m_committedRevision=1,m_sdrDVOverlayRefreshRevision=0;
  return @@ELIGIBLE@@;
 }
 bool receipt(int m_effectiveMode,bool m_directUsable,bool m_asyncEligible=true){return @@RECEIPT@@;}

@@ -40,9 +40,10 @@ namespace DVBRIDGE {
  enum class OutputMode {Disabled=2,Standard=0,HDR10=1,MasterReference=4,SDR=6}; enum class OutputRoute {Vanilla,NativeDV,HDR10,SDR,PlayerLed};
  enum class OutputReason {None,RestoreFailed,SourceIneligible,TVProfileRequired,ProcessingPending};
  enum class HDR10SourceMode {Native,ReferenceDV};
+ enum class SDRSourceMode {Native,HDR10,DolbyVision};
  struct Policy {int mode=0;struct {int gamut=0;}sdr;};
  struct Preferences {OutputMode output=OutputMode::Standard; unsigned revision=1;bool allowMasterFallback=true,hdr10TransportFallback=false;
-   double peak=1000;int panel=0,gamut=2;HDR10SourceMode hdr10Source=HDR10SourceMode::Native;
+   double peak=1000;int panel=0,gamut=2;HDR10SourceMode hdr10Source=HDR10SourceMode::Native;SDRSourceMode sdrSource=SDRSourceMode::Native;
    ::DVBRIDGE::Policy Policy()const{return {};}};
  Preferences FrameOutputSettings(bool=false,bool=false){return {};}
  bool DiagnosticsEnabled(){return false;}
@@ -60,7 +61,7 @@ namespace DVBRIDGE {
   template<class... T> static void NativeSelection(T...){}
  };
 }
-struct Capabilities {bool isDV=false,isHDR10=false,isHLG=false,stereoSource=false,processingKnown=true,sourceKnown=false,nativeDV=true;};
+struct Capabilities {bool isDV=false,isHDR10=false,isHLG=false,isSDR=false,stereoSource=false,processingKnown=true,sourceKnown=false,nativeDV=true;};
 struct Selection {DVBRIDGE::OutputRoute route=DVBRIDGE::OutputRoute::Vanilla;
  DVBRIDGE::Policy policy;DVBRIDGE::OutputReason reason=DVBRIDGE::OutputReason::None;
  uint64_t lldvEdidGeneration{};unsigned lldvRgbScanoutBits{8};};

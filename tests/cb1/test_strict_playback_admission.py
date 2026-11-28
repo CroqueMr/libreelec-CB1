@@ -224,14 +224,15 @@ int main(){Window w;VideoPicture picture;DVBRIDGE::OutputPreferences preferences
 #include <string>
 namespace DVBRIDGE {
 enum class OutputMode{Disabled,Standard,MasterReference};enum class HDR10SourceMode{Native,ReferenceDV,SDR};
+enum class SDRSourceMode{Native,HDR10,DolbyVision};
 enum class OutputRoute{Vanilla,DV,HDR10};
 enum class OutputReason{None,SourceIneligible,ProcessingPending,ActivationFailed,NoHDR10Transport};
 }
 struct Window{
  struct{DVBRIDGE::OutputMode output=DVBRIDGE::OutputMode::Standard;bool allowMasterFallback=false;
  bool hdr10TransportFallback=false;
- DVBRIDGE::HDR10SourceMode hdr10Source=DVBRIDGE::HDR10SourceMode::ReferenceDV;}preferences;
- struct{bool sourceKnown=true,isDV=true,isHDR10=false,isHLG=false,processingKnown=true,stereoSource=false;}capabilities;
+ DVBRIDGE::HDR10SourceMode hdr10Source=DVBRIDGE::HDR10SourceMode::ReferenceDV;DVBRIDGE::SDRSourceMode sdrSource=DVBRIDGE::SDRSourceMode::Native;}preferences;
+ struct{bool sourceKnown=true,isDV=true,isHDR10=false,isHLG=false,isSDR=false,processingKnown=true,stereoSource=false;}capabilities;
  struct{struct{int profile=7,compatibility=1;bool el=false;}doviSourceInfo;bool doviEnhancement=false;std::string strDVELType;}picture;
  struct{DVBRIDGE::OutputRoute route=DVBRIDGE::OutputRoute::Vanilla;
  DVBRIDGE::OutputReason reason=DVBRIDGE::OutputReason::ActivationFailed;}m_dvSelection;

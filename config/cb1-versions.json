@@ -13,7 +13,7 @@
     "version": "22.0 RC2",
     "revision": "d686683a55d50e576dd282f53fb2bf9914931b38",
     "modified": true,
-    "source_revision": "ff31715377bd1e8f0046828a431a5a67c12e4390"
+    "source_revision": "1ba7a81dd1e76b8ebe4ed69383ce9e01703e35a5"
   },
   "Linux": {
     "version": "7.4-rc4",
@@ -43,7 +43,7 @@
   },
   "CB1": {
     "version": "1.1",
-    "revision": "1089ebee8a8573ee52d9be1aad085951f2161b92",
+    "revision": "624e808dcc357a71b3e3f6d06888ba3570b9dd4a",
     "base_revision": "b852bd0b5e4c1422e0aa5e005520bca765dcb00a",
     "modified": true,
     "historical_revision": "R1.0.0-RC4-Preview:CB1/"

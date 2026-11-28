@@ -241,3 +241,8 @@ labels it forced and experimental. Automatic prefers native 10-bit, then
 a compatible 12-bit transport. The driver checks the display and timing for each LLDV
 commit. The Ryzen 5 7430U path at UHD 23.976/24 Hz carries 10 useful bits in a
 12-bit HDMI carrier.
+
+
+### SDR default playback
+
+Native SDR is unchanged and selected by default. For eligible progressive SDR sources, SDR to HDR10 Rendering uses a fixed 1000-nit container, and Dolby Vision Rendering uses a fixed 600-nit TV-led target. The original CB1 GPU expansion retains SDR blacks, follows a shared diffuse response and expands highlights; the peak is a ceiling, not the brightness of every white pixel. The Dolby Vision L1 statistics describe the expanded picture and L3 is neutral. No Dolby Vision metadata is attributed to SDR input. Quick Switch changes only the current playback; availability follows the actual source import, GPU and HDMI sink.

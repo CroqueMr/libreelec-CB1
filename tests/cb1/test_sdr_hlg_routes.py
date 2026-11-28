@@ -47,6 +47,7 @@ HEADER
 namespace DVBRIDGE {
 enum class OutputRoute {Vanilla,NativeDV,HDR10,SDR, PlayerLed};
 struct OutputSelection {OutputRoute route{};dvbridge_policy policy{};OutputReason reason{};int lldvFormat{};uint64_t lldvEdidGeneration{};unsigned lldvRgbScanoutBits{8};};
+OutputSelection SelectSDRExpansionOutput(const OutputPreferences& preferences,const OutputCapabilities& caps) EXPANSION
 OutputSelection SelectOutput(const OutputPreferences& preferences,const OutputCapabilities& caps) SELECTOR
 }
 int main(){
@@ -171,7 +172,7 @@ int main(){
  assert(native.hdr10Source==HDR10SourceMode::Native && native.revision!=sdr.revision);
  assert(stored->ints["dvbridge.hlgsource"]==2);
 }
-'''.replace('HEADER',header).replace('SELECTOR',selector).replace('QUALIFIED',qualified)
+'''.replace('HEADER',header).replace('EXPANSION',body((TREE/'xbmc/cores/VideoPlayer/DVDCodecs/Video/DVOutputSelection.h').read_text(), 'inline OutputSelection SelectSDRExpansionOutput(')).replace('SELECTOR',selector).replace('QUALIFIED',qualified)
         repo=Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);(root/'test.cpp').write_text(program)

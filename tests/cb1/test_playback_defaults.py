@@ -89,7 +89,7 @@ struct AppComponents {template<class T>T* GetComponent(){return &player;}} appCo
 struct AppMessenger {void PostMsg(int,int){assert(false);}} appMessenger;
 enum class VideoOutputType {DolbyVision,HDR10,HDR10Plus,HLG,SDR};
 struct DataCacheCore {
- struct VideoInfo {std::optional<VideoOutputType> outputType;struct {unsigned flags;bool lldv;} output;};
+ struct VideoInfo {std::optional<VideoOutputType> outputType;struct {unsigned flags;bool lldv, sdrExpanded;} output;};
  static inline VideoInfo recording{};
  VideoInfo GetVideoProcessingInfo(){return recording;}
 };
@@ -104,6 +104,7 @@ namespace DVBRIDGE {uint64_t NextRevision(){static uint64_t revision=1;return ++
 HEADER
 namespace DVBRIDGE {enum class OutputRoute{Vanilla,NativeDV,HDR10,SDR,PlayerLed};
 struct OutputSelection {OutputRoute route{};dvbridge_policy policy{};OutputReason reason{};int lldvFormat{};uint64_t lldvEdidGeneration{};unsigned lldvRgbScanoutBits{8};};
+OutputSelection SelectSDRExpansionOutput(const OutputPreferences& preferences,const OutputCapabilities& caps) EXPANSION
 OutputSelection SelectOutput(const OutputPreferences& preferences,const OutputCapabilities& caps) SELECTOR
 }
 enum class StreamHdrType{HDR_TYPE_NONE,HDR_TYPE_DOLBYVISION,HDR_TYPE_HDR10,HDR_TYPE_HDR10PLUS,HDR_TYPE_HLG};
@@ -309,7 +310,7 @@ int main(int argc,char** argv){assert(argc==2);using namespace DVBRIDGE;std::str
   p.output=OutputMode::Disabled;assert(SelectOutput(p,caps).reason==OutputReason::None);
  }
 }
-'''.replace('HEADER',header).replace('SELECTOR',selector).replace('MENU',menu).replace('CHOICES',choices).replace('LABEL',label).replace('ACTION',action)
+'''.replace('HEADER',header).replace('EXPANSION',body((TREE/'xbmc/cores/VideoPlayer/DVDCodecs/Video/DVOutputSelection.h').read_text(), 'inline OutputSelection SelectSDRExpansionOutput(')).replace('SELECTOR',selector).replace('MENU',menu).replace('CHOICES',choices).replace('LABEL',label).replace('ACTION',action)
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);code=root/'check.cpp';binary=root/'check';code.write_text(program)
             for flags in ([],['-DCB1_TEST_NO_AI']):

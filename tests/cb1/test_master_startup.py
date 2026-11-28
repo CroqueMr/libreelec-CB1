@@ -56,7 +56,7 @@ struct dvbridge_geometry {};
 struct CDVBridgeGLES {
  bool m_playerLed{};
  enum class FrameStatus{Ready,Pending,Busy,Failed,Reused,Unsupported};
- struct Layer {DVBRIDGE::Binding binding;double pts=1;struct {int profile=7;}sourceInfo;};
+ struct Layer {DVBRIDGE::Binding binding;double pts=1;bool sdrInput=false;struct {int profile=7;}sourceInfo;};
  struct Context {bool bad=false;bool Quarantined()const{return bad;}
  bool AsyncPreparation(uint64_t)const{return true;}}context;
  Context* m_context=&context;int m_renderer=1;

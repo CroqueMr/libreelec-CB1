@@ -55,7 +55,9 @@ int main() {
   assert(drm.staged.at("NV_CRTC_REGAMMA_DIVISOR")==4294967296ULL);
   assert(state.Stage(drm,true));
   assert(drm.staged.at("max bpc")==12);
-  assert(drm.staged.at("DVBRIDGE_HDR10_DEEP_COLOR")==1);
+  // Preserve the captured value for admission, not as a frame-owned restore.
+  assert(state.Before("DVBRIDGE_HDR10_DEEP_COLOR")==1);
+  assert(drm.staged.at("DVBRIDGE_HDR10_DEEP_COLOR")==0);
   assert(drm.staged.at("NV_HDMI_VSIF_METADATA")==0);
   assert(drm.staged.at("HDR_OUTPUT_METADATA")==777);
   assert(drm.staged.at("NV_CRTC_REGAMMA_DIVISOR")==17);

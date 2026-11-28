@@ -13,9 +13,9 @@ class StableVideoSettings(unittest.TestCase):
     def test_playback_controls_and_sdr_dependencies(self):
         group = self.video.find("group[@id='99']")
         ids = [setting.get("id") for setting in group]
-        self.assertEqual(ids[:8], [f"dvbridge.{name}" for name in
+        self.assertEqual(ids[:9], [f"dvbridge.{name}" for name in
                          ("playback", "masteroutput", "hdr10source", "hdr10plussource", "hybridsource", "hlgsource",
-                          "sdrpreset", "sdrgamut")])
+                          "sdrsource", "sdrpreset", "sdrgamut")])
         gamut = group.find("setting[@id='dvbridge.sdrgamut']")
         self.assertIsNone(gamut.find("dependencies/dependency[@type='visible']"))
         for name in ("sdrpreset", "sdrpeak", "sdrgamma", "sdrblack"):

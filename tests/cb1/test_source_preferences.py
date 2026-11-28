@@ -63,9 +63,10 @@ HEADER
 namespace DVBRIDGE {
 enum class OutputRoute {Vanilla,NativeDV,HDR10,SDR, PlayerLed};
 struct OutputSelection {OutputRoute route{};dvbridge_policy policy{};OutputReason reason{};int lldvFormat{};uint64_t lldvEdidGeneration{};unsigned lldvRgbScanoutBits{8};};
+OutputSelection SelectSDRExpansionOutput(const OutputPreferences& preferences,const OutputCapabilities& caps) EXPANSION
 OutputSelection SelectOutput(const OutputPreferences& preferences,const OutputCapabilities& caps) SELECTOR
 struct StreamTelemetry {struct Snapshot {struct {OutputCapabilities capabilities;} transaction;};
- static Snapshot Read(){return {};}};
+ static inline Snapshot current; static Snapshot Read(){return current;}};
 }
 enum class StreamHdrType {HDR_TYPE_HDR10,HDR_TYPE_HDR10PLUS,HDR_TYPE_DOLBYVISION,HDR_TYPE_NONE,HDR_TYPE_HLG};
 bool choose(StreamHdrType type,int selected,bool settingsMenu=false){
@@ -169,8 +170,39 @@ int main(){
  assert(choose(StreamHdrType::HDR_TYPE_HDR10PLUS,2));
  assert(SelectOutput(FrameOutputSettings(true),caps).route==OutputRoute::Vanilla);
  assert(hdr10PlusPlaybackMode.load()==HDR10SourceMode::Native);
+ // SDR has its own saved source selector, independent of HDR/DV preferences.
+ stored->ints["dvbridge.sdrsource"]=0;
+ activeOutputSelectors.reset();
+ auto sdrDefault=FrameOutputSettings();
+ assert(sdrDefault.sdrSource==SDRSourceMode::Native);
+ OutputCapabilities sdrCaps;
+ sdrCaps.sourceKnown=sdrCaps.isSDR=sdrCaps.processingKnown=sdrCaps.nativeDV=sdrCaps.hdr10=true;
+ sdrCaps.sdrExpansion={ModeAdmission{true,OutputReason::None},ModeAdmission{true,OutputReason::None}};
+ assert(SelectOutput(sdrDefault,sdrCaps).route==OutputRoute::Vanilla);
+ StreamTelemetry::current.transaction.capabilities=sdrCaps;
+ assert(choose(StreamHdrType::HDR_TYPE_NONE,1));
+ auto hdr=FrameOutputSettings();
+ assert(hdr.sdrSource==SDRSourceMode::HDR10 && stored->ints["dvbridge.sdrsource"]==0);
+ assert(SelectOutput(hdr,sdrCaps).route==OutputRoute::HDR10);
+ sdrCaps.hdr10MaxBpc=8;
+ assert(SelectOutput(hdr,sdrCaps).reason==OutputReason::HDR10LinkDepthTooLow);
+ sdrCaps.hdr10MaxBpc=10;
+ assert(choose(StreamHdrType::HDR_TYPE_NONE,2));
+ auto dvExpanded=FrameOutputSettings();
+ assert(dvExpanded.sdrSource==SDRSourceMode::DolbyVision);
+ assert(SelectOutput(dvExpanded,sdrCaps).route==OutputRoute::NativeDV);
+ sdrCaps.nativeDV=false;
+ assert(SelectOutput(dvExpanded,sdrCaps).reason==OutputReason::NoDVTransport);
+ sdrCaps.nativeDV=true;sdrCaps.processingKnown=false;
+ assert(SelectOutput(dvExpanded,sdrCaps).reason==OutputReason::ProcessingPending);
+ sdrCaps.processingKnown=true;sdrCaps.sdrExpansion[1]={false,OutputReason::NoGPUProcessing};
+ assert(SelectOutput(dvExpanded,sdrCaps).reason==OutputReason::NoGPUProcessing);
+ sdrCaps.isSDR=false;
+ assert(SelectOutput(dvExpanded,sdrCaps).route==OutputRoute::Vanilla);
+ activeOutputSelectors.reset();
+ assert(FrameOutputSettings().sdrSource==SDRSourceMode::Native);
 }
-'''.replace('HEADER', header).replace('SELECTOR', selector).replace('CHOICES', choices).replace('WRITES', writes)
+'''.replace('HEADER', header).replace('EXPANSION',body((TREE/'xbmc/cores/VideoPlayer/DVDCodecs/Video/DVOutputSelection.h').read_text(), 'inline OutputSelection SelectSDRExpansionOutput(')).replace('SELECTOR', selector).replace('CHOICES', choices).replace('WRITES', writes)
         root_repo = Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

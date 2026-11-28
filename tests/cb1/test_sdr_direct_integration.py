@@ -50,7 +50,7 @@ class SDRDirectIntegration(unittest.TestCase):
             '@HINTS_COPY@':next(line for line in hints.splitlines() if 'dovi = stream->dovi;' in line),
             '@DECODED@':decoded,'@LAYER_COPY@':layer_copy,
             '@FEL_IDENTITY@':body(decoder,'struct FELBaseIdentity'),
-            '@LAYER_BINDING@':next(line for line in producer.splitlines() if 'layer.binding=hdr10 ?' in line)}.items():
+            '@LAYER_BINDING@':next(line for line in producer.splitlines() if 'layer.binding=plain ?' in line)}.items():
             provenance = provenance.replace(token,code)
         program = (Path(__file__).with_name('sdr_direct_owners.cpp')).read_text()
         program = program.replace('@SETTINGS@',settings).replace('@CLASS@',cls).replace('@SNAPSHOT@',snapshot).replace('@METHODS@',methods).replace('@PROVENANCE@',provenance)
@@ -82,7 +82,7 @@ class SDRDirectIntegration(unittest.TestCase):
             built = subprocess.run(['cc','-std=gnu11','-ffunction-sections','-fdata-sections','-I'+str(ROOT/'CB1/src'),
                 *flags,'-c',str(ROOT/'CB1/src/cb1_hdr10plus_dovi.c'),'-o',str(root/'describe.o')],env=env,capture_output=True,text=True)
             self.assertEqual(built.returncode,0,built.stderr)
-            build = subprocess.run(['c++','-std=c++20','-DFMT_HEADER_ONLY','-ffunction-sections','-fdata-sections','-Wl,--gc-sections','-I'+str(root),'-I'+str(ROOT/'CB1/src'),'-I'+str(ROOT/'CB1/tests'),'-I'+str(TREE/'xbmc'),
+            build = subprocess.run(['c++','-std=c++20','-DFMT_HEADER_ONLY','-ffunction-sections','-fdata-sections','-Wl,--gc-sections','-I'+str(root),'-I'+str(Path(os.environ.get('CB1_TEST_ENGINE',str(ROOT/'CB1')))/'src'),'-I'+str(ROOT/'CB1/src'),'-I'+str(ROOT/'CB1/tests'),'-I'+str(TREE/'xbmc'),
                 str(root/'check.cpp'),str(TREE/'xbmc/utils/Crc32.cpp'),str(TREE/'xbmc/cores/VideoSourceSideData.cpp'),
                 str(TREE/'xbmc/utils/Base64.cpp'),str(TREE/'xbmc/utils/Variant.cpp'),str(TREE/'xbmc/utils/JSONVariantWriter.cpp'),
                 str(root/'describe.o'),str(ROOT/'CB1/src/dvbridge_policy.c'),*flags,'-o',str(root/'check')],env=env,capture_output=True,text=True)
