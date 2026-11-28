@@ -26,7 +26,7 @@ inline bool enabled=false;inline uint64_t now=0;inline unsigned logs=0;inline st
 bool DiagnosticsEnabled(){return enabled;}uint64_t DiagnosticNowMs(){return now;}
 template<class... T>void DiagnosticLog(int,const char*,const char* stage,T...){++logs;lastStage=stage;}
 }
-constexpr int DVBRIDGE_MODE_MASTER_REFERENCE=5,DVBRIDGE_MODE_SDR=7,AV_PIX_FMT_RGBA=1,AV_PIX_FMT_RGBA64LE=2,AV_PIX_FMT_BGRA=3,AV_PIX_FMT_X2BGR10LE=4;
+constexpr int DVBRIDGE_MODE_STANDARD=1,DVBRIDGE_MODE_HDR10_BASIC=2,DVBRIDGE_MODE_ENHANCED_DV=4,DVBRIDGE_MODE_MASTER_REFERENCE=5,DVBRIDGE_MODE_SDR=7,AV_PIX_FMT_RGBA=1,AV_PIX_FMT_RGBA64LE=2,AV_PIX_FMT_BGRA=3,AV_PIX_FMT_X2BGR10LE=4;
 constexpr int GL_READ_FRAMEBUFFER_BINDING=1,GL_READ_FRAMEBUFFER=2;
 constexpr int GL_DRAW_FRAMEBUFFER_BINDING=3,GL_DRAW_FRAMEBUFFER=4;
 using GLint=int;
@@ -91,7 +91,7 @@ struct CDVBridgeGLES {
  DVBRIDGE::DiagnosticFailures m_captureFailures;
  struct{uint64_t stream=3,picture=4,revision=5;}m_pendingIdentity;
  int m_effectiveMode=5;bool m_prepared=true,m_direct=true,m_hdr10Limited=false;unsigned m_outputBits=10;
- bool m_hdr10=true,m_playerLed=false,sourceCarrier=true;
+ bool m_hdr10=true,m_playerLed=false,sourceCarrier=true,m_pendingExpansion=false;
  bool UsesMasterSourceCarrier() const {return sourceCarrier;}
  Texture texture, picture;
  Texture* m_scanout=&texture;
@@ -99,11 +99,11 @@ struct CDVBridgeGLES {
  dvbridge_policy m_playerLedPolicy;
  struct {int gpu=1;} context,*m_gl=&context;
  int m_renderer=1;
- unsigned m_scanoutFramebuffer=42,m_pendingInfo=2;int pqCalls=0;
+ unsigned m_scanoutFramebuffer=42,m_pendingInfo=2,pqFramebuffer=77;int pqCalls=0;
  struct {const void* Data(){return this;}size_t Size(){return 10;}}m_pendingMetadata;
  bool m_pendingOverlayVisible=false, m_overlayVisible=false, m_guiComposed=false, m_nativeOverlayEnabled=false;
  struct {float rect[4]{};} m_nativeOverlay;
- unsigned GetPQFramebuffer(bool forGUI){++pqCalls;if(forGUI)m_guiComposed=true;return 77;}
+ unsigned GetPQFramebuffer(bool forGUI){++pqCalls;if(forGUI)m_guiComposed=true;return pqFramebuffer;}
  bool ReadPlayerLedScreenshot(KODI::RENDERING::CAPTURE::ReadbackBuffer& out) @@PLAYER_LED@@
  struct {struct {int primaries=PL_COLOR_PRIM_BT_709;} container;} sdrOutput;
  auto HDR10Output() const {return &sdrOutput;}
@@ -141,7 +141,7 @@ int main(){
  assert(!bridge.ReadScreenshot(out) && bound==99 && out.pixels.get()==accepted);
  readOK=true;mapOK=false;
  assert(!bridge.ReadScreenshot(out) && bound==99 && out.pixels.get()==accepted);
- bridge.m_effectiveMode=1;bridge.m_direct=false;
+ bridge.m_effectiveMode=DVBRIDGE_MODE_HDR10_BASIC;bridge.m_direct=false;
  assert(bridge.ReadScreenshot(out));assert(bound==99 && depth==16 && !flip && bridge.pqCalls==1);
  assert(out.format==AV_PIX_FMT_RGBA && out.stride==8);
  assert(out.colorEncodingVerified);
@@ -165,6 +165,26 @@ int main(){
  bridge.m_playerLed=false;
  bridge.m_guiComposed=false;
  assert(bridge.ReadScreenshot(out,true) && !bridge.m_guiComposed);
+ // The expanded SDR source produces a real BT.2020 PQ texture before DV packing.
+ // A standard capture must be eligible for sRGB conversion even in TV-led output.
+ bridge.m_effectiveMode=DVBRIDGE_MODE_STANDARD;bridge.m_hdr10=false;
+ bridge.m_pendingExpansion=true;bridge.m_guiComposed=false;
+ readFormat=AV_PIX_FMT_RGBA64LE;
+ assert(bridge.ReadScreenshot(out,false) && out.colorEncodingVerified);
+ assert(depth==16 && !flip && bound==99 && out.format==AV_PIX_FMT_RGBA64LE);
+ // Failed readback must not publish a different or incorrectly tagged frame.
+ accepted=out.pixels.get();readOK=false;
+ assert(!bridge.ReadScreenshot(out,false) && out.pixels.get()==accepted && bound==99);
+ readOK=true;bridge.pqFramebuffer=0;
+ assert(!bridge.ReadScreenshot(out,false) && out.pixels.get()==accepted && bound==99);
+ bridge.pqFramebuffer=77;
+ // A genuine authored-DV Standard frame is not an SDR expansion.
+ bridge.m_pendingExpansion=false;
+ assert(bridge.ReadScreenshot(out,false) && !out.colorEncodingVerified);
+ // An old expansion flag is not sufficient for another output policy.
+ bridge.m_pendingExpansion=true;bridge.m_effectiveMode=DVBRIDGE_MODE_ENHANCED_DV;
+ assert(bridge.ReadScreenshot(out,false) && !out.colorEncodingVerified);
+ bridge.m_pendingExpansion=false;readFormat=AV_PIX_FMT_RGBA;
  bridge.m_effectiveMode=DVBRIDGE_MODE_SDR;bridge.m_direct=true;mapOK=false;
  const int priorPQ=bridge.pqCalls;
  assert(bridge.ReadScreenshot(out));assert(bound==99 && depth==10 && flip);
