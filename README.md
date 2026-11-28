@@ -148,7 +148,6 @@ Both tiers require native HDMI. [Performance details](docs/cb1/PERFORMANCE-GUIDE
 Optional community-maintained tools, installed separately:
 
 - **[CB1 PlayerProcessInfo](https://github.com/frodo19/service-cb1-ppi)** by frodo19 — Customize the Player Information panel's colours, text styling and transparency.
-- **[TinyPPI Mobile](https://github.com/CE-Repo/tinyppi-mobile)** by CE-Repo — Android companion for live playback information, library browsing and remote playback control via the optional CB1 PlayerProcessInfo web server.
 
 ## What's next?
 
