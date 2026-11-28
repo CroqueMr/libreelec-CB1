@@ -28,6 +28,7 @@ class GbmColourTransition(unittest.TestCase):
         controller = (self.root / 'xbmc/windowing/gbm/WinSystemGbmGLESContext.cpp').read_text()
         native = (self.root / 'xbmc/windowing/gbm/WinSystemGbm.cpp').read_text()
         program = native_owner_program(self.root).split('int main() {', 1)[0]
+        program = program.replace('struct CServiceBroker {', 'struct CServiceBroker { struct Cache{unsigned GetVideoProcessingGeneration(){return 1;}}; static Cache& GetDataCacheCore(){static Cache c;return c;}')
         for signature in ('bool ConnectorPreferencesAllowed()',
                           'std::optional<bool> TransportLimitedColor()',
                           'std::optional<uint64_t> RestoredConnectorProperty('):
@@ -72,6 +73,12 @@ struct CWinSystemGbmGLESContext:CWinSystemGbm{
  static constexpr int DVBRIDGE_GAMUT_BT2020=3;
  struct{struct{struct{int gamut=1;}sdr;}policy;}m_dvSelection;
  bool m_cb1RestoringPreferences=false,m_dvOrdinaryFrame=false,m_dvStopPending=false;
+ struct DeferredPicture{struct{unsigned informationGeneration=0;}doviSourceInfo;};
+ std::shared_ptr<const DeferredPicture> m_deferredOrdinaryPicture;
+ enum class OrdinaryDraw { Deferred, Awaiting, Attempted, Drawn };
+ OrdinaryDraw m_deferredOrdinaryDraw{OrdinaryDraw::Deferred};
+ auto&GetGfxContext(){return *this;}bool IsFullScreenVideo(){return true;}
+ bool CancelDeferredOrdinaryVideo(){assert(false);return false;}
  bool m_dvOutputSurface=false,m_dvEndPending=false,m_sdrConversion=false,m_hdrConversion=false;
  std::shared_ptr<void>m_nativeDVProperties;
  std::optional<uint64_t>m_hdrDeepColorPrevious,m_queuedHdrMetadata;

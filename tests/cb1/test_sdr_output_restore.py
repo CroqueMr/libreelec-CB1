@@ -38,7 +38,7 @@ namespace DVBRIDGE {
  };
  struct PlaybackNotification{static void OrdinaryOutputAccepted(bool){}};
 }
-struct CServiceBroker{struct Cache{unsigned GetVideoProcessingGeneration(){return 1;}
+struct CServiceBroker{struct Cache{unsigned generation=1;unsigned GetVideoProcessingGeneration(){return generation;}
  Cache& GetWindowManager(){return *this;}void MarkDirty(){}};
  static Cache* GetGUI(){return &GetDataCacheCore();}
  static Cache& GetDataCacheCore(){static Cache c;return c;}};
@@ -71,6 +71,15 @@ struct Picture{int color_transfer=16;struct{unsigned informationGeneration=1;}do
 struct Window{
  bool m_cb1RestoringPreferences=false;
  bool m_dvOrdinaryFrame=true,m_dvStopPending=false,m_dvRollbackFailed=false;
+ enum class OrdinaryDraw { Deferred, Awaiting, Attempted, Drawn };
+ OrdinaryDraw m_deferredOrdinaryDraw{OrdinaryDraw::Deferred};
+ std::shared_ptr<const Picture> m_deferredOrdinaryPicture;
+ bool fullscreen=true;Window&GetGfxContext(){return *this;}bool IsFullScreenVideo(){return fullscreen;}
+ void DeferOrdinaryVideo(std::shared_ptr<const Picture> picture) @DEFER@
+ void MarkDeferredOrdinaryVideoAttempted(const Picture& picture) @ATTEMPT@
+ void MarkDeferredOrdinaryVideoDrawn(const Picture& picture) @DRAWN@
+ bool CancelDeferredOrdinaryVideo() @CANCEL@
+ void BeginDeferredOrdinaryVideo() @BEGIN_DEFERRED@
  bool m_dvActivating=false,m_dvRecoveryPending=false,m_dvSuperseded=false,m_dvRejectedSurface=false;
  bool m_sdrBT2020Rejected=false;
  bool m_dvPriorHDRConversion=false,m_dvPriorSDRConversion=false,m_dvPriorGuiCompositing=false;
@@ -87,7 +96,7 @@ struct Window{
  bool pending=true,complete=true,bind=true,restore=false;unsigned restores=0;
  unsigned m_dvAttemptFailures=0,m_dvFailedStream=0,m_dvFailedPolicy=0;
  unsigned m_dvActivationStream=1,m_dvActivationPolicy=1,m_hdr10SessionStream=1;
- float m_dvPriorGuiSDRGamma=2.4f;int m_videoSourceSideData=0;
+ float m_dvPriorGuiSDRGamma=2.4f;std::shared_ptr<int> m_videoSourceSideData;
  std::mutex m_dvCapabilityMutex;
  DVBRIDGE::OutputReason m_dvActivationReason{},m_dvFatalReason{};
  DVBRIDGE::OutputRoute m_dvRejectedRoute{};
@@ -107,7 +116,7 @@ struct Window{
  bool ConfigureGuiCompositing(int,float){return true;}
  bool EndDVBridge(){++restores;if(!restore)return false;m_dvState.Restored();return true;}
  void AnnounceCB1Mode(bool){}void CompleteCB1Mode(bool,bool){}
- void CompleteCB1ConnectorRestore(){}void PublishVideoSource(bool,int){}
+ void CompleteCB1ConnectorRestore(){}void PublishVideoSource(bool,const std::shared_ptr<int>&){}
  void SetColorimetry(const Picture*p){m_queuedColorspace=p?9:0;
   auto drm=std::dynamic_pointer_cast<CDRMAtomic>(m_DRM);drm->AddProperty(drm.get(),"Colorspace",*m_queuedColorspace);}
  bool SetHDR(const Picture*p){m_queuedHdrMetadata=p?12:0;
@@ -129,7 +138,30 @@ struct Window{
 int main(int argc,char**argv){
  assert(argc==2);std::string scenario=argv[1];Window w;
  auto drm=std::dynamic_pointer_cast<CDRMAtomic>(w.m_DRM);
- if(scenario=="missing-drm"){
+ if(scenario=="deferred-retry"){
+  auto picture=std::make_shared<Picture>();w.fullscreen=false;
+  w.DeferOrdinaryVideo(picture);w.Present(true);
+  assert(drm->commits==0 && !w.m_dvStopPending);
+  w.BeginDeferredOrdinaryVideo();w.MarkDeferredOrdinaryVideoAttempted(*picture);w.Present(true);
+  assert(drm->commits==0 && !w.m_dvStopPending);
+  Picture different;w.MarkDeferredOrdinaryVideoDrawn(different);w.Present(true);
+  assert(drm->commits==0);
+  w.MarkDeferredOrdinaryVideoDrawn(*picture);w.Present(true);
+  assert(drm->commits==1 && w.m_deferredOrdinaryPicture && w.m_dvOrdinaryFrame);
+  w.BeginDeferredOrdinaryVideo();w.MarkDeferredOrdinaryVideoAttempted(*picture);w.Present(true);
+  assert(drm->commits==1);
+  w.MarkDeferredOrdinaryVideoDrawn(*picture);drm->accept=true;w.Present(true);
+  assert(drm->commits==2 && !w.m_deferredOrdinaryPicture && !w.m_dvOrdinaryFrame);
+ }else if(scenario=="deferred-cancel" || scenario=="deferred-stale"){
+  auto picture=std::make_shared<Picture>();w.DeferOrdinaryVideo(picture);
+  w.BeginDeferredOrdinaryVideo();w.m_videoSourceSideData=std::make_shared<int>(1);
+  if(scenario=="deferred-stale"){
+   w.MarkDeferredOrdinaryVideoDrawn(*picture);CServiceBroker::GetDataCacheCore().generation=2;
+  }else w.fullscreen=false; // The windowed controller went away before the real retry.
+  w.Present(true);assert(!drm->commits && w.m_dvStopPending && !w.m_videoSourceSideData);
+  w.BeginDeferredOrdinaryVideo();assert(!w.m_deferredOrdinaryPicture && w.m_dvStopPending);
+  drm->accept=true;w.Present(true);assert(drm->commits==1 && !w.m_dvOrdinaryFrame);
+ }else if(scenario=="missing-drm"){
   w.m_DRM.reset();w.Present(true);
   assert(w.m_dvOrdinaryFrame && w.pending && w.m_dvState.captured && !w.Prepare());
   assert(drm->commits==0 && !w.m_dvRollbackFailed);
@@ -184,6 +216,13 @@ int main(int argc,char**argv){
                 ('@POLL@', 'bool CWinSystemGbmGLESContext::PollRejectedDVSurface()'),
                 ('@RECOVER@', 'bool CWinSystemGbmGLESContext::RecoverDVActivation()')):
             program = program.replace(token, body(source, signature))
+        for token, signature in (
+                ('@DEFER@', 'void CWinSystemGbmGLESContext::DeferOrdinaryVideo('),
+                ('@ATTEMPT@', 'void CWinSystemGbmGLESContext::MarkDeferredOrdinaryVideoAttempted('),
+                ('@DRAWN@', 'void CWinSystemGbmGLESContext::MarkDeferredOrdinaryVideoDrawn('),
+                ('@CANCEL@', 'bool CWinSystemGbmGLESContext::CancelDeferredOrdinaryVideo('),
+                ('@BEGIN_DEFERRED@', 'void CWinSystemGbmGLESContext::BeginDeferredOrdinaryVideo(')):
+            program = program.replace(token, body(source, signature))
         program = program.replace('@GUARD@', guard).replace('@ORDINARY@', ordinary)
         program = program.replace('@ORDINARY_PREPARE@', body(
             source, 'bool CWinSystemGbmGLESContext::PrepareOrdinaryDVOutput('))
@@ -199,7 +238,7 @@ int main(int argc,char**argv){
                                    capture_output=True, text=True)
             self.assertEqual(built.returncode, 0, built.stderr)
             for scenario in ('ordinary', 'stop', 'completion', 'recovery', 'fence', 'rebind', 'poll',
-                             'live-retry', 'stop-retry', 'missing-drm'):
+                             'live-retry', 'stop-retry', 'missing-drm', 'deferred-retry', 'deferred-cancel', 'deferred-stale'):
                 with self.subTest(scenario=scenario):
                     run = subprocess.run([str(binary), scenario], capture_output=True, text=True)
                     self.assertEqual(run.returncode, 0, run.stdout + run.stderr)
@@ -227,7 +266,8 @@ struct CModeChangeHold {enum class Kind{NONE,STOP};Kind Holding(){return Kind::N
 struct VideoPicture{int color_transfer=16;};
 struct Services {unsigned dirty=0;Services& GetWindowManager(){return *this;}
  void MarkDirty(){++dirty;}};
-struct CServiceBroker {static Services* GetGUI(){static Services value;return &value;}};
+struct CServiceBroker {static Services* GetGUI(){static Services value;return &value;}
+ struct Cache{unsigned GetVideoProcessingGeneration(){return 1;}};static Cache& GetDataCacheCore(){static Cache c;return c;}};
 namespace DVBRIDGE {
  uint64_t DiagnosticNowMs(){return 0;}
  enum class OutputReason {None,ProcessingPending};
@@ -264,6 +304,12 @@ struct CWinSystemGbmGLESContext:CWinSystemGbmEGLContext{
  struct {DVBRIDGE::OutputReason reason=DVBRIDGE::OutputReason::None;}m_dvSelection;
  bool m_cb1RestoringPreferences=false;
  bool m_dvOrdinaryFrame=true,m_dvStopPending=true,rollback=false;
+ struct DeferredPicture{struct{unsigned informationGeneration=0;}doviSourceInfo;};
+ std::shared_ptr<const DeferredPicture> m_deferredOrdinaryPicture;
+ enum class OrdinaryDraw { Deferred, Awaiting, Attempted, Drawn };
+ OrdinaryDraw m_deferredOrdinaryDraw{OrdinaryDraw::Deferred};
+ auto&GetGfxContext(){return *this;}bool IsFullScreenVideo(){return true;}
+ bool CancelDeferredOrdinaryVideo(){assert(false);return false;}
  unsigned rejects=0,gui=0,swaps=0;
  unsigned colorClears=0,hdrClears=0;
  std::mutex m_dvCapabilityMutex;int m_masterSafety=0;
