@@ -112,10 +112,15 @@ Use a native HDMI port wired to the GPU. DisplayPort and USB-C to HDMI converter
 - **Intel** — Integrated graphics on mobile and desktop Core 8th Gen or newer, selected 7th Gen Kaby Lake systems, Core Ultra Series 1/2, and N-series including N100/N150. Dedicated GPUs include Arc A/B and Iris Xe MAX.
 - **AMD** — Ryzen APUs with Radeon graphics: mobile 2000–6000, 7030/7035/7040/8040 and Ryzen AI 300, plus desktop 2000G/3000G/4000G/5000G/8000G. Dedicated GPUs include Radeon RX 5000/6000/7000 and Vega M. RX 550 support is experimental. RX 9000 awaits physical HDMI validation.
 - **NVIDIA** (experimental compatibility; not recommended) — Dedicated GeForce GTX 10/16 and RTX 20/30/40/50. The x86-64 image automatically selects the matching R580 or R620 stack; physical validation remains incomplete.
-- **Raspberry Pi 5** — TV-led Dolby Vision with output matching CB1 Master Reference at the same settings. [dangerouslaser's dedicated build](https://github.com/dangerouslaser/libreelec-rpi-dv)
-- **Intel NUC 11 (CM11EBV58W)** — Parade PS185 DP-to-HDMI PCON, with TV-led Dolby Vision, HDR10 and HBR audio via [Snuffpig's dedicated fork](https://github.com/Snuffpig/libreelec-CB1-intel-pcon).
 
 [Full hardware list](docs/cb1/HARDWARE.md) · [HDMI output support by format](docs/cb1/DRIVER-COVERAGE.md)
+
+### Dolby Vision on other platforms
+
+Dedicated community builds, separate from the main x86-64 image:
+
+- **Raspberry Pi 5** — TV-led Dolby Vision with output matching CB1 Master Reference at the same settings. [dangerouslaser's dedicated build](https://github.com/dangerouslaser/libreelec-rpi-dv)
+- **Intel NUC 11 (CM11EBV58W)** — Parade PS185 DP-to-HDMI PCON, with TV-led Dolby Vision, HDR10 and HBR audio via [Snuffpig's dedicated fork](https://github.com/Snuffpig/libreelec-CB1-intel-pcon).
 
 ## Recommended hardware
 
