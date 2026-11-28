@@ -22,7 +22,7 @@ build. Existing upstream files retain their own notices.
 The GPLv2 migration covers the project's additions and replacements, not the
 complete image. FFmpeg retains `--enable-gpl --enable-version3` and the selected
 Kodi build retains its GPLv3 conditions. An API or shared-library boundary does
-not remove those requirements. [Engine license details](../../CB1/docs/LICENSING.md).
+not remove those requirements. [Engine license details](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/LICENSING.md).
 
 Source archives provide release sources, patches, the model and build material.
 Keep source and vendor inputs available alongside the binaries, with notices and
@@ -31,8 +31,8 @@ license texts. The model lock records the owner's additional grant and
 No proprietary Dolby SDK is used. This license inventory is not patent clearance.
 
 Published Beta5's historical inventory is retained in the
-[license map](../../CB1/docs/LICENSE-MAP.md). The current replacements and grants
-are documented in the [migration record](../../CB1/docs/GPL2-MIGRATION.md).
+[license map](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/LICENSE-MAP.md). The current replacements and grants
+are documented in the [migration record](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/GPL2-MIGRATION.md).
 Offline comparisons do not certify hardware or establish patent clearance.
 
 The 2026-10-28 HDR transport additions do not import, copy, translate or adapt

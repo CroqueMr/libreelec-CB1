@@ -4,14 +4,14 @@ Supported: NVIDIA GeForce GTX 10 series, using the matched R580 driver in the Ge
 
 ## Build
 
-The Generic image contains NVIDIA **580.178.04** and **615.78.08** in isolated
+The current x86-64 image contains NVIDIA **580.196.07** and **620.73.04** in isolated
 payloads. LibreELEC selects one matching module, firmware and userspace stack
 before systemd/udev. No separate Pascal image or build flag is required.
 
 Selection uses the intersection of the pinned NVIDIA PCI-device lists for R580,
 not retirement hints alone. A known NVIDIA boot VGA GPU
 takes priority; otherwise a sole known family is selected. On mixed-family
-machines without a unique known boot GPU, R615 is selected with a boot diagnostic;
+machines without a unique known boot GPU, R620 is selected with a boot diagnostic;
 the other family is unavailable. This does not select the connected monitor.
 An unknown NVIDIA boot GPU gets no automatic NVIDIA module overlay. Intel/AMD-only
 machines retain Mesa and do not load an NVIDIA overlay. Cross-family NVIDIA
@@ -57,7 +57,7 @@ The complete-image checks verify both driver branches, their firmware, userspace
 libraries, dependencies, module versions and early-boot selection. These checks
 do not constitute Dolby or HDMI certification.
 
-## Source versions
+## Historical RC3 source versions
 
 | Component | Source |
 | --- | --- |
@@ -65,6 +65,8 @@ do not constitute Dolby or HDMI certification.
 | NVIDIA proprietary payload | `580.178.04` |
 | Public modeset sources | NVIDIA `c8e699821c23e4335bf23330a54a23d15cfb95e9` |
 | Driver patch | `packages/graphics/nvidia-pascal-modeset/patches/nvidia-pascal-modeset-9000-dv-transport.patch` |
+
+For the current driver and image versions, see [Versions](VERSIONS.md).
 
 The Pascal-specific code is limited to transport and packaging. CB1 algorithms, generated
 metadata, codecs and existing Intel/AMD/NVIDIA rendering paths are unchanged.

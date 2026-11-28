@@ -2,7 +2,7 @@
 
 ## Reference vs Master Reference
 
-Both TV-led paths reconstruct applicable FEL and forward display-management metadata. Master Reference uses exact source-domain integer arithmetic and dedicated FEL filters for its admitted source formats. Reference uses a lighter reconstruction recipe. [Master Reference contract](../../CB1/docs/MASTER-REFERENCE.md) · [Reference algorithm](../../CB1/docs/ALGORITHMS.md#dolby-vision-reference)
+Both TV-led paths reconstruct applicable FEL and forward display-management metadata. Master Reference uses exact source-domain integer arithmetic and dedicated FEL filters for its admitted source formats. Reference uses a lighter reconstruction recipe. [Master Reference contract](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/MASTER-REFERENCE.md) · [Reference algorithm](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/ALGORITHMS.md#dolby-vision-reference)
 
 On the Ryzen 5 7430U with **Beta5 Debug**, the circuit then named **Standard** reduced graphics-engine busy time by **34% on Avatar** and **50% on 1917**. Both matched measurement windows reported zero missed presentations. These figures describe the two measured excerpts at 23.976 fps on the historical build. The report includes unamplified crops, amplified difference maps, per-component errors and raw measurements. [Matched comparison](../reports/master-reference-vs-standard-2026-10-21.md)
 
@@ -22,6 +22,10 @@ Kodi keeps its existing scaler by default. The video scaler has independent sett
 The **Ryzen 5 7430U SDR scaling comparison** uses matching 1080p-to-4K crops from *Tears of Steel* and *Sintel*. These are GPU render timings for the scaling comparison. Decode, subtitles and display are outside the timings. The PDF includes P95 and the exact crop coordinates. Blender Foundation film stills are credited in the report under CC BY 3.0. [PDF with same-position crops and timings](../reports/upscaler-comparison-amd.pdf)
 
 The **FEL upscaler** is a separate stage. It resamples the enhancement layer before reconstruction. Master Reference retains its dedicated FEL reconstruction filters when the final picture is enlarged with a video upscaler. [FEL visual comparison](FEL-UPSCALING.md)
+
+## SDR conversion headroom
+
+CB1-R1.2.0 adds SDR-to-HDR10 and SDR-to-Dolby-Vision GPU rendering. The 24 fps film test on N100 and Ryzen 5 7430U passed with the playback controls moving; AMD Dolby Vision skips fell from 10 to zero in the measured window. These are short matched tests, not universal throughput guarantees. The N100 remains GPU-limited on the tested 4K60 converted SDR patterns with on-screen controls. Native SDR remains available.
 
 ## Hardware reference points
 

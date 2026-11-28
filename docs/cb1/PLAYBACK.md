@@ -7,13 +7,14 @@ modes appear during playback. Unavailable modes show their blocking reason.
 | Source | Available processing |
 | --- | --- |
 | Dolby Vision | Reference, Master Reference, Adaptive HDR Mapping, HDR10 Rendering, HDR10 : LLDV Reference conversion, Dolby Vision : LLDV Reference, HDR10+ Rendering, SDR Rendering or Kodi default |
-| HDR10 | Dolby Vision Rendering, Dolby Vision : Adaptive HDR Mapping, SDR Rendering or Kodi default |
+| HDR10 | HDR10 Native, Dolby Vision Rendering, Dolby Vision : Adaptive HDR Mapping or SDR Conversion |
 | HDR10+ | HDR10+ Native, Kodi default for ordinary HDR10, Dolby Vision Rendering or SDR Conversion |
 | HLG | HLG Native, Dolby Vision Rendering or SDR Conversion |
-| SDR / 3D | Native Kodi playback |
+| SDR | SDR Native (default), HDR10 Rendering or Dolby Vision Rendering |
+| 3D | Native Kodi playback |
 
-The **Dolby Vision default playback**, **HDR10 default playback**, **HDR10+ default playback**
-and **HLG default playback** selectors store independent defaults. Their right-hand
+The **Dolby Vision default playback**, **HDR10 default playback**, **HDR10+ default playback**,
+**HLG default playback** and **SDR default playback** selectors store independent defaults. Their right-hand
 values show the saved choices, including the Dolby Vision conversion method.
 Opening or reopening a file, restarting playback or advancing the playlist uses
 that source's default. HLG-based Dolby Vision with RPU uses the Dolby Vision default.
@@ -22,8 +23,7 @@ Quick rendering selection through **O** or the video-settings button changes onl
 the current playback session. Pause, seek, decoder reopening and display recreation
 retain that choice. These live choices never save over a default. Editing a default
 during playback affects the next file; calibration and other tuning still apply live.
-**Kodi default** uses native Kodi playback. An unavailable requested circuit shows
-its reason and cannot silently switch to another circuit; preparation can remain pending.
+**Kodi default** and the explicit native paths use Kodi playback. Unavailable circuits show their reason. If the default LLDV circuit is unavailable because the source frame rate exceeds its limit, the player uses HDR10 rendering and shows a notification after the first accepted picture; the saved default is unchanged.
 
 ## TV profile
 
@@ -61,8 +61,7 @@ Master Reference retains its requested circuit when rendering headroom is low.
 Presentation-margin diagnostics remain available. GUI, capture, pause and
 discontinuous pictures are excluded from those measurements.
 
-**HDR/DV to SDR target** configures HDR10, HDR10+ and Dolby Vision conversion to
-SDR, using BT.709 by default. It does not change native SDR playback.
+**HDR/DV to SDR target** configures Dolby Vision, HDR10, HDR10+ and HLG conversion to SDR. It does not change native SDR playback. **SDR output gamut** selects BT.709 (default) or accepted BT.2020 for SDR output, including native SDR.
 
 ## FEL upscaling and frame preparation
 
@@ -92,7 +91,7 @@ trims or alter reconstructed pixels. Auto uses mastering brightness and its
 selected trigger. Auto 2 uses scene L1 and TV peak, with 20% headroom by default.
 The decision uses original L2 presence even when **Disable L2 trims** is enabled.
 Both settings deliberately change outgoing metadata; leave both off to retain
-the original Master metadata. [Conditions and defaults](../../CB1/docs/CM4-APPEND.md).
+the original Master metadata. [Conditions and defaults](https://github.com/CroqueMr/CB1/blob/10b8a83944be871e8973dbcaf7f8b93a69e3d4bb/docs/CM4-APPEND.md).
 
 ## Playback panels
 
@@ -243,6 +242,6 @@ commit. The Ryzen 5 7430U path at UHD 23.976/24 Hz carries 10 useful bits in a
 12-bit HDMI carrier.
 
 
-### SDR default playback
+## SDR default playback
 
-Native SDR is unchanged and selected by default. For eligible progressive SDR sources, SDR to HDR10 Rendering uses a fixed 1000-nit container, and Dolby Vision Rendering uses a fixed 600-nit TV-led target. The original CB1 GPU expansion retains SDR blacks, follows a shared diffuse response and expands highlights; the peak is a ceiling, not the brightness of every white pixel. The Dolby Vision L1 statistics describe the expanded picture and L3 is neutral. No Dolby Vision metadata is attributed to SDR input. Quick Switch changes only the current playback; availability follows the actual source import, GPU and HDMI sink.
+Native SDR is unchanged and selected by default. For eligible progressive SDR sources, SDR to HDR10 Rendering uses a fixed 1000-nit container, and Dolby Vision Rendering uses a fixed 600-nit TV-led target. The original CB1 GPU expansion retains SDR blacks, follows a shared diffuse response and expands highlights; the peak is a ceiling, not the brightness of every white pixel. The Dolby Vision L1 statistics describe the expanded picture and L3 is neutral. No Dolby Vision metadata is attributed to SDR input. Quick Switch changes only the current playback; availability follows the actual source import, GPU and HDMI sink. Native SDR and its selected video upscaler remain available. 24 fps conversions were qualified on N100 and Ryzen 5 7430U; 4K60 conversion can exceed the N100’s GPU headroom, particularly with on-screen controls.

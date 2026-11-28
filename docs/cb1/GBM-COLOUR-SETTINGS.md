@@ -16,10 +16,10 @@ The normal display settings offer:
   when the driver exposes the writable connector property. Adaptive considers
   content depth and link constraints and has bounded fallback attempts.
 - **Maximum bit depth:** Auto or a value within the driver's reported limits.
-  Auto restores the captured driver default. This sets a ceiling; it does not
+  Auto restores the captured driver default. A clean Kodi shutdown restores its inherited ceiling before the next restart; stale limits left by older builds or an unclean stop may still require a device reboot. This sets a ceiling; it does not
   assert that every frame or physical link operates at that depth.
 
-The kernel remains 7.2.6. The generic `color format` interface requires newer
+CB1-R1.2.0 uses Linux 7.4-rc4. The generic `color format` interface requires
 driver support, so this setting is hidden when absent; adding the menu does
 not add that interface to older Intel, AMD or NVIDIA drivers. Range and bit
 depth controls are likewise subject to connector capabilities. DP/USB-C and
