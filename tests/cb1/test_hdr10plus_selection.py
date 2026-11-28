@@ -43,7 +43,7 @@ int main(){
         configure=body(renderer,'bool CLinuxRendererGLES::ConfigureVideoOutput(const VideoPicture& picture)')
         settings=(TREE/'xbmc/cores/VideoPlayer/DVDCodecs/Video/DVOutputSettings.h').read_text()
         profile=body(settings,'bool ProfileValid() const')
-        enums='\n'.join(re.findall(r'enum class (?:OutputMode|HDR10SourceMode|HLGSourceMode)[^;]+;',settings))
+        enums='\n'.join(re.findall(r'enum class (?:OutputMode|HDR10SourceMode|HLGSourceMode|SDRSourceMode)[^;]+;',settings))
         program=r'''
 #define HAVE_DVBRIDGE
 #include "cores/VideoPlayer/DVDCodecs/Video/DVPlaybackInfo.h"
@@ -58,16 +58,19 @@ enum class OutputRoute {Vanilla,NativeDV,HDR10,SDR, PlayerLed};
 struct OutputSelection {OutputRoute route{};dvbridge_policy policy{};OutputReason reason{};int lldvFormat{};uint64_t lldvEdidGeneration{};unsigned lldvRgbScanoutBits{8};};
 struct OutputPreferences {
  HLGSourceMode hlgSource=HLGSourceMode::Native;
+ SDRSourceMode sdrSource=SDRSourceMode::Native;
  OutputMode output=OutputMode::HDR10;HDR10SourceMode hdr10Source=HDR10SourceMode::Native;
  bool allowMasterFallback=true,hdr10TransportFallback=false;int method=2;dvbridge_mode mode=DVBRIDGE_MODE_HDR10PLUS;
  double peak=1000;int panel=0,gamut=2,lldvFormat=0;
  bool ProfileValid(int=0)const PROFILE
  dvbridge_policy Policy()const{return {.revision=1,.mode=mode};}
+ dvbridge_policy SDRExpansionPolicy()const{return {}; }
  dvbridge_policy HDR10PolicyFor(HDR10SourceMode)const{return Policy();}
  HDR10SourceMode HLGMode()const{return HDR10SourceMode::Native;}
  auto HDR10Mode(bool)const{return hdr10Source;}
 };
 using Caps=OutputCapabilities;
+OutputSelection SelectSDRExpansionOutput(const OutputPreferences& preferences,const Caps& caps) EXPANSION
 OutputSelection select(const OutputPreferences& preferences,const Caps& caps) BODY
 OutputSelection SelectOutput(const OutputPreferences& p,const Caps& c){return select(p,c);}
 OutputPreferences preferences;Caps capabilities;
@@ -141,7 +144,7 @@ int main(){
  r=select(p,c);assert(r.route==OutputRoute::NativeDV && r.policy.mode==DVBRIDGE_MODE_MASTER_REFERENCE);
  c.stereoSource=true;assert(select(p,c).route==OutputRoute::Vanilla);
 }
-'''.replace('BODY',implementation).replace('WANTS',wants).replace('CONFIGURE',configure).replace('PROFILE',profile).replace('NATIVE_ENUMS',enums)
+'''.replace('EXPANSION',body(source,'inline OutputSelection SelectSDRExpansionOutput(')).replace('BODY',implementation).replace('WANTS',wants).replace('CONFIGURE',configure).replace('PROFILE',profile).replace('NATIVE_ENUMS',enums)
         repo=Path(__file__).resolve().parents[2]
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary);code=root/'check.cpp';binary=root/'check'

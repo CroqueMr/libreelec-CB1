@@ -1,5 +1,6 @@
 """Adapter summary cannot claim generated metadata as original source metadata."""
 from pathlib import Path
+import os
 import subprocess
 import tempfile
 import unittest
@@ -20,7 +21,7 @@ class ProducerTests(unittest.TestCase):
 #include <bitset>
 enum AVPixelFormat { AV_PIX_FMT_NONE=-1 };
 struct SourceBinding { uint64_t stream{}, picture{}, revision{}; bool Valid() const {return stream && picture && revision;} };
-struct OutputCapabilities { bool isHDR10{},isDV{},isHLG{}; };
+struct OutputCapabilities { bool isHDR10{},isDV{},isHLG{},isSDR{}; };
 using OutputReason=VideoProcessingReason;
 struct CDVPlaybackInfo { enum {HDMI=1,FEL=2,CM4=4,HDR10=8,HDR10PLUS=16,SDR=32}; };
 namespace DVBRIDGE { using ::SourceBinding; using ::OutputCapabilities; using ::OutputReason; struct StreamSnapshot SNAPSHOT }
@@ -80,7 +81,7 @@ int main() {
 '''.replace('SNAPSHOT',snapshot)
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary); (root/'test.cpp').write_text(program)
-            core=Path(__file__).resolve().parents[2]/'CB1/src'
+            core=Path(os.environ.get('CB1_TEST_ENGINE', str(Path(__file__).resolve().parents[2]/'CB1')))/'src'
             circuit=root/'circuit.o'
             compiled=subprocess.run(['cc','-std=c11','-I'+str(core),'-c',str(core/'cb1_circuit.c'),
                 '-o',str(circuit)],capture_output=True,text=True)

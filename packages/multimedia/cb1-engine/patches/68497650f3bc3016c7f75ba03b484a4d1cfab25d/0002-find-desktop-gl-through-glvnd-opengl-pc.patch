@@ -1,4 +1,4 @@
-From c779bc7637e0942c2627f7dd8d5803b9f1f1913c Mon Sep 17 00:00:00 2001
+From 67d7686902a04ac563e76f0083765cadfdcca01a Mon Sep 17 00:00:00 2001
 From: Chris <meischris39@hotmail.com>
 Date: Tue, 10 Nov 2026 03:21:48 +0000
 Subject: [PATCH] CB1: find desktop GL through glvnd's opengl.pc too
@@ -11,7 +11,7 @@ opengl.pc and no gl.pc.
  2 files changed, 3 insertions(+), 2 deletions(-)
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index b3b0b86..6bc0be1 100644
+index d554ebb..4c567c4 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -25,7 +25,7 @@

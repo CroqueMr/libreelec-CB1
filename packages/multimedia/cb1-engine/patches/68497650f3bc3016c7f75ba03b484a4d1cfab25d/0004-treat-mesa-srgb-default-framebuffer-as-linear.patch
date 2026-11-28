@@ -1,4 +1,4 @@
-From 69fc9726804aeff1b999f6bdba6a95afef738454 Mon Sep 17 00:00:00 2001
+From 82cca4046be643100fcbb966936945722bfb6ae8 Mon Sep 17 00:00:00 2001
 From: Chris <meischris39@hotmail.com>
 Date: Tue, 10 Nov 2026 03:21:49 +0000
 Subject: [PATCH] CB1: treat Mesa's sRGB-capable default framebuffer as linear
@@ -14,13 +14,13 @@ check refused such a target.
  2 files changed, 5 insertions(+), 1 deletion(-)
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index fa5ae03..b340200 100644
+index 5209555..1560056 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -83,5 +83,5 @@
    "src/cb1_hdr10_expert.h": "3600cf66e3cccc82e3d9669a0e2b7390e4d1da7377fb04ffeeec61976e18ba74",
-   "src/cb1_sdr_expansion.h": "ece846209ef8bbc74868141fa96d8e783349df0661cf8b369fe19611445c7544",
-   "src/cb1_sdr_expansion.c": "4c74c8d51b3240a2db228d9a729909857757b711acacefa4455dd98dd4d8eedf",
+   "src/cb1_sdr_expansion.h": "c3e9dd57958309d5599b01d678ab50e22e4d8728bb8681e42f88b74739f73fb8",
+   "src/cb1_sdr_expansion.c": "f48894e328932b3fdf3914d5c5ed8469721f728b18048ac7068ab993a81c4b76",
 -  "src/dvbridge_gl_api.h": "7c716c104de155042bc14f24b31cf134365759677b2188f7249342b290d89ad4"
 +  "src/dvbridge_gl_api.h": "d841f661cb5602e854db988ac923f6f2ba8038cdbfcc99e1e190b117d21f031e"
  }

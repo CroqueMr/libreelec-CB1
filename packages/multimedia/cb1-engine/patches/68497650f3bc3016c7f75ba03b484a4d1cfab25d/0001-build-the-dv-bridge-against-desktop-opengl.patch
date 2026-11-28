@@ -1,4 +1,4 @@
-From 7142e6348923e01a7f59ea3468d69485091f10bd Mon Sep 17 00:00:00 2001
+From d3b782f029d24bdd654b5ebf6d82e443e7cc7ef2 Mon Sep 17 00:00:00 2001
 From: Chris <meischris39@hotmail.com>
 Date: Tue, 10 Nov 2026 03:21:32 +0000
 Subject: [PATCH] CB1: build the DV bridge against desktop OpenGL when Kodi
@@ -29,7 +29,7 @@ uses to their core equivalents; GLES builds are unchanged.
  create mode 100644 src/dvbridge_gl_api.h
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index 57b507f..b3b0b86 100644
+index 3eeb297..d554ebb 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -1,13 +1,13 @@
@@ -76,10 +76,10 @@ index 57b507f..b3b0b86 100644
    "src/dvbridge_placebo.h": "1ae453d519231b702dcf128fa6a5c8347491485f746023bf5f7c8ef478ccfef4",
    "src/dvbridge_policy.c": "372986bc8bacd0cb68ca4af440a0b255e2954b1f357cfe84a3fbb9199b8b561d",
    "src/dvbridge_policy.h": "560dbfb112f687461ef9f394d867188724dbbd74135329876325fde4cc793392",
--  "src/dvbridge_render.c": "df0b3113b343923e29d90baeff3809bb3f75560be8c1e777e44dfba056c8b41c",
-+  "src/dvbridge_render.c": "921d1700fb76bf5329a5d7b2eb54a09d592d4470ddc2eead4cb9e4e423c33709",
+-  "src/dvbridge_render.c": "6b5c3424b3ed2107bdf1d9eb4ef95d35761513671a82c7bfe7235bab8abb7052",
++  "src/dvbridge_render.c": "748d3b596faf297f5d831a9c8988433f2113fc5257a6f7c17be03b6cbf4bc56c",
    "src/dvbridge_fel_seek.h": "bdc2944c719f354c4189fd4411e6c5ffe94d1afc4f500d3f5708fce34d12ec58",
-   "src/dvbridge_render.h": "4b2a31b251353dbf04c9feb6db67e3544279d5f91c90c6eb000747dc13ac9ba5",
+   "src/dvbridge_render.h": "0d1e6f16f4b224cf7372680e722d554f0a23c0ecee875be09003fc4f04a5ac8b",
 -  "src/dvbridge_gl_frame.c": "0d2b9daa8031064a2a921cb47cf6856e903f420f573be8ae1e951badadb05e59",
 +  "src/dvbridge_gl_frame.c": "6cbcb4b4c0427ca8196dbd4821aa6a771594fe6388c7adfcacd937e45da27c66",
    "src/dvbridge_gl_frame.h": "598e01022a7a5f683b00ef3c05bec8d575608f342c6698290f9870d64e99a090",
@@ -110,9 +110,9 @@ index 57b507f..b3b0b86 100644
 @@ -82,5 +82,6 @@
    "src/cb1_hdr10_expert.c": "f9db6f021c637bd1054cb1593ecf348b46750541a430a5334fd9051d66d06530",
    "src/cb1_hdr10_expert.h": "3600cf66e3cccc82e3d9669a0e2b7390e4d1da7377fb04ffeeec61976e18ba74",
-   "src/cb1_sdr_expansion.h": "ece846209ef8bbc74868141fa96d8e783349df0661cf8b369fe19611445c7544",
--  "src/cb1_sdr_expansion.c": "4c74c8d51b3240a2db228d9a729909857757b711acacefa4455dd98dd4d8eedf"
-+  "src/cb1_sdr_expansion.c": "4c74c8d51b3240a2db228d9a729909857757b711acacefa4455dd98dd4d8eedf",
+   "src/cb1_sdr_expansion.h": "c3e9dd57958309d5599b01d678ab50e22e4d8728bb8681e42f88b74739f73fb8",
+-  "src/cb1_sdr_expansion.c": "f48894e328932b3fdf3914d5c5ed8469721f728b18048ac7068ab993a81c4b76"
++  "src/cb1_sdr_expansion.c": "f48894e328932b3fdf3914d5c5ed8469721f728b18048ac7068ab993a81c4b76",
 +  "src/dvbridge_gl_api.h": "d1c315243ac60207e8e67af4eb570facfbd470050e2899e46492cd6b50c22a74"
  }
 diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
@@ -365,7 +365,7 @@ index 9da549f..abfbbec 100644
  #include <stdlib.h>
  #include <EGL/egl.h>
 diff --git a/src/dvbridge_render.c b/src/dvbridge_render.c
-index 0e23e50..0ed3087 100644
+index 02320dd..c76ae26 100644
 --- a/src/dvbridge_render.c
 +++ b/src/dvbridge_render.c
 @@ -28,8 +28,14 @@
@@ -383,7 +383,7 @@ index 0e23e50..0ed3087 100644
  #include <EGL/egl.h>
  #include <math.h>
  #include <stdlib.h>
-@@ -3147,7 +3153,7 @@ static bool dv_gpu_requirements(pl_gpu gpu)
+@@ -3180,7 +3186,7 @@ static bool dv_gpu_requirements(pl_gpu gpu)
      glGetIntegerv(GL_MAX_SHADER_STORAGE_BUFFER_BINDINGS,&bindings);
      glGetInteger64v(GL_MAX_SHADER_STORAGE_BLOCK_SIZE,&storage);
      if(invocations<128 || size<128 || groups<16200 || bindings<3 || storage<259200 || glGetError()!=GL_NO_ERROR)return false;
@@ -392,7 +392,7 @@ index 0e23e50..0ed3087 100644
             eglGetProcAddress("glDeleteSync") && eglGetProcAddress("glFenceSync") &&
             eglGetProcAddress("glMapBufferRange") && eglGetProcAddress("glDispatchCompute") &&
             eglGetProcAddress("glMemoryBarrier");
-@@ -3237,7 +3243,7 @@ static bool dv_allocate(struct dvbridge_renderer *r,size_t scratch_bytes)
+@@ -3270,7 +3276,7 @@ static bool dv_allocate(struct dvbridge_renderer *r,size_t scratch_bytes)
      struct dvbridge_dv_slot *s=&r->dv;
      bool reuse=r->enhanced_authored && r->reuse_authored_storage;
      if(reuse && (s->active || s->fence || s->mapped || s->buffers[0] || s->sampler))return false;

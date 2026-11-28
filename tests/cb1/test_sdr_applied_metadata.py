@@ -32,7 +32,7 @@ extern "C" {
 #include <libavutil/mem.h>
 }
 struct SourceBinding{uint64_t stream{},picture{},revision{};bool Valid()const{return stream&&picture&&revision;}};
-struct OutputCapabilities{bool isHDR10{},isDV{},isHLG{};};using OutputReason=VideoProcessingReason;
+struct OutputCapabilities{bool isHDR10{},isDV{},isHLG{},isSDR{};};using OutputReason=VideoProcessingReason;
 struct CDVPlaybackInfo{enum{HDMI=1,FEL=2,CM4=4,HDR10=8,HDR10PLUS=16,SDR=32};};
 namespace DVBRIDGE{using ::SourceBinding;using ::OutputCapabilities;using ::OutputReason;struct StreamSnapshot SNAPSHOT;}
 #include "DVProcessingInfo.h"

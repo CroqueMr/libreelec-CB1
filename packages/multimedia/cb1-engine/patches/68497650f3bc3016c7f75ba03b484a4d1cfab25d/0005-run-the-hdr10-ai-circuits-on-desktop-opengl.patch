@@ -1,4 +1,4 @@
-From 08f395660d81b717ec56ae3c798e7995500f91db Mon Sep 17 00:00:00 2001
+From 13ff4f56ee5940be132313ee6ec5c390db6e346e Mon Sep 17 00:00:00 2001
 From: Chris <meischris39@hotmail.com>
 Date: Mon, 16 Nov 2026 12:50:16 +0000
 Subject: [PATCH] CB1: run the HDR10 AI circuits on desktop OpenGL too
@@ -25,7 +25,7 @@ GL_ARB_buffer_storage on desktop GL. The OpenGL ES checks are unchanged.
  9 files changed, 65 insertions(+), 8 deletions(-)
 
 diff --git a/config/owned-sources.json b/config/owned-sources.json
-index b340200..abc1974 100644
+index 1560056..cbd1c22 100644
 --- a/config/owned-sources.json
 +++ b/config/owned-sources.json
 @@ -7,19 +7,19 @@
@@ -57,10 +57,10 @@ index b340200..abc1974 100644
    "src/dvbridge_placebo.h": "1ae453d519231b702dcf128fa6a5c8347491485f746023bf5f7c8ef478ccfef4",
    "src/dvbridge_policy.c": "372986bc8bacd0cb68ca4af440a0b255e2954b1f357cfe84a3fbb9199b8b561d",
    "src/dvbridge_policy.h": "560dbfb112f687461ef9f394d867188724dbbd74135329876325fde4cc793392",
--  "src/dvbridge_render.c": "9be056e48520ad52e7305dc1fe4c55b6970937e7a0b7dd6316c51286b44c1021",
-+  "src/dvbridge_render.c": "ee3be7ea21c6bb2086b10ea3ccb2d2b0701d52f1c1210612c390a6fb81849b17",
+-  "src/dvbridge_render.c": "338850bda3b37f548b294494705f2b4b1e7878721031add32b2aac12a2b1874d",
++  "src/dvbridge_render.c": "3e230dc4fe84a3b7821c66fb07f989a1dabafa76b197026cad514fdfad4ec515",
    "src/dvbridge_fel_seek.h": "bdc2944c719f354c4189fd4411e6c5ffe94d1afc4f500d3f5708fce34d12ec58",
-   "src/dvbridge_render.h": "4b2a31b251353dbf04c9feb6db67e3544279d5f91c90c6eb000747dc13ac9ba5",
+   "src/dvbridge_render.h": "0d1e6f16f4b224cf7372680e722d554f0a23c0ecee875be09003fc4f04a5ac8b",
    "src/dvbridge_gl_frame.c": "6cbcb4b4c0427ca8196dbd4821aa6a771594fe6388c7adfcacd937e45da27c66",
 @@ -69,7 +69,7 @@
    "src/cb1_master_ipt_shader.h": "92e41f052f975a44bb3404a5ec8f44380729b070507af918c40f40d52f446e95",
@@ -73,8 +73,8 @@ index b340200..abc1974 100644
    "src/cb1_hdr10plus_curve.c": "83e9a8b6437e3c5f9d206ed7114b6df47e2440cfb43424d495381a8d0312c8c6",
 @@ -83,5 +83,5 @@
    "src/cb1_hdr10_expert.h": "3600cf66e3cccc82e3d9669a0e2b7390e4d1da7377fb04ffeeec61976e18ba74",
-   "src/cb1_sdr_expansion.h": "ece846209ef8bbc74868141fa96d8e783349df0661cf8b369fe19611445c7544",
-   "src/cb1_sdr_expansion.c": "4c74c8d51b3240a2db228d9a729909857757b711acacefa4455dd98dd4d8eedf",
+   "src/cb1_sdr_expansion.h": "c3e9dd57958309d5599b01d678ab50e22e4d8728bb8681e42f88b74739f73fb8",
+   "src/cb1_sdr_expansion.c": "f48894e328932b3fdf3914d5c5ed8469721f728b18048ac7068ab993a81c4b76",
 -  "src/dvbridge_gl_api.h": "d841f661cb5602e854db988ac923f6f2ba8038cdbfcc99e1e190b117d21f031e"
 +  "src/dvbridge_gl_api.h": "5af6593cce78f514b1a45de0b2d7293ecb84f450719a8cde079e0517f0257dc1"
  }
@@ -231,10 +231,10 @@ index 649ebcc..377c3f9 100644
   * GL_BACK_LEFT, so read the sizes and the encoding from the bound colour attachment. */
  static inline void dvbridge_gl_color_bits(GLuint framebuffer, GLint bits[4], GLint *encoding)
 diff --git a/src/dvbridge_render.c b/src/dvbridge_render.c
-index ed33376..b9cf1b7 100644
+index 65af23f..77c4073 100644
 --- a/src/dvbridge_render.c
 +++ b/src/dvbridge_render.c
-@@ -3139,10 +3139,15 @@ bool dvbridge_retirement_owner_destroy(struct dvbridge_retirement_owner **owner)
+@@ -3172,10 +3172,15 @@ bool dvbridge_retirement_owner_destroy(struct dvbridge_retirement_owner **owner)
  static bool dv_gpu_requirements(pl_gpu gpu)
  {
      pl_opengl gl=pl_opengl_get(gpu);
@@ -250,7 +250,7 @@ index ed33376..b9cf1b7 100644
      GLint precision,range[2],size,groups,invocations,bindings;GLint64 storage;
      for(unsigned i=0;i<2;i++){
          glGetShaderPrecisionFormat(i?GL_FRAGMENT_SHADER:GL_VERTEX_SHADER,GL_HIGH_FLOAT,range,&precision);
-@@ -3162,8 +3167,12 @@ static bool dv_gpu_requirements(pl_gpu gpu)
+@@ -3195,8 +3200,12 @@ static bool dv_gpu_requirements(pl_gpu gpu)
  static bool dv_transport_requirements(pl_gpu gpu)
  {
      pl_opengl gl=pl_opengl_get(gpu);
@@ -263,7 +263,7 @@ index ed33376..b9cf1b7 100644
      GLint precision,range[2];
      glGetShaderPrecisionFormat(GL_FRAGMENT_SHADER,GL_HIGH_FLOAT,range,&precision);
      return precision>=23 && range[0]>=127 && range[1]>=127 && glGetError()==GL_NO_ERROR &&
-@@ -3191,7 +3200,11 @@ bool dvbridge_renderer_supports_mode(struct dvbridge_renderer *r,enum dvbridge_m
+@@ -3224,7 +3233,11 @@ bool dvbridge_renderer_supports_mode(struct dvbridge_renderer *r,enum dvbridge_m
  static bool hdr10_ai_gpu_requirements(pl_gpu gpu)
  {
      pl_opengl gl=pl_opengl_get(gpu);

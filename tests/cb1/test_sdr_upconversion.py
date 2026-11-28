@@ -67,7 +67,7 @@ int main() {
             self.assertIn("m_dvBridge->PlayerLed() || layer.sdrInput", ctx)
         renderer=(TREE/"xbmc/cores/VideoPlayer/VideoRenderers/DVBridgeGLES.cpp").read_text()
         self.assertIn("dvbridge_prepare_sdr_expansion(", renderer)
-        self.assertIn("dvbridge_render_expanded_hdr10(", renderer)
+        self.assertIn("dvbridge_render_sdr_hdr10(", renderer)
         menu=(TREE/"xbmc/dialogs/DVPlaybackModes.cpp").read_text()
         self.assertIn("dvbridge.sdrplaybackchoice", menu)
         self.assertIn("active.sdrSource", menu)

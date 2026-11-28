@@ -422,6 +422,7 @@ struct Picture{StreamHdrType hdrType=StreamHdrType::HDR_TYPE_HDR10;
  int color_primaries=AVCOL_PRI_BT2020,color_space=AVCOL_SPC_BT2020_NCL;
  bool colorPrimariesGuessed=false;
  bool IsLimitedHLG8() const LIMITED_HLG};
+namespace DVBRIDGE {bool IsSDRExpansionSource(const Picture&){return false;}}
 struct Metadata{const void* Data(){return this;}::Binding Binding(){return {};}};
 struct Layer{int width,height,layout,scalingMethod,autoScalingMethod;double pts;::Binding binding;};
 struct Renderer{

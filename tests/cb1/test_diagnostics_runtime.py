@@ -712,7 +712,7 @@ struct CServiceBroker {
 };
 struct Admission {bool usable=false; DVBRIDGE::OutputReason reason{};};
 struct Caps {unsigned generation=1;bool nativeDV=false,hdr10=false,hdr10plus=false,processingKnown=false;
-  std::array<Admission,7> processing{},hdr10Processing{};};
+  std::array<Admission,7> processing{},hdr10Processing{};std::array<Admission,2> sdrExpansion{};};
 inline int currentEglContext = 1;
 inline int eglGetCurrentContext() {return currentEglContext;}
 inline bool pl_opengl_has_ext(int,const char*) {return true;}
