@@ -24,19 +24,30 @@ class ReleaseTests(unittest.TestCase):
         self.assertEqual(found, [], 'Local build data must not enter release sources or runtime')
 
     def test_native_image_version_and_ai_defaults(self):
-        keys = ("CUSTOM_VERSION", "BUILDER_VERSION", "BUILDER_NAME", "CB1_HDR10_AI")
+        keys = ("CUSTOM_VERSION", "BUILDER_VERSION", "BUILDER_NAME", "CB1_HDR10_AI", "CUSTOM_IMAGE_NAME")
         options = (ROOT / "projects/Generic/options").read_text()
         defaults = options.split('################################################################################', 1)[0]
-        script = "unset " + " ".join(keys) + "\n" + defaults
-        script += '\nprintf "%s\\n" "$CUSTOM_VERSION" "$BUILDER_VERSION" "$BUILDER_NAME" "$CB1_HDR10_AI"'
+        script = "unset " + " ".join(keys) + "\n"
+        script += 'DEVICE=Generic; DISTRONAME=LibreELEC; TARGET_ARCH=x86_64; OS_VERSION=13.0\n' + defaults
+        script += '\nprintf "%s\\n" "$CUSTOM_VERSION" "$BUILDER_VERSION" "$BUILDER_NAME" "$CB1_HDR10_AI" "$CUSTOM_IMAGE_NAME"'
         result = subprocess.check_output(["bash", "-c", script], text=True).splitlines()
-        version = "CB-R1.1.2"
-        self.assertEqual(result, [version, version, "Community & CroqueMr", "yes"])
+        version = "CB1-R1.2.0"
+        self.assertEqual(result, [version, version, "Community & CroqueMr", "yes", "LibreELEC-x86_64-13.0-" + version])
         versions = json.loads((ROOT / "config/cb1-versions.json").read_text())
         self.assertEqual(versions["Release"]["version"], result[1])
-        self.assertEqual(versions["Release"]["tag"], version.removeprefix("CB-"))
+        self.assertEqual(versions["Release"]["tag"], version.removeprefix("CB1-"))
         self.assertEqual(versions["Release"]["image"],
-                         "LibreELEC-Generic.x86_64-13.0-" + version)
+                         result[4])
+        for device, override, expected in (
+            ("Generic", "Custom-Image", "Custom-Image"),
+            ("Generic-legacy", "", ""),
+        ):
+            with self.subTest(device=device, override=override):
+                script = ('DEVICE="$1"; CUSTOM_IMAGE_NAME="$2"; '
+                          'DISTRONAME=LibreELEC; TARGET_ARCH=x86_64; OS_VERSION=13.0\n' +
+                          defaults + '\nprintf "%s" "$CUSTOM_IMAGE_NAME"')
+                self.assertEqual(subprocess.check_output(
+                    ["bash", "-c", script, "image-name", device, override], text=True), expected)
 
 
     def test_community_builder_label_and_official_override(self):

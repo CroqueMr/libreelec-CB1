@@ -1,6 +1,7 @@
 """Adapter summary cannot claim generated metadata as original source metadata."""
 from pathlib import Path
 import os
+import json
 import subprocess
 import tempfile
 import unittest
@@ -53,7 +54,7 @@ int main() {
  assert(info.transmittedBlocks[1] && info.transmittedBlocks[5]);
  assert(info.output.aiL1L3[1]==2000 && !info.output.engine.empty());
  assert(info.output.aiModel=="CB1-L1L3 0.1" && info.output.aiBaseline[1]==1900);
- assert(info.output.circuit=="CB1-HDR10DVR.1.0" && info.output.engine=="CB1 1.1");
+ assert(info.output.circuit=="CB1-HDR10DVR.1.0" && info.output.engine=="EXPECTED_ENGINE");
  s.output.hdr10PlusDV=true;s.output.guidedSourceFields=2;s.output.guidedEstimatedFields=5;
  info=DVBRIDGE::NativeProcessingInfo(s);
  assert(!info.metadata && info.output.circuit=="CB1-HDR10PDVR.1.0");
@@ -79,6 +80,8 @@ int main() {
  assert(DVBRIDGE::NativeProcessingInfo(s).output.iptTransport);
 }
 '''.replace('SNAPSHOT',snapshot)
+        version = json.loads((Path(__file__).resolve().parents[2]/'config/cb1-versions.json').read_text())['CB1']['version'] if os.environ.get('CB1_TEST_ENGINE') else '1.1'
+        program = program.replace('EXPECTED_ENGINE', 'CB1 ' + version)
         with tempfile.TemporaryDirectory() as temporary:
             root=Path(temporary); (root/'test.cpp').write_text(program)
             core=Path(os.environ.get('CB1_TEST_ENGINE', str(Path(__file__).resolve().parents[2]/'CB1')))/'src'

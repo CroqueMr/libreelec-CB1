@@ -1,0 +1,120 @@
+From 278ace6ecde4ab1c556142ce224284e665d779fc Mon Sep 17 00:00:00 2001
+From: Chris <meischris39@hotmail.com>
+Date: Tue, 10 Nov 2026 03:21:49 +0000
+Subject: [PATCH] CB1: read framebuffer bit depths the core-profile way on
+ desktop GL
+
+Core profiles dropped GL_RED_BITS and friends and call the default
+colour buffer GL_BACK_LEFT, so the packer and the final-framebuffer
+check read garbage depths and left INVALID_ENUM pending on desktop GL.
+---
+ config/owned-sources.json |  6 +++---
+ src/dvbridge_gl_api.h     | 14 ++++++++++++++
+ src/dvbridge_gl_pack.c    | 10 +++++++++-
+ src/dvbridge_render.c     |  7 ++++++-
+ 4 files changed, 32 insertions(+), 5 deletions(-)
+
+diff --git a/config/owned-sources.json b/config/owned-sources.json
+index 4c567c4..5209555 100644
+--- a/config/owned-sources.json
++++ b/config/owned-sources.json
+@@ -1,7 +1,7 @@
+ {
+   "src/dvbridge_fel.c": "cc38c1569fe00c07bb8db57e6ff0d42b376b9917281093d108cfa2f09031ce21",
+   "src/dvbridge_gl_pack.h": "2ccd974503fbcbb33678ee2eff076a7a086bcd1796efa97010a1eebb901143f5",
+-  "src/dvbridge_gl_pack.c": "5bbed682b3b2f15de2fb0abeb8010d40e8b995cea7921f3c5e2706f37b21f52d",
++  "src/dvbridge_gl_pack.c": "dcb6175b3cbe927ce09b3efec05d24100cebf0715c4e72186b8725625c392a60",
+   "src/cb1_circuit.c": "71393d1bb655a54f2d9067cf1d49af58d4d68a456ab241e86db2880903166333",
+   "src/cb1_circuit.h": "32d7ed24975cc744d6d7dc3fc7fce36ed02b9a82be15099760eb2246fc375d89",
+   "src/cb1_hdr10_ai.c": "77432675f0f122e12294238987b5d66e5e99cc11653e1ddc4701ef5c6fedf129",
+@@ -36,7 +36,7 @@
+   "src/dvbridge_placebo.h": "1ae453d519231b702dcf128fa6a5c8347491485f746023bf5f7c8ef478ccfef4",
+   "src/dvbridge_policy.c": "372986bc8bacd0cb68ca4af440a0b255e2954b1f357cfe84a3fbb9199b8b561d",
+   "src/dvbridge_policy.h": "560dbfb112f687461ef9f394d867188724dbbd74135329876325fde4cc793392",
+-  "src/dvbridge_render.c": "748d3b596faf297f5d831a9c8988433f2113fc5257a6f7c17be03b6cbf4bc56c",
++  "src/dvbridge_render.c": "338850bda3b37f548b294494705f2b4b1e7878721031add32b2aac12a2b1874d",
+   "src/dvbridge_fel_seek.h": "bdc2944c719f354c4189fd4411e6c5ffe94d1afc4f500d3f5708fce34d12ec58",
+   "src/dvbridge_render.h": "0d1e6f16f4b224cf7372680e722d554f0a23c0ecee875be09003fc4f04a5ac8b",
+   "src/dvbridge_gl_frame.c": "6cbcb4b4c0427ca8196dbd4821aa6a771594fe6388c7adfcacd937e45da27c66",
+@@ -83,5 +83,5 @@
+   "src/cb1_hdr10_expert.h": "3600cf66e3cccc82e3d9669a0e2b7390e4d1da7377fb04ffeeec61976e18ba74",
+   "src/cb1_sdr_expansion.h": "c3e9dd57958309d5599b01d678ab50e22e4d8728bb8681e42f88b74739f73fb8",
+   "src/cb1_sdr_expansion.c": "f48894e328932b3fdf3914d5c5ed8469721f728b18048ac7068ab993a81c4b76",
+-  "src/dvbridge_gl_api.h": "d1c315243ac60207e8e67af4eb570facfbd470050e2899e46492cd6b50c22a74"
++  "src/dvbridge_gl_api.h": "7c716c104de155042bc14f24b31cf134365759677b2188f7249342b290d89ad4"
+ }
+diff --git a/src/dvbridge_gl_api.h b/src/dvbridge_gl_api.h
+index c9c3c9a..dce4a2b 100644
+--- a/src/dvbridge_gl_api.h
++++ b/src/dvbridge_gl_api.h
+@@ -18,3 +18,17 @@
+ #define GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT_EXT GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT
+ #endif
+ typedef PFNGLBUFFERSTORAGEPROC PFNGLBUFFERSTORAGEEXTPROC;
++
++/* Core profiles dropped GL_RED_BITS and friends and call the default colour buffer
++ * GL_BACK_LEFT, so read the sizes and the encoding from the bound colour attachment. */
++static inline void dvbridge_gl_color_bits(GLuint framebuffer, GLint bits[4], GLint *encoding)
++{
++    static const GLenum sizes[4] = {GL_FRAMEBUFFER_ATTACHMENT_RED_SIZE,
++        GL_FRAMEBUFFER_ATTACHMENT_GREEN_SIZE, GL_FRAMEBUFFER_ATTACHMENT_BLUE_SIZE,
++        GL_FRAMEBUFFER_ATTACHMENT_ALPHA_SIZE};
++    const GLenum attachment = framebuffer ? GL_COLOR_ATTACHMENT0 : GL_BACK_LEFT;
++    for (int i = 0; i < 4; ++i)
++        glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, attachment, sizes[i], &bits[i]);
++    glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER, attachment,
++        GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, encoding);
++}
+diff --git a/src/dvbridge_gl_pack.c b/src/dvbridge_gl_pack.c
+index abfbbec..8e835dc 100644
+--- a/src/dvbridge_gl_pack.c
++++ b/src/dvbridge_gl_pack.c
+@@ -134,13 +134,21 @@ static bool pack(struct dvbridge_gl_packer *p, unsigned texture, unsigned frameb
+     bool ok = false;
+     glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+     GLint red, green, blue, samples, encoding;
++#if defined(DVBRIDGE_DESKTOP_GL)
++    GLint bits[4];
++    dvbridge_gl_color_bits(framebuffer, bits, &encoding);
++    red = bits[0];
++    green = bits[1];
++    blue = bits[2];
++#else
+     glGetIntegerv(GL_RED_BITS, &red);
+     glGetIntegerv(GL_GREEN_BITS, &green);
+     glGetIntegerv(GL_BLUE_BITS, &blue);
+-    glGetIntegerv(GL_SAMPLES, &samples);
+     glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER,
+         framebuffer ? GL_COLOR_ATTACHMENT0 : GL_BACK,
+         GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING, &encoding);
++#endif
++    glGetIntegerv(GL_SAMPLES, &samples);
+     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE ||
+         red != 8 || green != 8 || blue != 8 || samples > 1 || encoding != GL_LINEAR)
+         goto restore;
+diff --git a/src/dvbridge_render.c b/src/dvbridge_render.c
+index c76ae26..65af23f 100644
+--- a/src/dvbridge_render.c
++++ b/src/dvbridge_render.c
+@@ -4148,12 +4148,17 @@ static bool dv_final_framebuffer(unsigned framebuffer,unsigned alpha_bits)
+     GLint draw,read,bits[4],encoding=0;
+     glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING,&draw);glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING,&read);
+     glBindFramebuffer(GL_FRAMEBUFFER,framebuffer);
+-    const GLenum channels[4]={GL_RED_BITS,GL_GREEN_BITS,GL_BLUE_BITS,GL_ALPHA_BITS};
+     bool valid=glCheckFramebufferStatus(GL_FRAMEBUFFER)==GL_FRAMEBUFFER_COMPLETE;
+     if(valid){
++#if defined(DVBRIDGE_DESKTOP_GL)
++        dvbridge_gl_color_bits(framebuffer,bits,&encoding);
++        for(unsigned i=0;i<4;i++)valid=valid && bits[i]==(i==3?alpha_bits:8);
++#else
++        const GLenum channels[4]={GL_RED_BITS,GL_GREEN_BITS,GL_BLUE_BITS,GL_ALPHA_BITS};
+         for(unsigned i=0;i<4;i++){glGetIntegerv(channels[i],&bits[i]);valid=valid && bits[i]==(i==3?alpha_bits:8);}
+         glGetFramebufferAttachmentParameteriv(GL_FRAMEBUFFER,framebuffer?GL_COLOR_ATTACHMENT0:GL_BACK,
+             GL_FRAMEBUFFER_ATTACHMENT_COLOR_ENCODING,&encoding);
++#endif
+         valid=valid && encoding==GL_LINEAR;
+     }
+     glBindFramebuffer(GL_DRAW_FRAMEBUFFER,draw);glBindFramebuffer(GL_READ_FRAMEBUFFER,read);
+-- 
+2.55.0.windows.5
+

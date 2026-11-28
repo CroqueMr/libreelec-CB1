@@ -1,7 +1,10 @@
-CUSTOM_VERSION="${CUSTOM_VERSION:-CB-R1.1.2}"
-BUILDER_VERSION="${BUILDER_VERSION:-CB-R1.1.2}"
+CUSTOM_VERSION="${CUSTOM_VERSION:-CB1-R1.2.0}"
+BUILDER_VERSION="${BUILDER_VERSION:-CB1-R1.2.0}"
 BUILDER_NAME="${BUILDER_NAME:-Community & CroqueMr}"
 CB1_HDR10_AI="${CB1_HDR10_AI:-yes}"
+if [ "${DEVICE}" = "Generic" ]; then
+  CUSTOM_IMAGE_NAME="${CUSTOM_IMAGE_NAME:-${DISTRONAME}-${TARGET_ARCH}-${OS_VERSION}-${CUSTOM_VERSION}}"
+fi
 
 ################################################################################
 # setup system defaults
